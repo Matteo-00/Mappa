@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
+import '../services/auth_service.dart';
+import '../services/location_service.dart';
+import '../models/user_mode.dart';
+import '../models/muta_model.dart';
+import '../data/events_data.dart';
+import '../data/mute_data.dart';
+import '../widgets/map_action_button.dart';
+import 'turista_events_page.dart';
+import 'mute_list_page.dart';
+import 'login_page.dart';
 
-/// HomePage con GoogleMap, Drawer laterale e percorso evidenziato
+/// HomePage con GoogleMap al centro, percorso Ceri e funzionalità complete
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -10,18 +23,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Controller della mappa
   GoogleMapController? _mapController;
+  final LocationService _locationService = LocationService();
+  
+  LatLng? _currentLocation;
+  LatLng? _selectedDestination;
+  String? _selectedDestinationName;
+  bool _isLoadingLocation = false;
+  double _currentZoom = 15.0; // Traccia il livello di zoom corrente
 
-  // Centro iniziale della mappa
+  // Centro iniziale: Gubbio, Piazza Grande
   static const CameraPosition _initialPosition = CameraPosition(
     target: LatLng(43.35190, 12.57730),
     zoom: 15,
   );
 
-  // Coordinate del percorso da evidenziare
+  // Percorso ufficiale dei Ceri (da Piazza Grande a Basilica Sant'Ubaldo)
   final List<LatLng> _routeCoordinates = const [
-    LatLng(43.35190, 12.57730),
+    LatLng(43.35190, 12.57730), // Piazza Grande
     LatLng(43.35182, 12.57755),
     LatLng(43.35174, 12.57780),
     LatLng(43.35165, 12.57805),
@@ -52,123 +71,374 @@ class _HomePageState extends State<HomePage> {
     LatLng(43.34760, 12.58770),
     LatLng(43.34740, 12.58790),
     LatLng(43.34720, 12.58805),
-    LatLng(43.34705, 12.58820),
+    LatLng(43.34705, 12.58820), // Basilica Sant'Ubaldo
   ];
 
-  // Set di Polyline per la mappa
   Set<Polyline> get _polylines => {
         Polyline(
-          polylineId: const PolylineId('route'),
+          polylineId: const PolylineId('ceri_route'),
           points: _routeCoordinates,
-          color: Colors.red,
+          color: const Color(0xFFB71C1C), // Rosso elegante
           width: 5,
           geodesic: true,
         ),
       };
 
+  Set<Marker> get _markers {
+    final markers = <Marker>{};
+    final userMode = context.read<AuthService>().userMode;
+
+    if (userMode == UserMode.ceraiolo) {
+      // Modalità Ceraiolo: mostra le mute solo con zoom >= 17
+      if (_currentZoom >= 17.0) {
+        for (final muta in muteData) {
+          markers.add(
+            Marker(
+              markerId: MarkerId(muta.id),
+              position: muta.coordinates,
+              // Blu scuro elegante (hue 210 = blu scuro)
+              icon: BitmapDescriptor.defaultMarkerWithHue(210),
+              onTap: () => _showMutaDetailPopup(muta),
+            ),
+          );
+        }
+      }
+    } else {
+      // Modalità Turista: mostra i luoghi degli eventi
+      for (final event in eventsData) {
+        markers.add(
+          Marker(
+            markerId: MarkerId(event.id),
+            position: event.coordinates,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: InfoWindow(
+              title: event.title,
+              snippet: event.location,
+            ),
+          ),
+        );
+      }
+    }
+
+    // Marker posizione utente
+    if (_currentLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('user_location'),
+          position: _currentLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'La tua posizione'),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+    final userMode = authService.userMode;
+
     return Scaffold(
-      // AppBar moderna
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Mappa App'),
-        elevation: 0,
-      ),
-      // Drawer laterale
-      drawer: _buildDrawer(),
-      // Body con GoogleMap
-      body: SafeArea(
-        child: GoogleMap(
-          initialCameraPosition: _initialPosition,
-          polylines: _polylines,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: true,
-          mapToolbarEnabled: false,
-          onMapCreated: (GoogleMapController controller) {
-            _mapController = controller;
-          },
-        ),
-      ),
-      // FloatingActionButton per centrare sulla route
-      floatingActionButton: FloatingActionButton(
-        onPressed: _centerOnRoute,
-        tooltip: 'Centra sul percorso',
-        child: const Icon(Icons.my_location),
+      drawer: _buildDrawer(userMode),
+      body: Stack(
+        children: [
+          // Mappa principale
+          GoogleMap(
+            initialCameraPosition: _initialPosition,
+            polylines: _polylines,
+            markers: _markers,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: true,
+            mapToolbarEnabled: false,
+            onMapCreated: (controller) {
+              _mapController = controller;
+            },
+            onCameraMove: (CameraPosition position) {
+              // Aggiorna il livello di zoom corrente
+              if (_currentZoom != position.zoom) {
+                setState(() {
+                  _currentZoom = position.zoom;
+                });
+              }
+            },
+            onTap: (_) {
+              // Nasconde la distanza quando si clicca sulla mappa
+              if (_selectedDestination != null) {
+                setState(() {
+                  _selectedDestination = null;
+                  _selectedDestinationName = null;
+                });
+              }
+            },
+          ),
+
+          // Barra superiore con titolo e menu
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Builder(
+                      builder: (context) => IconButton(
+                        icon: const Icon(Icons.menu),
+                        onPressed: () => Scaffold.of(context).openDrawer(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Festa dei Ceri',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          userMode?.displayName ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Bottoni azione sulla mappa (in basso a sinistra)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MapActionButton(
+                  icon: Icons.my_location,
+                  label: 'Dove sono',
+                  onPressed: _onLocateUser,
+                ),
+                if (_currentLocation != null) ...[
+                  const SizedBox(height: 8),
+                  MapActionButton(
+                    icon: Icons.straighten,
+                    label: 'Calcola distanza',
+                    onPressed: _onCalculateDistance,
+                  ),
+                ],
+                if (_selectedDestination != null) ...[
+                  const SizedBox(height: 8),
+                  MapActionButton(
+                    icon: Icons.directions_walk,
+                    label: 'Indicazioni',
+                    onPressed: _onGetDirections,
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Info distanza (se presente)
+          if (_selectedDestination != null && _currentLocation != null)
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Distanza',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _locationService.formatDistance(
+                        _locationService.calculateDistance(
+                          _currentLocation!,
+                          _selectedDestination!,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                    if (_selectedDestinationName != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'a $_selectedDestinationName',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+          // Loading indicator per geolocalizzazione
+          if (_isLoadingLocation)
+            const Positioned.fill(
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  /// Costruisce il Drawer laterale
-  Widget _buildDrawer() {
+  Widget _buildDrawer(UserMode? userMode) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // DrawerHeader moderno con colore primario
           DrawerHeader(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFB71C1C),
+                  Colors.red[900]!,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(
-                  Icons.map,
+                const Icon(
+                  Icons.local_fire_department_outlined,
                   size: 48,
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Colors.white,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Mappa App',
+                const Text(
+                  'Festa dei Ceri',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  userMode?.displayName ?? '',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
                   ),
                 ),
               ],
             ),
           ),
-          // Menu Items
+
+          // Menu specifico per modalità
+          if (userMode == UserMode.turista) ...[
+            ListTile(
+              leading: const Icon(Icons.event),
+              title: const Text('Come viene strutturata la giornata'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TuristaEventsPage()),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+
+          if (userMode == UserMode.ceraiolo) ...[
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Mute'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MuteListPage(
+                      onNavigateToMuta: _navigateToMuta,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+
           ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Home'),
-            onTap: () {
-              Navigator.pop(context);
-            },
+            leading: const Icon(Icons.map),
+            title: const Text('Mappa'),
+            onTap: () => Navigator.pop(context),
           ),
+
           ListTile(
-            leading: const Icon(Icons.route),
-            title: const Text('Percorso'),
-            onTap: () {
-              Navigator.pop(context);
-              _centerOnRoute();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.info),
+            leading: const Icon(Icons.info_outline),
             title: const Text('Informazioni'),
             onTap: () {
               Navigator.pop(context);
               _showInfoDialog();
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Impostazioni'),
-            onTap: () {
-              Navigator.pop(context);
-              _showSettingsDialog();
-            },
-          ),
+
           const Divider(),
+
           ListTile(
-            leading: const Icon(Icons.close),
-            title: const Text('Chiudi'),
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
             onTap: () {
-              Navigator.pop(context);
+              context.read<AuthService>().logout();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
             },
           ),
         ],
@@ -176,65 +446,426 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Centra la mappa sul percorso usando LatLngBounds
-  void _centerOnRoute() {
-    if (_mapController == null || _routeCoordinates.isEmpty) return;
+  /// Naviga alla muta sulla mappa, centra, zooma e apre il popup
+  void _navigateToMuta(LatLng coordinates, double zoom, MutaModel muta) {
+    setState(() {
+      _currentZoom = zoom;
+    });
 
-    // Calcola i bounds del percorso
-    double minLat = _routeCoordinates.first.latitude;
-    double maxLat = _routeCoordinates.first.latitude;
-    double minLng = _routeCoordinates.first.longitude;
-    double maxLng = _routeCoordinates.first.longitude;
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: coordinates,
+          zoom: zoom,
+        ),
+      ),
+    );
 
-    for (var point in _routeCoordinates) {
-      if (point.latitude < minLat) minLat = point.latitude;
-      if (point.latitude > maxLat) maxLat = point.latitude;
-      if (point.longitude < minLng) minLng = point.longitude;
-      if (point.longitude > maxLng) maxLng = point.longitude;
+    // Aspetta che l'animazione finisca e poi apre il popup
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _showMutaDetailPopup(muta);
+      }
+    });
+  }
+
+  /// Localizza l'utente sulla mappa
+  Future<void> _onLocateUser() async {
+    setState(() => _isLoadingLocation = true);
+
+    final location = await _locationService.getCurrentLocation();
+
+    if (!mounted) return;
+
+    setState(() => _isLoadingLocation = false);
+
+    if (location != null) {
+      setState(() {
+        _currentLocation = location;
+      });
+
+      _mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: location,
+            zoom: 16,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossibile ottenere la posizione'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
+  }
+
+  /// Calcola la distanza dall'utente a una destinazione
+  void _onCalculateDistance() {
+    // Mostra dialog per selezionare destinazione
+    showDialog(
+      context: context,
+      builder: (context) {
+        final userMode = context.read<AuthService>().userMode;
+        final List<dynamic> destinations =
+            userMode == UserMode.ceraiolo ? muteData : eventsData;
+
+        return AlertDialog(
+          title: const Text('Seleziona destinazione'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: destinations.length,
+              itemBuilder: (context, index) {
+                final dest = destinations[index];
+                final name = dest is MutaModel ? dest.name : dest.title;
+                final location = dest is MutaModel ? dest.zone : dest.location;
+
+                return ListTile(
+                  title: Text(name),
+                  subtitle: Text(location),
+                  onTap: () {
+                    setState(() {
+                      _selectedDestination = dest.coordinates;
+                      _selectedDestinationName = name;
+                    });
+
+                    // Anima la mappa per mostrare utente e destinazione
+                    _animateToShowBoth();
+
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annulla'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Avvia navigazione pedonale verso la destinazione
+  Future<void> _onGetDirections() async {
+    if (_currentLocation == null || _selectedDestination == null) return;
+
+    final url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&origin=${_currentLocation!.latitude},${_currentLocation!.longitude}'
+      '&destination=${_selectedDestination!.latitude},${_selectedDestination!.longitude}'
+      '&travelmode=walking',
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossibile aprire la navigazione'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Anima la camera per mostrare sia l'utente che la destinazione
+  void _animateToShowBoth() {
+    if (_currentLocation == null || _selectedDestination == null) return;
+
+    final lat1 = _currentLocation!.latitude;
+    final lng1 = _currentLocation!.longitude;
+    final lat2 = _selectedDestination!.latitude;
+    final lng2 = _selectedDestination!.longitude;
+
+    final minLat = math.min(lat1, lat2);
+    final maxLat = math.max(lat1, lat2);
+    final minLng = math.min(lng1, lng2);
+    final maxLng = math.max(lng1, lng2);
 
     final bounds = LatLngBounds(
       southwest: LatLng(minLat, minLng),
       northeast: LatLng(maxLat, maxLng),
     );
 
-    // Anima la camera verso i bounds
-    _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 50),
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100),
     );
   }
 
-  /// Mostra dialog informazioni
-  void _showInfoDialog() {
+  /// Mostra popup dettagliato con struttura barella e ceraioli
+  void _showMutaDetailPopup(MutaModel muta) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Informazioni'),
-        content: const Text(
-          'App di visualizzazione percorsi su mappa.\n\n'
-          'Sviluppata con Flutter e Google Maps.',
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Titolo e Capo Muta
+                Text(
+                  muta.name,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFB71C1C),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Capo Muta: ${muta.capoMuta}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFB71C1C),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Text(
+                      muta.zone,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                
+                // Struttura barella
+                _buildBarellaStructure(muta),
+                
+                const SizedBox(height: 20),
+                
+                // Pulsante chiudi
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Chiudi'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Costruisce la rappresentazione grafica della barella con gli 11 ceraioli
+  Widget _buildBarellaStructure(MutaModel muta) {
+    return Column(
+      children: [
+        // Titolo sezione
+        Text(
+          'Composizione Muta',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Capocorsa (davanti al centro)
+        _buildCeraiolo(muta.capocorsa, 'Capocorsa', true),
+        const SizedBox(height: 12),
+        
+        // Vista dall'alto della barella
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              // Prima riga
+              _buildBarellaRow(
+                sinistra: muta.esterniSinistra[0],
+                destra: muta.esterniDestra[0],
+                centro: null,
+              ),
+              const SizedBox(height: 4),
+              
+              // Seconda riga
+              _buildBarellaRow(
+                sinistra: muta.esterniSinistra[1],
+                destra: muta.esterniDestra[1],
+                centro: null,
+              ),
+              const SizedBox(height: 2),
+              
+              // Traversa centrale (più spessa)
+              Container(
+                width: double.infinity,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF212121),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 2),
+              
+              // Terza riga con primo interno
+              _buildBarellaRow(
+                sinistra: muta.esterniSinistra[2],
+                destra: muta.esterniDestra[2],
+                centro: muta.interniPosteriori[0],
+              ),
+              const SizedBox(height: 4),
+              
+              // Quarta riga con secondo interno
+              _buildBarellaRow(
+                sinistra: muta.esterniSinistra[3],
+                destra: muta.esterniDestra[3],
+                centro: muta.interniPosteriori[1],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Costruisce una riga della barella con esterni e interni
+  Widget _buildBarellaRow({
+    required String sinistra,
+    required String destra,
+    required String? centro,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Esterno sinistro
+        _buildCeraiolo(sinistra, '', false),
+        const SizedBox(width: 8),
+        
+        // Stanga sinistra
+        Container(
+          width: 4,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFF424242),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 12),
+        
+        // Centro (interno o spazio vuoto)
+        SizedBox(
+          width: 80,
+          child: centro != null
+              ? _buildCeraiolo(centro, 'Interno', false)
+              : Container(),
+        ),
+        const SizedBox(width: 12),
+        
+        // Stanga destra
+        Container(
+          width: 4,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFF424242),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        
+        // Esterno destro
+        _buildCeraiolo(destra, '', false),
+      ],
+    );
+  }
+
+  /// Costruisce un widget per un singolo ceraiolo
+  Widget _buildCeraiolo(String nome, String ruolo, bool isCapocorsa) {
+    return Container(
+      width: 80,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: isCapocorsa ? const Color(0xFFB71C1C) : Colors.grey[200],
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isCapocorsa ? const Color(0xFF8B0000) : Colors.grey[400]!,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (ruolo.isNotEmpty)
+            Text(
+              ruolo,
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                color: isCapocorsa ? Colors.white70 : Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          Text(
+            nome,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: isCapocorsa ? Colors.white : Colors.grey[800],
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  /// Mostra dialog impostazioni
-  void _showSettingsDialog() {
+  /// Mostra info su una muta (modalità Ceraiolo)
+  /// Mostra dialog informazioni
+  void _showInfoDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Impostazioni'),
-        content: const Text('Funzionalità in arrivo...'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Festa dei Ceri'),
+        content: const Text(
+          'App dedicata alla Festa dei Ceri di Gubbio.\n\n'
+          'Supporta turisti e ceraioli durante il 15 maggio con mappe interattive, '
+          'eventi e funzionalità di navigazione.\n\n'
+          'Un\'esperienza elegante per valorizzare una tradizione millenaria.',
+          style: TextStyle(height: 1.5),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('Chiudi'),
           ),
         ],
       ),

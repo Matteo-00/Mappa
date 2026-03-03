@@ -66,5 +66,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Permessi per geolocalizzazione -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>L'app ha bisogno della tua posizione per mostrarti la distanza dagli eventi e fornirti indicazioni durante la Festa dei Ceri.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>L'app ha bisogno della tua posizione per mostrarti la distanza dagli eventi e fornirti indicazioni durante la Festa dei Ceri.</string>
 </dict>
 </plist>
