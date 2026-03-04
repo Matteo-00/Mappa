@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
+import 'register_page.dart';
 
-/// Schermata di Login elegante e minimal
+/// Schermata di Login elegante e minimal con Supabase Auth
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -13,14 +15,14 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -30,27 +32,65 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    final authService = context.read<AuthService>();
-    final success = await authService.login(
-      _usernameController.text,
-      _passwordController.text,
-    );
+    final supabase = Supabase.instance.client;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (!mounted) return;
+    try {
+      // Login con Supabase Auth
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
-    setState(() => _isLoading = false);
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        throw 'Login fallito';
+      }
 
-    if (success) {
+      // Recupera dati utente dalla tabella utenti
+      final userData = await supabase
+          .from('utenti')
+          .select()
+          .eq('id', user.id)
+          .single();
+
+      if (!mounted) return;
+
+      // Aggiorna AuthService con i dati utente
+      final authService = context.read<AuthService>();
+      authService.loginWithSupabase(userData);
+
       // Naviga alla home
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } else {
-      // Mostra errore
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // Gestione errori specifici
+      String errorMessage = 'Errore durante il login';
+      
+      final errorString = e.toString().toLowerCase();
+      if (errorString.contains('invalid') && (errorString.contains('email') || errorString.contains('password') || errorString.contains('credentials'))) {
+        errorMessage = 'Email o password non corretti';
+      } else if (errorString.contains('429') || errorString.contains('too many')) {
+        errorMessage = 'Troppi tentativi! Attendi qualche minuto e riprova.';
+      } else if (errorString.contains('email not confirmed')) {
+        errorMessage = 'Email non confermata. Controlla la tua casella di posta.';
+      } else if (errorString.contains('network') || errorString.contains('connection')) {
+        errorMessage = 'Errore di connessione. Controlla la tua rete.';
+      } else if (errorString.contains('user not found')) {
+        errorMessage = 'Account non trovato. Registrati prima.';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Credenziali non valide'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: const Color(0xFFB71C1C),
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -118,13 +158,14 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 48),
 
-                  // Campo Username
+                  // Campo Email
                   Container(
                     constraints: const BoxConstraints(maxWidth: 400),
                     child: TextFormField(
-                      controller: _usernameController,
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        labelText: 'Username',
+                        labelText: 'Email',
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -146,13 +187,16 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         prefixIcon: Icon(
-                          Icons.person_outline,
+                          Icons.email_outlined,
                           color: Colors.grey[600],
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Inserisci username';
+                          return 'Inserisci email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Email non valida';
                         }
                         return null;
                       },
@@ -256,7 +300,26 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 32),
 
-                  // Info credenziali demo
+                  // Link registrazione
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RegisterPage()),
+                      );
+                    },
+                    child: const Text(
+                      'Non hai un account? Registrati',
+                      style: TextStyle(
+                        color: Color(0xFFB71C1C),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Info configurazione Supabase
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -267,7 +330,7 @@ class _LoginPageState extends State<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Credenziali Demo',
+                          'Configurazione Supabase',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -276,23 +339,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Username: admin',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Password: adminturista (Modalità Turista)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Password: adminceraiolo (Modalità Ceraiolo)',
+                          'Ricorda di inserire URL e ANON_KEY in main.dart',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[700],
