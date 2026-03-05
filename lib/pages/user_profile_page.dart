@@ -32,12 +32,14 @@ class UserProfilePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Titolo pagina
-            const Text(
-              'Profilo Utente',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFB22222),
+            Center(
+              child: const Text(
+                'Profilo Utente',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -144,6 +146,8 @@ class UserProfilePage extends StatelessWidget {
         selectedIndex: -1, // Nessuna tab selezionata (profilo aperto da menu)
         onTap: (index) => _handleNavigation(context, index, user.isCeraiolo),
         showMute: user.isCeraiolo,
+        onLocationMenuTap: () {}, // Non utilizzato in questa pagina
+        isLocationMenuOpen: false,
       ),
     );
   }

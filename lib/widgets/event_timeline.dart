@@ -122,7 +122,7 @@ class EventTimeline extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Orario + Tag "IN CORSO"
+                    // Orario + Tag "IN CORSO" o "CONCLUSO"
                     Row(
                       children: [
                         Text(
@@ -134,6 +134,28 @@ class EventTimeline extends StatelessWidget {
                             letterSpacing: 0.5,
                           ),
                         ),
+                        if (status == EventStatus.past) ...[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF9E9E9E),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'CONCLUSO',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ],
                         if (showCurrentTag) ...[
                           const SizedBox(width: 12),
                           Container(
@@ -185,39 +207,42 @@ class EventTimeline extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    // Pulsante "Vai ai dettagli"
-                    if (status != EventStatus.past)
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => EventDetailPage(event: event),
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF2F80ED),
-                            side: const BorderSide(
-                              color: Color(0xFF2F80ED),
-                              width: 1.5,
+                    // Pulsante "Vai ai dettagli" (anche per eventi passati)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EventDetailPage(event: event),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: status == EventStatus.past 
+                              ? const Color(0xFF9E9E9E) 
+                              : const Color(0xFF2F80ED),
+                          side: BorderSide(
+                            color: status == EventStatus.past 
+                                ? const Color(0xFFBDBDBD) 
+                                : const Color(0xFF2F80ED),
+                            width: 1.5,
                           ),
-                          child: const Text(
-                            'Vai ai dettagli',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Vai ai dettagli',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),

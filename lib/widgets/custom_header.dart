@@ -81,12 +81,12 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: const Color(0xFFB22222).withOpacity(0.1),
+          color: const Color(0xFF424242).withOpacity(0.1),
           shape: BoxShape.circle,
         ),
         child: const Icon(
           Icons.person,
-          color: Color(0xFFB22222),
+          color: Color(0xFF424242),
           size: 22,
         ),
       ),
@@ -102,48 +102,55 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           _handleLogout(context);
         }
       },
+      color: const Color(0xFFF5F5F5),
       itemBuilder: (context) => [
         PopupMenuItem(
           value: 'profile',
-          child: Row(
-            children: [
-              const Icon(
-                Icons.person_outline,
-                color: Color(0xFF6B6B6B),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Utente',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w500,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFF424242),
+                  size: 20,
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                const Text(
+                  'Utente',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'logout',
-          child: Row(
-            children: [
-              const Icon(
-                Icons.logout,
-                color: Color(0xFFB22222),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Logout',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Color(0xFFB22222),
-                  fontWeight: FontWeight.w500,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.logout,
+                  color: Color(0xFF424242),
+                  size: 20,
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                const Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

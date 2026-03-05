@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 
 /// Footer fisso con navigation bar personalizzata
 /// Altezza: 70px
-/// Icone: Home | Dove sono | Programma | Mute (solo ceraioli)
+/// Icone: Home | Menu Posizione | Programma | Mute (solo ceraioli)
 class CustomBottomNav extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTap;
   final bool showMute; // Mostra l'icona Mute solo se ceraiolo
+  final VoidCallback onLocationMenuTap; // Callback per menu posizione
+  final bool isLocationMenuOpen; // Stato menu posizione
 
   const CustomBottomNav({
     super.key,
     required this.selectedIndex,
     required this.onTap,
     required this.showMute,
+    required this.onLocationMenuTap,
+    required this.isLocationMenuOpen,
   });
 
   @override
@@ -38,30 +42,62 @@ class CustomBottomNav extends StatelessWidget {
             isSelected: selectedIndex == 0,
             onTap: () => onTap(0),
           ),
+          // Menu posizione (nuovo)
+          _buildLocationMenuItem(),
           _buildNavItem(
             index: 1,
-            icon: Icons.location_on_rounded,
-            label: 'Dove sono',
-            isSelected: selectedIndex == 1,
-            onTap: () => onTap(1),
-          ),
-          _buildNavItem(
-            index: 2,
             icon: Icons.calendar_today_rounded,
             label: 'Programma',
-            isSelected: selectedIndex == 2,
-            onTap: () => onTap(2),
+            isSelected: selectedIndex == 1,
+            onTap: () => onTap(1),
           ),
           // Mute - solo se ceraiolo
           if (showMute)
             _buildNavItem(
-              index: 3,
+              index: 2,
               icon: Icons.groups_rounded,
               label: 'Mute',
-              isSelected: selectedIndex == 3,
-              onTap: () => onTap(3),
+              isSelected: selectedIndex == 2,
+              onTap: () => onTap(2),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Item per menu posizione (con animazione)
+  Widget _buildLocationMenuItem() {
+    final color = const Color(0xFF2F80ED); // Sempre blu
+
+    return Expanded(
+      child: InkWell(
+        onTap: onLocationMenuTap,
+        splashColor: color.withOpacity(0.1),
+        highlightColor: Colors.transparent,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedRotation(
+              turns: isLocationMenuOpen ? 0.125 : 0, // Ruota di 45° quando aperto
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isLocationMenuOpen ? Icons.close : Icons.location_on_rounded,
+                color: color,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Mappa',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

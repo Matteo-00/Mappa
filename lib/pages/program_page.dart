@@ -51,6 +51,7 @@ class _ProgramPageState extends State<ProgramPage>
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
             ),
           ),
@@ -107,6 +108,8 @@ class _ProgramPageState extends State<ProgramPage>
         selectedIndex: 2, // Programma selezionato
         onTap: (index) => _handleNavigation(context, index, isCeraiolo),
         showMute: isCeraiolo,
+        onLocationMenuTap: () {}, // Non utilizzato in questa pagina
+        isLocationMenuOpen: false,
       ),
     );
   }

@@ -71,6 +71,8 @@ class _MuteListPageState extends State<MuteListPage> {
         selectedIndex: 3, // Mute selezionato
         onTap: (index) => _handleNavigation(context, index),
         showMute: true,
+        onLocationMenuTap: () {}, // Non utilizzato in questa pagina
+        isLocationMenuOpen: false,
       ),
     );
   }

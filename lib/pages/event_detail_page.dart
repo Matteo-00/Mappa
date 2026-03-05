@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/event_model.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/custom_bottom_nav.dart';
+import 'home_page.dart';
 
 /// Pagina dettaglio evento con informazioni complete
 /// Header e footer sempre visibili
@@ -72,6 +73,8 @@ class EventDetailPage extends StatelessWidget {
         selectedIndex: 2, // Programma selezionato
         onTap: (index) => _handleNavigation(context, index),
         showMute: false, // Da gestire dinamicamente se necessario
+        onLocationMenuTap: () {}, // Non utilizzato in questa pagina
+        isLocationMenuOpen: false,
       ),
     );
   }
@@ -359,9 +362,12 @@ class EventDetailPage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Torna alla home e centra sulla mappa
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                    // TODO: Centra mappa su event.coordinates
+                    // Naviga alla home con l'evento selezionato
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => HomePage(initialEventId: event.id),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.map_rounded, size: 20),
                   label: const Text('Vedi sulla mappa'),
