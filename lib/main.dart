@@ -26,23 +26,26 @@ class MappaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
       ],
       child: MaterialApp(
-        title: '15 Maggio',
+        title: '15 Maggio – Festa dei Ceri',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          scaffoldBackgroundColor: Colors.white,
+          scaffoldBackgroundColor: const Color(0xFFFFFFFF), // Bianco dominante
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFC00000), // Rosso brand
+            seedColor: const Color(0xFFB22222), // Rosso principale #B22222
             brightness: Brightness.light,
-            primary: const Color(0xFFC00000),
-            surface: Colors.white,
-            background: Colors.white,
+            primary: const Color(0xFFB22222),
+            secondary: const Color(0xFFC0392B), // Rosso hover
+            surface: const Color(0xFFFFFFFF),
+            background: const Color(0xFFFFFFFF),
+            error: const Color(0xFFB22222),
           ),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
+            backgroundColor: Color(0xFFFFFFFF),
             foregroundColor: Colors.black,
             elevation: 0,
             centerTitle: false,
+            surfaceTintColor: Colors.transparent,
           ),
           textTheme: const TextTheme(
             displayLarge: TextStyle(
@@ -51,8 +54,18 @@ class MappaApp extends StatelessWidget {
               letterSpacing: -0.5,
               color: Colors.black,
             ),
+            displayMedium: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFB22222), // Rosso per titoli importanti
+            ),
             titleLarge: TextStyle(
               fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+            titleMedium: TextStyle(
+              fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Colors.black,
             ),
@@ -61,13 +74,45 @@ class MappaApp extends StatelessWidget {
               height: 1.5,
               color: Colors.black87,
             ),
+            bodyMedium: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: Color(0xFF6B6B6B), // Grigio testo secondario
+            ),
           ),
           bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-            backgroundColor: Colors.white,
-            selectedItemColor: Color(0xFFC00000),
-            unselectedItemColor: Colors.grey,
-            elevation: 8,
+            backgroundColor: Color(0xFFFFFFFF),
+            selectedItemColor: Color(0xFF2F80ED), // Blu icone #2F80ED
+            unselectedItemColor: Color(0xFF6B6B6B), // Grigio
+            elevation: 0,
             type: BottomNavigationBarType.fixed,
+          ),
+          iconTheme: const IconThemeData(
+            color: Color(0xFF2F80ED), // Blu per icone #2F80ED
+          ),
+          dividerColor: const Color(0xFFEAEAEA), // Grigio separatori
+          cardTheme: CardThemeData(
+            color: const Color(0xFFFFFFFF),
+            elevation: 1,
+            shadowColor: Colors.black.withOpacity(0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB22222),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
         home: const LoginPage(),

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/muta_model.dart';
 import '../data/mute_data.dart';
+import '../widgets/custom_header.dart';
+import '../widgets/custom_bottom_nav.dart';
 import 'mute_form_page.dart';
 
 /// Pagina lista mute - visibile solo ai Ceraioli
+/// Header e footer sempre visibili
 class MuteListPage extends StatefulWidget {
   final Function(LatLng, double, MutaModel)? onNavigateToMuta;
 
@@ -21,29 +24,54 @@ class _MuteListPageState extends State<MuteListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mute'),
-        backgroundColor: const Color(0xFFB71C1C),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Nuova Muta',
-            onPressed: () => _navigateToCreateMuta(),
+      backgroundColor: const Color(0xFFFFFFFF),
+      appBar: const CustomHeader(),
+      body: Column(
+        children: [
+          // Titolo e pulsante aggiungi
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Mute',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFB22222),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_rounded),
+                  iconSize: 32,
+                  color: const Color(0xFF2F80ED),
+                  tooltip: 'Nuova Muta',
+                  onPressed: () => _navigateToCreateMuta(),
+                ),
+              ],
+            ),
+          ),
+          // Lista mute
+          Expanded(
+            child: muteData.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: muteData.length,
+                    itemBuilder: (context, index) {
+                      final muta = muteData[index];
+                      return _buildMutaCard(muta);
+                    },
+                  ),
           ),
         ],
       ),
-      body: muteData.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: muteData.length,
-              itemBuilder: (context, index) {
-                final muta = muteData[index];
-                return _buildMutaCard(muta);
-              },
-            ),
+      bottomNavigationBar: CustomBottomNav(
+        selectedIndex: 3, // Mute selezionato
+        onTap: (index) => _handleNavigation(context, index),
+        showMute: true,
+      ),
     );
   }
 
@@ -55,23 +83,23 @@ class _MuteListPageState extends State<MuteListPage> {
           Icon(
             Icons.people_outline,
             size: 80,
-            color: Colors.grey[400],
+            color: const Color(0xFF2F80ED).withOpacity(0.3),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Nessuna muta presente',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              color: Color(0xFF6B6B6B),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Crea la prima muta',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: Color(0xFF9E9E9E),
             ),
           ),
           const SizedBox(height: 24),
@@ -80,9 +108,13 @@ class _MuteListPageState extends State<MuteListPage> {
             icon: const Icon(Icons.add),
             label: const Text('Nuova Muta'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFB71C1C),
+              backgroundColor: const Color(0xFF2F80ED), // Blu invece di rosso
               foregroundColor: Colors.white,
+              elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -110,12 +142,12 @@ class _MuteListPageState extends State<MuteListPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFB71C1C).withOpacity(0.1),
+                      color: const Color(0xFF2F80ED).withOpacity(0.1), // Blu
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
                       Icons.people,
-                      color: Color(0xFFB71C1C),
+                      color: Color(0xFF2F80ED), // Blu
                       size: 24,
                     ),
                   ),
@@ -129,7 +161,7 @@ class _MuteListPageState extends State<MuteListPage> {
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFB71C1C),
+                            color: Colors.black, // Nero invece di rosso
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -183,8 +215,8 @@ class _MuteListPageState extends State<MuteListPage> {
                       icon: const Icon(Icons.map, size: 18),
                       label: const Text('Vai sulla mappa'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFB71C1C),
-                        side: const BorderSide(color: Color(0xFFB71C1C)),
+                        foregroundColor: const Color(0xFF2F80ED), // Blu
+                        side: const BorderSide(color: Color(0xFF2F80ED)), // Blu
                       ),
                     ),
                   ),
@@ -239,5 +271,14 @@ class _MuteListPageState extends State<MuteListPage> {
       // Ricarica la lista dopo la modifica
       setState(() {});
     });
+  }
+
+  /// Gestisce la navigazione dal footer
+  void _handleNavigation(BuildContext context, int index) {
+    if (index == 0 || index == 1 || index == 2) {
+      // Home, Dove sono, Programma - torna alla home
+      Navigator.of(context).pop();
+    }
+    // index 3 è Mute, già qui
   }
 }

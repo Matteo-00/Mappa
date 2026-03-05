@@ -4,17 +4,16 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../models/user_mode.dart';
-import '../models/muta_model.dart';
-import '../models/barella_model.dart';
+import '../models/event_model.dart';
 import '../data/events_data.dart';
-import '../data/mute_data.dart';
-import '../widgets/barella_visualization.dart';
-import 'turista_events_page.dart';
+import '../widgets/custom_header.dart';
+import '../widgets/custom_bottom_nav.dart';
+import '../widgets/welcome_popup.dart';
+import 'program_page.dart';
 import 'mute_list_page.dart';
-import 'login_page.dart';
-import 'user_profile_page.dart';
 
-/// HomePage con GoogleMap al centro, percorso Ceri e funzionalità complete
+/// HomePage ridisegnata con UI moderna ed elegante
+/// Header fisso + Mappa + Eventi + Footer fisso
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -28,16 +27,13 @@ class _HomePageState extends State<HomePage> {
   
   LatLng? _currentLocation;
   bool _isLoadingLocation = false;
-  double _currentZoom = 15.0; // Traccia il livello di zoom corrente
-  int _selectedIndex = 0; // Per il bottom navigation bar
+  int _selectedIndex = 0;
+  bool _showWelcomePopup = true; // Mostra popup di benvenuto
 
   // Centro iniziale: Gubbio, Piazza Grande
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(43.35190, 12.57730),
-    zoom: 15,
-  );
+  static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
 
-  // Percorso ufficiale dei Ceri (da Piazza Grande a Basilica Sant'Ubaldo)
+  // Percorso ufficiale dei Ceri
   final List<LatLng> _routeCoordinates = const [
     LatLng(43.35190, 12.57730), // Piazza Grande
     LatLng(43.35182, 12.57755),
@@ -77,7 +73,7 @@ class _HomePageState extends State<HomePage> {
         Polyline(
           polylineId: const PolylineId('ceri_route'),
           points: _routeCoordinates,
-          color: const Color(0xFFB71C1C), // Rosso elegante
+          color: const Color(0xFFB22222), // Rosso principale
           width: 5,
           geodesic: true,
         ),
@@ -85,47 +81,30 @@ class _HomePageState extends State<HomePage> {
 
   Set<Marker> get _markers {
     final markers = <Marker>{};
-    final userMode = context.read<AuthService>().userMode;
-
-    if (userMode == UserMode.ceraiolo) {
-      // Modalità Ceraiolo: mostra le mute solo con zoom >= 17
-      if (_currentZoom >= 17.0) {
-        for (final muta in muteData) {
-          markers.add(
-            Marker(
-              markerId: MarkerId(muta.id),
-              position: muta.coordinates,
-              // Blu scuro elegante (hue 210 = blu scuro)
-              icon: BitmapDescriptor.defaultMarkerWithHue(210),
-              onTap: () => _showMutaDetailPopup(muta),
-            ),
-          );
-        }
-      }
-    } else {
-      // Modalità Turista: mostra i luoghi degli eventi
-      for (final event in eventsData) {
-        markers.add(
-          Marker(
-            markerId: MarkerId(event.id),
-            position: event.coordinates,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-            infoWindow: InfoWindow(
-              title: event.title,
-              snippet: event.location,
-            ),
+    
+    // Marker rossi per eventi principali
+    final events = get15MaggioEvents();
+    for (final event in events) {
+      markers.add(
+        Marker(
+          markerId: MarkerId(event.id),
+          position: event.coordinates,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(
+            title: event.title,
+            snippet: event.time,
           ),
-        );
-      }
+        ),
+      );
     }
 
-    // Marker posizione utente blu
+    // Marker blu per posizione utente
     if (_currentLocation != null) {
       markers.add(
         Marker(
           markerId: const MarkerId('user_location'),
           position: _currentLocation!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(210), // Blu
+          icon: BitmapDescriptor.defaultMarkerWithHue(210), // Blu #2F80ED
           infoWindow: const InfoWindow(title: 'La tua posizione'),
         ),
       );
@@ -137,87 +116,63 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
-    final userMode = authService.userMode;
-    final isCeraiolo = userMode == UserMode.ceraiolo;
+    final isCeraiolo = authService.userMode == UserMode.ceraiolo;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _buildAppBar(context),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomNavBar(isCeraiolo),
-    );
-  }
-
-  /// AppBar con titolo "15 Maggio" e menu account
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      title: const Text(
-        '15 Maggio',
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFFC00000),
-        ),
+      backgroundColor: const Color(0xFFFFFFFF),
+      appBar: const CustomHeader(),
+      body: Stack(
+        children: [
+          // Contenuto principale
+          _buildMainContent(),
+          // Popup di benvenuto
+          if (_showWelcomePopup) _buildWelcomePopup(),
+        ],
       ),
-      actions: [
-        PopupMenuButton<String>(
-          icon: const Icon(
-            Icons.account_circle,
-            size: 32,
-            color: Colors.black87,
-          ),
-          offset: const Offset(0, 50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          onSelected: (value) {
-            if (value == 'profile') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const UserProfilePage(),
-                ),
-              );
-            } else if (value == 'logout') {
-              _handleLogout();
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'profile',
-              child: Row(
-                children: [
-                  Icon(Icons.person, color: Colors.black87),
-                  SizedBox(width: 12),
-                  Text('Utente'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'logout',
-              child: Row(
-                children: [
-                  Icon(Icons.logout, color: Colors.black87),
-                  SizedBox(width: 12),
-                  Text('Logout'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
+      bottomNavigationBar: CustomBottomNav(
+        selectedIndex: _selectedIndex,
+        onTap: (index) => _onBottomNavTap(index, isCeraiolo),
+        showMute: isCeraiolo,
+      ),
     );
   }
 
-  /// Body principale con mappa
-  Widget _buildBody() {
+  /// Contenuto principale: Mappa + Eventi
+  Widget _buildMainContent() {
+    if (_selectedIndex == 1) {
+      // Vista "Dove sono" - solo mappa full screen
+      return _buildFullScreenMap();
+    } else if (_selectedIndex == 3) {
+      // Vista Mute (solo ceraioli)
+      return MuteListPage(onNavigateToMuta: (coords, zoom, muta) {});
+    } else {
+      // Home - Mappa + Eventi
+      return Column(
+        children: [
+          // Mappa (occupa circa 50% dello schermo)
+          Expanded(
+            flex: 5,
+            child: _buildMap(),
+          ),
+          // Sezione Eventi
+          Expanded(
+            flex: 5,
+            child: _buildEventsSection(),
+          ),
+        ],
+      );
+    }
+  }
+
+  /// Mappa a schermo intero
+  Widget _buildFullScreenMap() {
     return Stack(
       children: [
-        // Mappa principale
         GoogleMap(
-          initialCameraPosition: _initialPosition,
+          initialCameraPosition: CameraPosition(
+            target: _currentLocation ?? _centerGubbio,
+            zoom: _currentLocation != null ? 17 : 15,
+          ),
           polylines: _polylines,
           markers: _markers,
           myLocationButtonEnabled: false,
@@ -226,24 +181,13 @@ class _HomePageState extends State<HomePage> {
           onMapCreated: (controller) {
             _mapController = controller;
           },
-          onCameraMove: (CameraPosition position) {
-            if (_currentZoom != position.zoom) {
-              setState(() {
-                _currentZoom = position.zoom;
-              });
-            }
-          },
-          onTap: (_) {
-            // Tap sulla mappa
-          },
         ),
-
-        // Loading indicator
         if (_isLoadingLocation)
-          const Positioned.fill(
-            child: Center(
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            child: const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFC00000)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFB22222)),
               ),
             ),
           ),
@@ -251,37 +195,233 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Bottom Navigation Bar
-  Widget _buildBottomNavBar(bool isCeraiolo) {
-    final items = [
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.home),
-        label: 'Home',
+  /// Mappa normale
+  Widget _buildMap() {
+    return GoogleMap(
+      initialCameraPosition: const CameraPosition(
+        target: _centerGubbio,
+        zoom: 15,
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.location_on),
-        label: 'Dove sono',
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.event),
-        label: 'Giornata',
-      ),
-      if (isCeraiolo)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.groups),
-          label: 'Mute',
-        ),
-    ];
+      polylines: _polylines,
+      markers: _markers,
+      myLocationButtonEnabled: false,
+      zoomControlsEnabled: false,
+      mapToolbarEnabled: false,
+      onMapCreated: (controller) {
+        _mapController = controller;
+      },
+    );
+  }
 
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (index) => _onBottomNavTap(index, isCeraiolo),
-      items: items,
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: const Color(0xFFC00000),
-      unselectedItemColor: Colors.grey,
-      elevation: 8,
+  /// Sezione Eventi (Prossimo evento + Oggi alla Festa)
+  Widget _buildEventsSection() {
+    final nextEvent = getNextEvent();
+    final todayEvents = get15MaggioEvents()
+        .where((e) => e.isToday())
+        .take(3)
+        .toList();
+
+    return Container(
+      color: const Color(0xFFFAFAFA),
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          // Prossimo evento
+          if (nextEvent != null) ...[
+            const Text(
+              'Prossimo evento',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B6B6B),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildNextEventCard(nextEvent),
+            const SizedBox(height: 32),
+          ],
+          // Oggi alla Festa
+          const Text(
+            'Oggi alla Festa',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...todayEvents.map((event) => _buildEventCard(event)),
+        ],
+      ),
+    );
+  }
+
+  /// Card del prossimo evento
+  Widget _buildNextEventCard(EventModel event) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF2F80ED), // Blu invece di rosso
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2F80ED), // Blu invece di rosso
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  event.time,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            event.title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {
+                // Centra la mappa sull'evento
+                _mapController?.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    CameraPosition(
+                      target: event.coordinates,
+                      zoom: 16,
+                    ),
+                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF2F80ED), // Blu invece di rosso
+                side: const BorderSide(
+                  color: Color(0xFF2F80ED), // Blu invece di rosso
+                  width: 2,
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Apri sulla mappa',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Card evento normale
+  Widget _buildEventCard(EventModel event) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFEAEAEA),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Immagine segnaposto
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.festival_rounded,
+              color: const Color(0xFFB22222).withOpacity(0.3),
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Info evento
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.time,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2F80ED), // Blu invece di rosso
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  event.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Popup di benvenuto
+  Widget _buildWelcomePopup() {
+    return WelcomePopup(
+      onClose: () {
+        setState(() {
+          _showWelcomePopup = false;
+        });
+      },
+      onViewProgram: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ProgramPage(),
+          ),
+        );
+      },
+      nextEvent: getNextEvent(),
     );
   }
 
@@ -291,95 +431,25 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = index;
     });
 
-    switch (index) {
-      case 0: // Home
-        _onHomePressed();
-        break;
-      case 1: // Dove sono
-        _onLocateUser();
-        break;
-      case 2: // Giornata
-        _onGiornataPressed();
-        break;
-      case 3: // Mute (solo ceraioli)
-        if (isCeraiolo) {
-          _onMutePressed();
-        }
-        break;
+    if (index == 1) {
+      // Dove sono - attiva geolocalizzazione
+      _onLocateUser();
+    } else if (index == 2) {
+      // Programma - apre pagina programma
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ProgramPage(),
+        ),
+      ).then((_) {
+        setState(() {
+          _selectedIndex = 0; // Torna a Home
+        });
+      });
     }
   }
 
-  /// Torna alla vista iniziale della mappa
-  void _onHomePressed() {
-    _mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(_initialPosition),
-    );
-  }
-
-  /// Apre la schermata "Come è strutturata la giornata"
-  void _onGiornataPressed() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const TuristaEventsPage(),
-      ),
-    ).then((_) {
-      // Reset l'indice quando si torna
-      setState(() {
-        _selectedIndex = 0;
-      });
-    });
-  }
-
-  /// Apre la schermata mute
-  void _onMutePressed() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MuteListPage(
-          onNavigateToMuta: _navigateToMuta,
-        ),
-      ),
-    ).then((_) {
-      setState(() {
-        _selectedIndex = 0;
-      });
-    });
-  }
-
-  /// Gestisce il logout
-  void _handleLogout() {
-    context.read<AuthService>().logout();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
-    );
-  }
-
-  /// Naviga alla muta sulla mappa, centra, zooma e apre il popup
-  void _navigateToMuta(LatLng coordinates, double zoom, MutaModel muta) {
-    setState(() {
-      _currentZoom = zoom;
-    });
-
-    _mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: coordinates,
-          zoom: zoom,
-        ),
-      ),
-    );
-
-    // Aspetta che l'animazione finisca e poi apre il popup
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        _showMutaDetailPopup(muta);
-      }
-    });
-  }
-
-  /// Localizza l'utente sulla mappa con marker blu
+  /// Localizza l'utente sulla mappa
   Future<void> _onLocateUser() async {
     setState(() => _isLoadingLocation = true);
 
@@ -398,26 +468,26 @@ class _HomePageState extends State<HomePage> {
         CameraUpdate.newCameraPosition(
           CameraPosition(
             target: location,
-            zoom: 16,
+            zoom: 17,
           ),
+        ),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Posizione trovata!'),
+          backgroundColor: Color(0xFF2F80ED), // Blu
+          duration: Duration(seconds: 2),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Impossibile ottenere la posizione'),
-          backgroundColor: Color(0xFFC00000),
+          backgroundColor: Color(0xFFB22222),
         ),
       );
     }
-  }
-
-  /// Mostra popup dettagliato con struttura barella e ceraioli
-  void _showMutaDetailPopup(MutaModel muta) {
-    showDialog(
-      context: context,
-      builder: (context) => BarellaVisualization(barella: barellaEsempio),
-    );
   }
 
   @override

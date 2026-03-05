@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../widgets/custom_header.dart';
+import '../widgets/custom_bottom_nav.dart';
 
 /// Schermata profilo utente che mostra tutte le informazioni di registrazione
+/// Header e footer sempre visibili
 class UserProfilePage extends StatelessWidget {
   const UserProfilePage({super.key});
 
@@ -13,9 +16,7 @@ class UserProfilePage extends StatelessWidget {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profilo'),
-        ),
+        appBar: const CustomHeader(),
         body: const Center(
           child: Text('Nessun utente autenticato'),
         ),
@@ -23,61 +24,82 @@ class UserProfilePage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Profilo Utente'),
-        elevation: 0,
-      ),
+      backgroundColor: const Color(0xFFFAFAFA),
+      appBar: const CustomHeader(),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Titolo pagina
+            const Text(
+              'Profilo Utente',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFB22222),
+              ),
+            ),
+            const SizedBox(height: 24),
+
             // Header con icona
             Center(
               child: Column(
                 children: [
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 100,
+                    height: 100,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFC00000).withOpacity(0.1),
+                      color: const Color(0xFFB22222).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.person,
-                      size: 48,
-                      color: Color(0xFFC00000),
+                      size: 50,
+                      color: Color(0xFFB22222),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Text(
                     user.nomeCompleto,
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.isCeraiolo ? 'Ceraiolo' : 'Turista',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: user.isCeraiolo
+                          ? const Color(0xFFB22222)
+                          : const Color(0xFF2F80ED),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      user.isCeraiolo ? 'Ceraiolo' : 'Turista',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
 
             // Card informazioni personali
             _buildInfoCard(
               title: 'Informazioni Personali',
               items: [
                 _InfoItem(
-                  icon: Icons.badge,
+                  icon: Icons.badge_outlined,
                   label: 'Nome',
                   value: user.nome,
                 ),
@@ -87,7 +109,7 @@ class UserProfilePage extends StatelessWidget {
                   value: user.cognome,
                 ),
                 _InfoItem(
-                  icon: Icons.cake,
+                  icon: Icons.cake_outlined,
                   label: 'Età',
                   value: '${user.eta} anni',
                 ),
@@ -107,40 +129,30 @@ class UserProfilePage extends StatelessWidget {
                 ),
                 if (user.isCeraiolo && user.cero != null)
                   _InfoItem(
-                    icon: Icons.local_fire_department,
-                    label: 'Cero',
+                    icon: Icons.festival_rounded,
+                    label: 'Cero scelto',
                     value: user.cero!,
                   ),
               ],
             ),
 
             const SizedBox(height: 32),
-
-            // Pulsante modifica (placeholder)
-            // SizedBox(
-            //   width: double.infinity,
-            //   child: OutlinedButton.icon(
-            //     onPressed: () {
-            //       // TODO: Implementare modifica profilo
-            //       ScaffoldMessenger.of(context).showSnackBar(
-            //         const SnackBar(
-            //           content: Text('Funzionalità in arrivo'),
-            //         ),
-            //       );
-            //     },
-            //     icon: const Icon(Icons.edit),
-            //     label: const Text('Modifica'),
-            //     style: OutlinedButton.styleFrom(
-            //       foregroundColor: const Color(0xFFC00000),
-            //       side: const BorderSide(color: Color(0xFFC00000)),
-            //       padding: const EdgeInsets.symmetric(vertical: 16),
-            //     ),
-            //   ),
-            // ),
           ],
         ),
       ),
+      bottomNavigationBar: CustomBottomNav(
+        selectedIndex: -1, // Nessuna tab selezionata (profilo aperto da menu)
+        onTap: (index) => _handleNavigation(context, index, user.isCeraiolo),
+        showMute: user.isCeraiolo,
+      ),
     );
+  }
+
+  /// Gestisce la navigazione dal footer
+  void _handleNavigation(BuildContext context, int index, bool isCeraiolo) {
+    // Chiude il profilo e torna alla home
+    Navigator.of(context).pop();
+    // La navigazione verrà gestita dalla HomePage
   }
 
   Widget _buildInfoCard({
@@ -150,14 +162,14 @@ class UserProfilePage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEAEAEA)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Text(
               title,
               style: const TextStyle(
@@ -167,7 +179,7 @@ class UserProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: Color(0xFFEAEAEA)),
           ...items.map((item) => _buildInfoRow(item)),
         ],
       ),
@@ -176,32 +188,41 @@ class UserProfilePage extends StatelessWidget {
 
   Widget _buildInfoRow(_InfoItem item) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          Icon(
-            item.icon,
-            size: 20,
-            color: const Color(0xFFC00000),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFB22222).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              item.icon,
+              size: 20,
+              color: const Color(0xFFB22222),
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   item.label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF6B6B6B),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   item.value,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
                 ),
