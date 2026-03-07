@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../models/user_mode.dart';
@@ -313,34 +314,34 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Immagine evento
-          Container(
-            height: 180,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.image_outlined,
-                    size: 48,
-                    color: const Color(0xFFBDBDBD),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Immagine evento',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: const Color(0xFF9E9E9E),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Container(
+          //   height: 180,
+          //   decoration: BoxDecoration(
+          //     color: const Color(0xFFF5F5F5),
+          //     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          //   ),
+          //   child: Center(
+          //     child: Column(
+          //       mainAxisAlignment: MainAxisAlignment.center,
+          //       children: [
+          //         Icon(
+          //           Icons.image_outlined,
+          //           size: 48,
+          //           color: const Color(0xFFBDBDBD),
+          //         ),
+          //         const SizedBox(height: 8),
+          //         Text(
+          //           'Immagine evento',
+          //           style: TextStyle(
+          //             fontSize: 13,
+          //             color: const Color(0xFF9E9E9E),
+          //             fontWeight: FontWeight.w500,
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
           // Contenuto
           Padding(
             padding: const EdgeInsets.all(20),
@@ -872,20 +873,51 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Apre la navigazione verso l'evento
-  void _openNavigation(EventModel event, String mode) {
-    // Costruisci URL per Google Maps (per uso futuro con url_launcher)
-    // final url = 'https://www.google.com/maps/dir/?api=1&destination=${event.coordinates.latitude},${event.coordinates.longitude}&travelmode=$mode';
+  Future<void> _openNavigation(EventModel event, String mode) async {
+    // Costruisci URL per Google Maps
+    final url = 'https://www.google.com/maps/dir/?api=1&destination=${event.coordinates.latitude},${event.coordinates.longitude}&travelmode=$mode';
     
-    // Mostra messaggio
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Apertura navigazione ${mode == 'walking' ? 'a piedi' : 'in auto'} verso ${event.title}',
-        ),
-        backgroundColor: const Color(0xFF2F80ED),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        
+        // Mostra messaggio di conferma
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Apertura navigazione ${mode == 'walking' ? 'a piedi' : 'in auto'} verso ${event.title}',
+              ),
+              backgroundColor: const Color(0xFF2F80ED),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Se non può aprire Google Maps, mostra errore
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Impossibile aprire Google Maps'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Gestisci errori
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore nell\'apertura della navigazione: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   /// Menu espandibile posizione (a ventaglio)

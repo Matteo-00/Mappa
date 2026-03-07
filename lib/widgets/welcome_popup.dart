@@ -78,37 +78,48 @@ class WelcomePopup extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Immagine segnaposto (folla con Ceri)
+                  // Immagine tamburini
                   Container(
                     height: 180,
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: const Color(0xFFEAEAEA),
                         width: 1,
                       ),
                     ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.festival_rounded,
-                            size: 60,
-                            color: const Color(0xFFB22222).withOpacity(0.3),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'I Ceri di Gubbio',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: const Color(0xFF6B6B6B),
-                              fontWeight: FontWeight.w500,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'tamburini.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: const Color(0xFFF5F5F5),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.festival_rounded,
+                                    size: 60,
+                                    color: const Color(0xFFB22222).withOpacity(0.3),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'I Ceri di Gubbio',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: const Color(0xFF6B6B6B),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),
