@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart';
 import 'login_page.dart';
 
 /// Schermata di registrazione con opzione Ceraiolo
@@ -189,12 +190,12 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.vgAncientParchment,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+          icon: const Icon(Icons.arrow_back, color: AppTheme.vgDarkSlate),
           onPressed: () => Navigator.pop(context),
         ),
       ),

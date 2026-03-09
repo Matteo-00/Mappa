@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
-import 'home_page.dart';
+import '../theme/app_theme.dart';
+import '../widgets/welcome_carousel_dialog.dart';
+import 'unified_home_page.dart';
 import 'register_page.dart';
 
-/// Schermata di Login elegante e minimal con Supabase Auth
+/// Schermata di Login con stile Visit Gubbio
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -61,9 +63,23 @@ class _LoginPageState extends State<LoginPage> {
       final authService = context.read<AuthService>();
       authService.loginWithSupabase(userData);
 
-      // Naviga alla home
+      // Mostra dialog di benvenuto, poi naviga alla home
+      if (!mounted) return;
+      
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WelcomeCarouselDialog(
+          onComplete: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+      
+      if (!mounted) return;
+      
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const UnifiedHomePage()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -89,8 +105,8 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: const Color(0xFFB71C1C),
-          duration: const Duration(seconds: 4),
+          backgroundColor: Colors.red[700],
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -99,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.vgAncientParchment,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -109,50 +125,55 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo/Icona stilizzata
+                  // Logo/Icona stilizzata medievale
                   Container(
-                    width: 120,
-                    height: 120,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      gradient: AppTheme.vgCardGradient,
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.vgBronze.withOpacity(0.5),
+                        width: 3,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: AppTheme.vgStoneGray.withOpacity(0.3),
                           blurRadius: 20,
-                          offset: const Offset(0, 4),
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.local_fire_department_outlined,
-                      size: 64,
-                      color: Colors.red[700],
+                    child: const Icon(
+                      Icons.location_city,
+                      size: 70,
+                      color: AppTheme.vgBronze,
                     ),
                   ),
 
                   const SizedBox(height: 32),
 
-                  // Titolo
-                  Text(
-                    'Festa dei Ceri',
+                  // Titolo principale
+                  const Text(
+                    'VISIT GUBBIO',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 36,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[900],
-                      letterSpacing: -0.5,
+                      color: AppTheme.vgDarkSlate,
+                      letterSpacing: 2.0,
+                      fontFamily: 'serif',
                     ),
                   ),
 
                   const SizedBox(height: 8),
 
                   Text(
-                    'Gubbio',
+                    'La città medievale dell\'Umbria',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w300,
-                      color: Colors.grey[600],
-                      letterSpacing: 2,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: AppTheme.vgStoneGray,
+                      letterSpacing: 0.5,
                     ),
                   ),
 
@@ -164,8 +185,10 @@ class _LoginPageState extends State<LoginPage> {
                     child: TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(color: AppTheme.vgDarkSlate),
                       decoration: InputDecoration(
                         labelText: 'Email',
+                        labelStyle: TextStyle(color: AppTheme.vgStoneGray),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -175,20 +198,20 @@ class _LoginPageState extends State<LoginPage> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: Colors.grey[300]!,
+                            color: AppTheme.vgStoneGray.withOpacity(0.3),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.red[700]!,
+                          borderSide: const BorderSide(
+                            color: AppTheme.vgBronze,
                             width: 2,
                           ),
                         ),
-                        prefixIcon: Icon(
+                        prefixIcon: const Icon(
                           Icons.email_outlined,
-                          color: Colors.grey[600],
+                          color: AppTheme.vgBronze,
                         ),
                       ),
                       validator: (value) {
@@ -211,8 +234,10 @@ class _LoginPageState extends State<LoginPage> {
                     child: TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
+                      style: const TextStyle(color: AppTheme.vgDarkSlate),
                       decoration: InputDecoration(
                         labelText: 'Password',
+                        labelStyle: TextStyle(color: AppTheme.vgStoneGray),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -222,27 +247,27 @@ class _LoginPageState extends State<LoginPage> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: Colors.grey[300]!,
+                            color: AppTheme.vgStoneGray.withOpacity(0.3),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.red[700]!,
+                          borderSide: const BorderSide(
+                            color: AppTheme.vgBronze,
                             width: 2,
                           ),
                         ),
-                        prefixIcon: Icon(
+                        prefixIcon: const Icon(
                           Icons.lock_outline,
-                          color: Colors.grey[600],
+                          color: AppTheme.vgBronze,
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
-                            color: Colors.grey[600],
+                            color: AppTheme.vgStoneGray,
                           ),
                           onPressed: () {
                             setState(() {
@@ -270,9 +295,10 @@ class _LoginPageState extends State<LoginPage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[700],
+                        backgroundColor: AppTheme.vgBronze,
                         foregroundColor: Colors.white,
-                        elevation: 0,
+                        elevation: 3,
+                        shadowColor: AppTheme.vgStoneGray.withOpacity(0.4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -288,11 +314,11 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             )
                           : const Text(
-                              'Accedi',
+                              'ACCEDI',
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
                               ),
                             ),
                     ),
@@ -301,53 +327,69 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 32),
 
                   // Link registrazione
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RegisterPage()),
-                      );
-                    },
-                    child: const Text(
-                      'Non hai un account? Registrati',
-                      style: TextStyle(
-                        color: Color(0xFFB71C1C),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Non hai un account? ',
+                        style: TextStyle(
+                          color: AppTheme.vgStoneGray,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                          );
+                        },
+                        child: const Text(
+                          'Registrati',
+                          style: TextStyle(
+                            color: AppTheme.vgBronze,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Info configurazione Supabase
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Configurazione Supabase',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
+                  // Info configurazione Supabase (per sviluppo)
+                  if (false) // Cambia a true per vedere le info di configurazione
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(top: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Configurazione Supabase',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Ricorda di inserire URL e ANON_KEY in main.dart',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Ricorda di inserire URL e ANON_KEY in main.dart',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
