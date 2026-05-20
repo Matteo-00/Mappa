@@ -27,15 +27,19 @@ class VisitGubbioApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp(
-            title: 'Visit Gubbio',
-            debugShowCheckedModeBanner: false,
-            theme: themeProvider.currentTheme,
-            home: const LoginPage(),
-          );
-        },
+      child: MaterialApp(
+        title: 'Visit Gubbio',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFB22222),
+            brightness: Brightness.light,
+            primary: const Color(0xFFB22222),
+          ),
+        ),
+        home: const LoginPage(),
       ),
     );
   }

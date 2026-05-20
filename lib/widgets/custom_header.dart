@@ -6,9 +6,9 @@ import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
-/// Header fisso personalizzato elegante per l'app "15 Maggio"
+/// Header fisso personalizzato elegante per l'app "Visit Gubbio"
 /// Altezza: 60px
-/// Sinistra: Icona casa + "15 Maggio"
+/// Sinistra: Icona + "Visit Gubbio"
 /// Destra: Avatar utente con menu dropdown
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   const CustomHeader({super.key});
@@ -36,28 +36,28 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           // Sinistra: Icona + Testo
           Row(
             children: [
-              // Icona casa stilizzata rossa
+              // Icona esplora stilizzata ambra
               Container(
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFB22222),
+                  color: const Color(0xFF9C7355),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Icon(
-                  Icons.home_rounded,
+                  Icons.explore,
                   color: Colors.white,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 12),
-              // Testo "15 Maggio"
+              // Testo "Visit Gubbio"
               const Text(
-                '15 Maggio',
+                'Visit Gubbio',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFFB22222), // Rosso principale
+                  color: Colors.black,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -109,7 +109,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           _handleLogout(context);
         }
       },
-      color: const Color(0xFFF5F5F5),
+      color: Colors.white,
       itemBuilder: (context) => [
         PopupMenuItem(
           value: 'profile',
@@ -253,10 +253,10 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFB22222).withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? const Color(0xFF9C7355).withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFFB22222) : Colors.grey[300]!,
+            color: isSelected ? const Color(0xFF9C7355) : Colors.grey[300]!,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -273,14 +273,14 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? const Color(0xFFB22222) : Colors.black87,
+                  color: isSelected ? const Color(0xFF9C7355) : Colors.black87,
                 ),
               ),
             ),
             if (isSelected)
               const Icon(
                 Icons.check_circle,
-                color: Color(0xFFB22222),
+                color: Color(0xFF9C7355),
                 size: 24,
               ),
           ],

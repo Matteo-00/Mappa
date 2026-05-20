@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_header.dart';
-import '../widgets/custom_bottom_nav.dart';
 
 /// Schermata profilo utente che mostra tutte le informazioni di registrazione
 /// Header e footer sempre visibili
@@ -48,18 +47,10 @@ class UserProfilePage extends StatelessWidget {
             Center(
               child: Column(
                 children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFB22222).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Color(0xFFB22222),
-                    ),
+                  Icon(
+                    Icons.person,
+                    size: 100,
+                    color: Colors.black,
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -68,25 +59,6 @@ class UserProfilePage extends StatelessWidget {
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2F80ED),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Turista',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
                     ),
                   ),
                 ],
@@ -122,21 +94,59 @@ class UserProfilePage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNav(
-        selectedIndex: -1, // Nessuna tab selezionata (profilo aperto da menu)
-        onTap: (index) => _handleNavigation(context, index, false),
-        showMute: false,
-        onLocationMenuTap: () {}, // Non utilizzato in questa pagina
-        isLocationMenuOpen: false,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop(); // Torna alla home
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.home,
+                          color: Colors.grey[800],
+                          size: 22,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Home',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
-  }
-
-  /// Gestisce la navigazione dal footer
-  void _handleNavigation(BuildContext context, int index, bool isCeraiolo) {
-    // Chiude il profilo e torna alla home
-    Navigator.of(context).pop();
-    // La navigazione verrà gestita dalla HomePage
   }
 
   Widget _buildInfoCard({
@@ -175,18 +185,10 @@ class UserProfilePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFB22222).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              item.icon,
-              size: 20,
-              color: const Color(0xFFB22222),
-            ),
+          Icon(
+            item.icon,
+            size: 24,
+            color: Colors.black,
           ),
           const SizedBox(width: 16),
           Expanded(

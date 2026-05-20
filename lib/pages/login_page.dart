@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
-import 'home_page.dart';
+import 'modern_home_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 
@@ -64,23 +64,11 @@ class _LoginPageState extends State<LoginPage> {
       final authService = context.read<AuthService>();
       authService.loginWithSupabase(userData);
 
-      // Mostra dialog di benvenuto, poi naviga alla home
-      if (!mounted) return;
-      
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => WelcomeCarouselDialog(
-          onComplete: () {
-            Navigator.of(context).pop();
-          },
-        ),
-      );
-      
+      // Naviga alla home
       if (!mounted) return;
       
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const UnifiedHomePage()),
+        MaterialPageRoute(builder: (_) => const ModernHomePage()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -121,7 +109,7 @@ class _LoginPageState extends State<LoginPage> {
     final l10n = AppLocalizations.of(langService.currentLanguageCode);
 
     return Scaffold(
-      backgroundColor: AppTheme.vgAncientParchment,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
@@ -141,8 +129,8 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFFB22222),
-                              Colors.red[800]!,
+                              const Color(0xFF9C7355),
+                              const Color(0xFF8B6F47),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -150,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFB22222).withOpacity(0.3),
+                              color: const Color(0xFF9C7355).withOpacity(0.3),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
@@ -183,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w300,
-                          color: const Color(0xFFB22222),
+                          color: const Color(0xFF9C7355),
                           letterSpacing: 1,
                         ),
                       ),
@@ -208,8 +196,10 @@ class _LoginPageState extends State<LoginPage> {
                         child: TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          cursorColor: Colors.black,
                           decoration: InputDecoration(
                             labelText: l10n.email,
+                            floatingLabelStyle: const TextStyle(color: Colors.black87),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
@@ -226,7 +216,7 @@ class _LoginPageState extends State<LoginPage> {
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: Color(0xFFB22222),
+                                color: Color(0xFF9C7355),
                                 width: 2,
                               ),
                             ),
@@ -262,8 +252,10 @@ class _LoginPageState extends State<LoginPage> {
                         child: TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
+                          cursorColor: Colors.black,
                           decoration: InputDecoration(
                             labelText: l10n.password,
+                            floatingLabelStyle: const TextStyle(color: Colors.black87),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
@@ -280,7 +272,7 @@ class _LoginPageState extends State<LoginPage> {
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: Color(0xFFB22222),
+                                color: Color(0xFF9C7355),
                                 width: 2,
                               ),
                             ),
@@ -336,7 +328,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Text(
                               l10n.forgotPassword,
                               style: const TextStyle(
-                                color: Color(0xFFB22222),
+                                color: Color(0xFF9C7355),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -355,10 +347,10 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFB22222),
+                            backgroundColor: const Color(0xFF9C7355),
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            shadowColor: const Color(0xFFB22222).withOpacity(0.3),
+                            shadowColor: const Color(0xFF9C7355).withOpacity(0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -428,7 +420,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Text(
                               l10n.register,
                               style: const TextStyle(
-                                color: Color(0xFFB22222),
+                                color: Color(0xFF9C7355),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -463,6 +455,7 @@ class _LoginPageState extends State<LoginPage> {
                   onSelected: (String code) {
                     langService.setLanguage(code);
                   },
+                  color: Colors.white,
                   offset: const Offset(0, 40),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -480,7 +473,7 @@ class _LoginPageState extends State<LoginPage> {
                           const Text('Italiano'),
                           if (langService.currentLanguageCode == 'it') ...[
                             const SizedBox(width: 8),
-                            const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                            const Icon(Icons.check, size: 16, color: Color(0xFF9C7355)),
                           ],
                         ],
                       ),
@@ -497,7 +490,7 @@ class _LoginPageState extends State<LoginPage> {
                           const Text('English'),
                           if (langService.currentLanguageCode == 'en') ...[
                             const SizedBox(width: 8),
-                            const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                            const Icon(Icons.check, size: 16, color: Color(0xFF9C7355)),
                           ],
                         ],
                       ),
