@@ -145,7 +145,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final l10n = AppLocalizations.of(langService.currentLanguageCode);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.vgAncientParchment,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

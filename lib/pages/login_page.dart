@@ -8,7 +8,7 @@ import 'home_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 
-/// Schermata di Login elegante e minimal con Supabase Auth
+/// Schermata di Login con stile Visit Gubbio
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -64,9 +64,23 @@ class _LoginPageState extends State<LoginPage> {
       final authService = context.read<AuthService>();
       authService.loginWithSupabase(userData);
 
-      // Naviga alla home
+      // Mostra dialog di benvenuto, poi naviga alla home
+      if (!mounted) return;
+      
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WelcomeCarouselDialog(
+          onComplete: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+      
+      if (!mounted) return;
+      
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const UnifiedHomePage()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -94,8 +108,8 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: const Color(0xFFB71C1C),
-          duration: const Duration(seconds: 4),
+          backgroundColor: Colors.red[700],
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -107,7 +121,7 @@ class _LoginPageState extends State<LoginPage> {
     final l10n = AppLocalizations.of(langService.currentLanguageCode);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.vgAncientParchment,
       body: SafeArea(
         child: Stack(
           children: [
