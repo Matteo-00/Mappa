@@ -77,14 +77,12 @@ class UserProfilePage extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: user.isCeraiolo
-                          ? const Color(0xFFB22222)
-                          : const Color(0xFF2F80ED),
+                      color: const Color(0xFF2F80ED),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      user.isCeraiolo ? 'Ceraiolo' : 'Turista',
-                      style: const TextStyle(
+                    child: const Text(
+                      'Turista',
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -111,32 +109,14 @@ class UserProfilePage extends StatelessWidget {
                   value: user.cognome,
                 ),
                 _InfoItem(
-                  icon: Icons.cake_outlined,
-                  label: 'Età',
-                  value: '${user.eta} anni',
+                  icon: Icons.email_outlined,
+                  label: 'Email',
+                  value: user.email,
                 ),
               ],
             ),
 
-            const SizedBox(height: 16),
 
-            // Card informazioni ceraiolo
-            _buildInfoCard(
-              title: 'Dettagli Ceri',
-              items: [
-                _InfoItem(
-                  icon: Icons.person_outline,
-                  label: 'Ceraiolo',
-                  value: user.isCeraiolo ? 'Sì' : 'No',
-                ),
-                if (user.isCeraiolo && user.cero != null)
-                  _InfoItem(
-                    icon: Icons.festival_rounded,
-                    label: 'Cero scelto',
-                    value: user.cero!,
-                  ),
-              ],
-            ),
 
             const SizedBox(height: 32),
           ],
@@ -144,8 +124,8 @@ class UserProfilePage extends StatelessWidget {
       ),
       bottomNavigationBar: CustomBottomNav(
         selectedIndex: -1, // Nessuna tab selezionata (profilo aperto da menu)
-        onTap: (index) => _handleNavigation(context, index, user.isCeraiolo),
-        showMute: user.isCeraiolo,
+        onTap: (index) => _handleNavigation(context, index, false),
+        showMute: false,
         onLocationMenuTap: () {}, // Non utilizzato in questa pagina
         isLocationMenuOpen: false,
       ),

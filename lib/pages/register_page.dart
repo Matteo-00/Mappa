@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import 'login_page.dart';
 
-/// Schermata di registrazione con opzione Ceraiolo
+/// Schermata di registrazione semplificata
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -14,75 +17,37 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
   final _cognomeController = TextEditingController();
-  final _etaController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _isCeraiolo = false;
-  String? _ceroScelto;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
-  final List<String> _ceriDisponibili = [
-    'Sant\'Ubaldo',
-    'Sant\'Antonio Abate',
-    'San Giorgio',
-  ];
 
   @override
   void dispose() {
     _nomeController.dispose();
     _cognomeController.dispose();
-    _etaController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  /// Validazione password robusta
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Inserisci una password';
-    }
-    if (value.length < 8) {
-      return 'Minimo 8 caratteri';
-    }
-    if (!value.contains(RegExp(r'[A-Z]'))) {
-      return 'Richiesta 1 maiuscola';
-    }
-    if (!value.contains(RegExp(r'[0-9]'))) {
-      return 'Richiesto 1 numero';
-    }
-    if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      return 'Richiesto 1 carattere speciale';
-    }
-    return null;
-  }
-
   /// Funzione di registrazione
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final langService = context.read<LanguageService>();
+    final l10n = AppLocalizations.of(langService.currentLanguageCode);
+
     // Controllo conferma password
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Le password non coincidono'),
-          backgroundColor: Color(0xFFB71C1C),
-        ),
-      );
-      return;
-    }
-
-    // Se è ceraiolo, controllo che abbia scelto un cero
-    if (_isCeraiolo && _ceroScelto == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Seleziona il tuo Cero'),
-          backgroundColor: Color(0xFFB71C1C),
+        SnackBar(
+          content: Text(l10n.passwordsDontMatch),
+          backgroundColor: const Color(0xFFB71C1C),
         ),
       );
       return;
@@ -93,26 +58,18 @@ class _RegisterPageState extends State<RegisterPage> {
     final supabase = Supabase.instance.client;
     final nome = _nomeController.text.trim();
     final cognome = _cognomeController.text.trim();
-    final eta = int.tryParse(_etaController.text.trim());
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (eta == null) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Età non valida'),
-          backgroundColor: Color(0xFFB71C1C),
-        ),
-      );
-      return;
-    }
-
     try {
-      // Registrazione con Supabase Auth
+      // Registrazione con Supabase Auth (include metadata per il trigger)
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'nome': nome,
+          'cognome': cognome,
+        },
       );
 
       final user = response.user;
@@ -120,23 +77,26 @@ class _RegisterPageState extends State<RegisterPage> {
         throw 'Registrazione fallita';
       }
 
-      // Salvataggio dati utente nella tabella utenti
-      await supabase.from('utenti').insert({
-        'id': user.id,
-        'nome': nome,
-        'cognome': cognome,
-        'eta': eta,
-        'is_ceraiolo': _isCeraiolo,
-        'cero': _isCeraiolo ? _ceroScelto : null,
-      });
+      // Salvataggio dati utente nella tabella utenti (fallback se il trigger non funziona)
+      try {
+        await supabase.from('utenti').insert({
+          'id': user.id,
+          'nome': nome,
+          'cognome': cognome,
+          'email': email,
+        });
+      } catch (insertError) {
+        // Se l'inserimento fallisce (es. trigger già creato), ignora l'errore
+        print('Insert skipped (trigger might have handled it): $insertError');
+      }
 
       if (!mounted) return;
 
       // Successo - torna al login
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registrazione completata! Effettua il login.'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(l10n.registrationSuccess),
+          backgroundColor: const Color(0xFF4CAF50),
         ),
       );
 
@@ -149,26 +109,19 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => _isLoading = false);
       
       // Gestione errori specifici
-      String errorMessage = 'Errore durante la registrazione';
+      String errorMessage = l10n.registrationError;
       
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('429') || errorString.contains('too many')) {
-        errorMessage = 'Troppe richieste! Attendi 5-10 minuti e riprova.\n'
-            'Supabase ha limiti di rate per prevenire spam.';
+        errorMessage = l10n.tooManyAttempts;
       } else if (errorString.contains('email') && errorString.contains('already')) {
-        errorMessage = 'Email già registrata. Prova ad effettuare il login.';
+        errorMessage = l10n.emailAlreadyInUse;
       } else if (errorString.contains('weak password')) {
-        errorMessage = 'Password troppo debole. Usa almeno 8 caratteri con maiuscole, numeri e caratteri speciali.';
+        errorMessage = l10n.weakPassword;
       } else if (errorString.contains('invalid email')) {
-        errorMessage = 'Email non valida. Controlla il formato.';
-      } else if (errorString.contains('42501') || errorString.contains('row-level security') || errorString.contains('violates row')) {
-        errorMessage = '⚠️ ERRORE CONFIGURAZIONE SUPABASE\n\n'
-            '1. Dashboard → Authentication → Settings\n'
-            '2. DISABILITA "Enable email confirmations"\n'
-            '3. Salva e riprova\n\n'
-            'Se l\'errore persiste, verifica le Policy RLS.';
+        errorMessage = l10n.invalidEmail;
       } else if (errorString.contains('network') || errorString.contains('connection')) {
-        errorMessage = 'Errore di connessione. Controlla la tua rete.';
+        errorMessage = l10n.connectionError;
       }
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,15 +141,89 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final langService = context.watch<LanguageService>();
+    final l10n = AppLocalizations.of(langService.currentLanguageCode);
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF424242)),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Selettore lingua
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: PopupMenuButton<String>(
+              initialValue: langService.currentLanguageCode,
+              onSelected: (String code) {
+                langService.setLanguage(code);
+              },
+              offset: const Offset(0, 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'it',
+                  child: Row(
+                    children: [
+                      const Text('🇮🇹', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      const Text('Italiano'),
+                      if (langService.currentLanguageCode == 'it') ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                      ],
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'en',
+                  child: Row(
+                    children: [
+                      const Text('🇬🇧', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      const Text('English'),
+                      if (langService.currentLanguageCode == 'en') ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      langService.currentLanguageCode == 'it' ? '🇮🇹' : '🇬🇧',
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -207,184 +234,71 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Titolo
+                  // Icona e titolo
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFB22222),
+                          Colors.red[800]!,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFB22222).withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.person_add,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
                   Text(
-                    'Registrazione',
+                    l10n.registration,
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[900],
                       letterSpacing: -0.5,
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
                   Text(
-                    'Crea il tuo account',
+                    l10n.createAccount,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Colors.grey[600],
                     ),
                   ),
-                  const SizedBox(height: 32),
 
-                  // Nome
-                  _buildTextField(
-                    controller: _nomeController,
-                    label: 'Nome',
-                    icon: Icons.person_outline,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Inserisci il nome';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 40),
 
-                  // Cognome
-                  _buildTextField(
-                    controller: _cognomeController,
-                    label: 'Cognome',
-                    icon: Icons.person_outline,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Inserisci il cognome';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Età
-                  _buildTextField(
-                    controller: _etaController,
-                    label: 'Età',
-                    icon: Icons.calendar_today_outlined,
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Inserisci l\'età';
-                      }
-                      final eta = int.tryParse(value);
-                      if (eta == null || eta < 1 || eta > 120) {
-                        return 'Età non valida';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Email
-                  _buildTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Inserisci l\'email';
-                      }
-                      if (!value.contains('@') || !value.contains('.')) {
-                        return 'Email non valida';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password
-                  _buildTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    icon: Icons.lock_outline,
-                    obscureText: _obscurePassword,
-                    validator: _validatePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: Colors.grey[600],
-                      ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Conferma Password
-                  _buildTextField(
-                    controller: _confirmPasswordController,
-                    label: 'Conferma Password',
-                    icon: Icons.lock_outline,
-                    obscureText: _obscureConfirmPassword,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Conferma la password';
-                      }
-                      return null;
-                    },
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: Colors.grey[600],
-                      ),
-                      onPressed: () {
-                        setState(
-                            () => _obscureConfirmPassword = !_obscureConfirmPassword);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Checkbox Ceraiolo
+                  // Nome e Cognome in riga
                   Container(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _isCeraiolo,
-                              activeColor: const Color(0xFFB71C1C),
-                              onChanged: (value) {
-                                setState(() {
-                                  _isCeraiolo = value ?? false;
-                                  if (!_isCeraiolo) {
-                                    _ceroScelto = null;
-                                  }
-                                });
-                              },
-                            ),
-                            Expanded(
-                              child: Text(
-                                'Sei un Ceraiolo?',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_isCeraiolo) ...[
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            value: _ceroScelto,
+                        Expanded(
+                          child: TextFormField(
+                            controller: _nomeController,
                             decoration: InputDecoration(
-                              labelText: 'Scegli il tuo Cero',
+                              labelText: l10n.firstName,
                               filled: true,
-                              fillColor: Colors.grey[50],
+                              fillColor: Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
@@ -399,36 +313,279 @@ class _RegisterPageState extends State<RegisterPage> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFFB71C1C),
+                                  color: Color(0xFFB22222),
                                   width: 2,
                                 ),
                               ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFB71C1C),
+                                  width: 1,
+                                ),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                            items: _ceriDisponibili.map((cero) {
-                              return DropdownMenuItem(
-                                value: cero,
-                                child: Text(cero),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() => _ceroScelto = value);
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return l10n.enterFirstName;
+                              }
+                              return null;
                             },
                           ),
-                        ],
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _cognomeController,
+                            decoration: InputDecoration(
+                              labelText: l10n.lastName,
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFB22222),
+                                  width: 2,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFB71C1C),
+                                  width: 1,
+                                ),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return l10n.enterLastName;
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Email
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: l10n.email,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB22222),
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB71C1C),
+                            width: 1,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.enterEmail;
+                        }
+                        if (!value.contains('@')) {
+                          return l10n.invalidEmail;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Password
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: l10n.password,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB22222),
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB71C1C),
+                            width: 1,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: Colors.grey[600],
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.enterPassword;
+                        }
+                        if (value.length < 6) {
+                          return l10n.passwordMinLength;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Conferma Password
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        labelText: l10n.confirmPassword,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB22222),
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB71C1C),
+                            width: 1,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: Colors.grey[600],
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.confirmPasswordText;
+                        }
+                        if (value != _passwordController.text) {
+                          return l10n.passwordsDontMatch;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
 
                   // Pulsante Registrati
                   Container(
-                    constraints: const BoxConstraints(maxWidth: 400),
+                    constraints: const BoxConstraints(maxWidth: 500),
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB71C1C),
+                        backgroundColor: const Color(0xFFB22222),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -445,9 +602,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                     AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                          : const Text(
-                              'Registrati',
-                              style: TextStyle(
+                          : Text(
+                              l10n.register,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 0.5,
@@ -455,87 +612,46 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                     ),
                   ),
-                  const SizedBox(height: 16),
 
-                  // Link al login
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                      );
-                    },
-                    child: Text(
-                      'Hai già un account? Accedi',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14,
+                  const SizedBox(height: 24),
+
+                  // Link per tornare al login
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        l10n.haveAccount + ' ',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          l10n.signIn,
+                          style: const TextStyle(
+                            color: Color(0xFFB22222),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    String? Function(String?)? validator,
-    Widget? suffixIcon,
-  }) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 400),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscureText,
-        decoration: InputDecoration(
-          labelText: label,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Colors.grey[300]!,
-              width: 1,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: Color(0xFFB71C1C),
-              width: 2,
-            ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Colors.orange[700]!,
-              width: 1,
-            ),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Colors.orange[700]!,
-              width: 2,
-            ),
-          ),
-          prefixIcon: Icon(icon, color: Colors.grey[600]),
-          suffixIcon: suffixIcon,
-        ),
-        validator: validator,
       ),
     );
   }

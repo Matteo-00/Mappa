@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/auth_service.dart';
+import 'services/language_service.dart';
 import 'pages/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://jqvsfnkypvnjymrnubdv.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxdnNmbmt5cHZuanltcm51YmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NDc2NzIsImV4cCI6MjA4ODEyMzY3Mn0.l0QlcFdwZhrhgxollQ1F-n2bTmQTwhtGWilw_EBdZZo',
+    url: 'https://kcoglivbakjyxszoruka.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjb2dsaXZiYWtqeXhzem9ydWthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDA0NTcsImV4cCI6MjA4ODYxNjQ1N30.ICFTE2V6Y62BjT2gagazjLvyW8RZIZUji_D575hC5sY',
   );
 
   runApp(const MappaApp());
@@ -24,6 +25,7 @@ class MappaApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => LanguageService()),
       ],
       child: MaterialApp(
         title: '15 Maggio – Festa dei Ceri',

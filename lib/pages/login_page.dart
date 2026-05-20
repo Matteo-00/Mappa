@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import 'home_page.dart';
 import 'register_page.dart';
+import 'forgot_password_page.dart';
 
 /// Schermata di Login elegante e minimal con Supabase Auth
 class LoginPage extends StatefulWidget {
@@ -71,19 +74,21 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = false);
 
       // Gestione errori specifici
-      String errorMessage = 'Errore durante il login';
+      final langService = context.read<LanguageService>();
+      final l10n = AppLocalizations.of(langService.currentLanguageCode);
+      String errorMessage = l10n.loginError;
       
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('invalid') && (errorString.contains('email') || errorString.contains('password') || errorString.contains('credentials'))) {
-        errorMessage = 'Email o password non corretti';
+        errorMessage = l10n.invalidCredentials;
       } else if (errorString.contains('429') || errorString.contains('too many')) {
-        errorMessage = 'Troppi tentativi! Attendi qualche minuto e riprova.';
+        errorMessage = l10n.tooManyAttempts;
       } else if (errorString.contains('email not confirmed')) {
-        errorMessage = 'Email non confermata. Controlla la tua casella di posta.';
+        errorMessage = l10n.emailNotConfirmed;
       } else if (errorString.contains('network') || errorString.contains('connection')) {
-        errorMessage = 'Errore di connessione. Controlla la tua rete.';
+        errorMessage = l10n.connectionError;
       } else if (errorString.contains('user not found')) {
-        errorMessage = 'Account non trovato. Registrati prima.';
+        errorMessage = l10n.userNotFound;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,260 +103,410 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final langService = context.watch<LanguageService>();
+    final l10n = AppLocalizations.of(langService.currentLanguageCode);
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo/Icona stilizzata
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.local_fire_department_outlined,
-                      size: 64,
-                      color: Colors.red[700],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Titolo
-                  Text(
-                    'Festa dei Ceri',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[900],
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    'Gubbio',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w300,
-                      color: Colors.grey[600],
-                      letterSpacing: 2,
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  // Campo Email
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.grey[300]!,
-                            width: 1,
+        child: Stack(
+          children: [
+            // Contenuto principale
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo/Icona stilizzata
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFFB22222),
+                              Colors.red[800]!,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFB22222).withOpacity(0.3),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.red[700]!,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.email_outlined,
-                          color: Colors.grey[600],
+                        child: const Icon(
+                          Icons.local_fire_department,
+                          size: 70,
+                          color: Colors.white,
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Inserisci email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Email non valida';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 40),
 
-                  // Campo Password
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                      // Titolo con multilingua
+                      Text(
+                        l10n.welcome,
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[900],
+                          letterSpacing: -0.5,
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.grey[300]!,
-                            width: 1,
-                          ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        l10n.toGubbio,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w300,
+                          color: const Color(0xFFB22222),
+                          letterSpacing: 1,
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.red[700]!,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.lock_outline,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Text(
+                        l10n.discoverGubbio,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
                           color: Colors.grey[600],
+                          letterSpacing: 0.3,
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.grey[600],
+                      ),
+
+                      const SizedBox(height: 48),
+
+                      // Campo Email
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            labelText: l10n.email,
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB22222),
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB71C1C),
+                                width: 1,
+                              ),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.enterEmail;
+                            }
+                            if (!value.contains('@')) {
+                              return l10n.invalidEmail;
+                            }
+                            return null;
                           },
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Inserisci password';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
 
-                  const SizedBox(height: 32),
+                      const SizedBox(height: 16),
 
-                  // Pulsante Login
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[700],
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text(
-                              'Accedi',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
+                      // Campo Password
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: l10n.password,
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
                               ),
                             ),
-                    ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB22222),
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB71C1C),
+                                width: 1,
+                              ),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: Colors.grey[600],
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.grey[600],
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.enterPassword;
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Password dimenticata
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              l10n.forgotPassword,
+                              style: const TextStyle(
+                                color: Color(0xFFB22222),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Pulsante Login
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB22222),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shadowColor: const Color(0xFFB22222).withOpacity(0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  l10n.login,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Divider
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey[300])),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'o',
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: Colors.grey[300])),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Link registrazione
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            l10n.noAccount + ' ',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              l10n.register,
+                              style: const TextStyle(
+                                color: Color(0xFFB22222),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: 32),
-
-                  // Link registrazione
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RegisterPage()),
-                      );
-                    },
-                    child: const Text(
-                      'Non hai un account? Registrati',
-                      style: TextStyle(
-                        color: Color(0xFFB71C1C),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+            // Selettore lingua in alto a destra
+            Positioned(
+              top: 16,
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: PopupMenuButton<String>(
+                  initialValue: langService.currentLanguageCode,
+                  onSelected: (String code) {
+                    langService.setLanguage(code);
+                  },
+                  offset: const Offset(0, 40),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  itemBuilder: (BuildContext context) => [
+                    PopupMenuItem(
+                      value: 'it',
+                      child: Row(
+                        children: [
+                          Text(
+                            '🇮🇹',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Italiano'),
+                          if (langService.currentLanguageCode == 'it') ...[
+                            const SizedBox(width: 8),
+                            const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                          ],
+                        ],
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Info configurazione Supabase
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
+                    PopupMenuItem(
+                      value: 'en',
+                      child: Row(
+                        children: [
+                          Text(
+                            '🇬🇧',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('English'),
+                          if (langService.currentLanguageCode == 'en') ...[
+                            const SizedBox(width: 8),
+                            const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                          ],
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Configurazione Supabase',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
-                          ),
+                          langService.currentLanguageCode == 'it' ? '🇮🇹' : '🇬🇧',
+                          style: const TextStyle(fontSize: 20),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Ricorda di inserire URL e ANON_KEY in main.dart',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

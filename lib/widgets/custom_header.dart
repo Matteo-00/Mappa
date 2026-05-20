@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../pages/user_profile_page.dart';
 import '../pages/login_page.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 /// Header fisso personalizzato elegante per l'app "15 Maggio"
@@ -70,6 +72,9 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
 
   /// Menu utente con avatar circolare
   Widget _buildUserMenu(BuildContext context) {
+    final langService = context.watch<LanguageService>();
+    final l10n = AppLocalizations.of(langService.currentLanguageCode);
+
     return PopupMenuButton<String>(
       offset: const Offset(0, 50),
       shape: RoundedRectangleBorder(
@@ -98,6 +103,8 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
               builder: (_) => const UserProfilePage(),
             ),
           );
+        } else if (value == 'language') {
+          _showLanguageDialog(context, langService, l10n);
         } else if (value == 'logout') {
           _handleLogout(context);
         }
@@ -116,9 +123,34 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Utente',
-                  style: TextStyle(
+                Text(
+                  l10n.profile,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'language',
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.language,
+                  color: Color(0xFF424242),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  l10n.language,
+                  style: const TextStyle(
                     fontSize: 15,
                     color: Colors.black,
                     fontWeight: FontWeight.w500,
@@ -141,9 +173,9 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
                   size: 20,
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Logout',
-                  style: TextStyle(
+                Text(
+                  l10n.logout,
+                  style: const TextStyle(
                     fontSize: 15,
                     color: Colors.black,
                     fontWeight: FontWeight.w500,
@@ -154,6 +186,106 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Mostra dialog per cambiare lingua
+  void _showLanguageDialog(BuildContext context, LanguageService langService, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            l10n.language,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLanguageOption(
+                context: dialogContext,
+                langService: langService,
+                l10n: l10n,
+                languageCode: 'it',
+                languageName: l10n.italian,
+                flagEmoji: '🇮🇹',
+              ),
+              const SizedBox(height: 12),
+              _buildLanguageOption(
+                context: dialogContext,
+                langService: langService,
+                l10n: l10n,
+                languageCode: 'en',
+                languageName: l10n.english,
+                flagEmoji: '🇬🇧',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption({
+    required BuildContext context,
+    required LanguageService langService,
+    required AppLocalizations l10n,
+    required String languageCode,
+    required String languageName,
+    required String flagEmoji,
+  }) {
+    final isSelected = langService.currentLanguageCode == languageCode;
+
+    return InkWell(
+      onTap: () async {
+        await langService.setLanguage(languageCode);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFB22222).withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFB22222) : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              flagEmoji,
+              style: const TextStyle(fontSize: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                languageName,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? const Color(0xFFB22222) : Colors.black87,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_circle,
+                color: Color(0xFFB22222),
+                size: 24,
+              ),
+          ],
+        ),
+      ),
     );
   }
 

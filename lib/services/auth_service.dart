@@ -18,8 +18,8 @@ class AuthService extends ChangeNotifier {
     _currentUser = UserModel.fromJson(userData);
     _isAuthenticated = true;
     
-    // Determina UserMode in base a is_ceraiolo
-    _userMode = _currentUser!.isCeraiolo ? UserMode.ceraiolo : UserMode.turista;
+    // Tutti gli utenti partono come turisti
+    _userMode = UserMode.turista;
     
     notifyListeners();
   }
