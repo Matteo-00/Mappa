@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../pages/restaurants_page.dart';
+import '../pages/bars_page.dart';
+import '../pages/hotels_page.dart';
+import '../pages/storia_page.dart';
+import '../pages/festa_ceri_page.dart';
 
 /// Drawer menu laterale moderno stile Google Maps
 /// Occupa circa metà schermo con animazione fluida
@@ -70,7 +75,12 @@ class AppDrawer extends StatelessWidget {
                       title: 'Ristoranti',
                       onTap: () {
                         Navigator.pop(context);
-                        // TODO: Navigare a pagina ristoranti
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RestaurantsPage(),
+                          ),
+                        );
                       },
                     ),
                     _buildMenuItem(
@@ -79,7 +89,12 @@ class AppDrawer extends StatelessWidget {
                       title: 'Bar',
                       onTap: () {
                         Navigator.pop(context);
-                        // TODO: Navigare a pagina bar
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BarsPage(),
+                          ),
+                        );
                       },
                     ),
                     _buildMenuItem(
@@ -88,7 +103,12 @@ class AppDrawer extends StatelessWidget {
                       title: 'Hotel',
                       onTap: () {
                         Navigator.pop(context);
-                        // TODO: Navigare a pagina hotel
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HotelsPage(),
+                          ),
+                        );
                       },
                     ),
                     _buildMenuItem(
@@ -97,7 +117,12 @@ class AppDrawer extends StatelessWidget {
                       title: 'Storia di Gubbio',
                       onTap: () {
                         Navigator.pop(context);
-                        // TODO: Navigare a pagina storia
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StoriaPage(),
+                          ),
+                        );
                       },
                     ),
                     const Divider(height: 32, thickness: 1),
@@ -109,7 +134,12 @@ class AppDrawer extends StatelessWidget {
                       iconColor: Colors.red,
                       onTap: () {
                         Navigator.pop(context);
-                        // TODO: Navigare a modalità Festa dei Ceri
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FestaCeriPage(),
+                          ),
+                        );
                       },
                     ),
                   ],

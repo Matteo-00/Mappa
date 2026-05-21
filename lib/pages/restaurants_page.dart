@@ -5,6 +5,7 @@ import '../data/restaurants_data.dart';
 import '../theme/app_theme.dart';
 import '../services/location_service.dart';
 import 'restaurant_detail_page.dart';
+import '../widgets/custom_header.dart';
 
 /// Pagina ristoranti con mappa integrata e lista
 class RestaurantsPage extends StatefulWidget {
@@ -129,6 +130,8 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
       backgroundColor: AppTheme.vgAncientParchment,
       body: Column(
         children: [
+          // Header
+          const CustomHeader(),
           // Mappa
           SizedBox(
             height: 300,
@@ -147,10 +150,8 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
               zoomControlsEnabled: false,
             ),
           ),
-          
           // Barra di ricerca
           _buildSearchBar(),
-          
           // Lista ristoranti
           Expanded(
             child: _filteredRestaurants.isEmpty
@@ -163,6 +164,8 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                     },
                   ),
           ),
+          // Footer
+          _buildFooter(context),
         ],
       ),
     );
@@ -384,6 +387,61 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+  
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).pop(); // Torna alla home
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.home,
+                        color: Colors.grey[800],
+                        size: 22,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Home',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
