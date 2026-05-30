@@ -108,87 +108,59 @@ class _LoginPageState extends State<LoginPage> {
     final langService = context.watch<LanguageService>();
     final l10n = AppLocalizations.of(langService.currentLanguageCode);
 
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
         child: Stack(
           children: [
             // Contenuto principale
+            Align(
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 24),
+                  // Logo ancora più grande
+                  SizedBox(
+                    width: 400,
+                    height: 400,
+                    child: Image.asset(
+                      'assets/geo/logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'La più bella città medioevale',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.brown,
+                      fontFamily: 'Cinzel', // Font elegante stile antico, assicurati che sia nel progetto
+                      letterSpacing: 2.0,
+                      fontStyle: FontStyle.italic,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 2,
+                          color: Colors.brown.shade200,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Form principale centrato
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.only(top: 380, left: 24, right: 24, bottom: 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo/Icona stilizzata
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF9C7355),
-                              const Color(0xFF8B6F47),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF9C7355).withOpacity(0.3),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.local_fire_department,
-                          size: 70,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const SizedBox(height: 40),
-
-                      // Titolo con multilingua
-                      Text(
-                        l10n.welcome,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[900],
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      Text(
-                        l10n.toGubbio,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w300,
-                          color: const Color(0xFF9C7355),
-                          letterSpacing: 1,
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      Text(
-                        l10n.discoverGubbio,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-
-                      const SizedBox(height: 48),
 
                       // Campo Email
                       Container(
@@ -199,7 +171,6 @@ class _LoginPageState extends State<LoginPage> {
                           cursorColor: Colors.black,
                           decoration: InputDecoration(
                             labelText: l10n.email,
-                            floatingLabelStyle: const TextStyle(color: Colors.black87),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
@@ -208,16 +179,16 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.grey[300]!,
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
                                 width: 1,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: Color(0xFF9C7355),
-                                width: 2,
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
                               ),
                             ),
                             errorBorder: OutlineInputBorder(
@@ -255,7 +226,6 @@ class _LoginPageState extends State<LoginPage> {
                           cursorColor: Colors.black,
                           decoration: InputDecoration(
                             labelText: l10n.password,
-                            floatingLabelStyle: const TextStyle(color: Colors.black87),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
@@ -264,16 +234,16 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.grey[300]!,
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
                                 width: 1,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: Color(0xFF9C7355),
-                                width: 2,
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
                               ),
                             ),
                             errorBorder: OutlineInputBorder(
@@ -315,23 +285,21 @@ class _LoginPageState extends State<LoginPage> {
                       // Password dimenticata
                       Container(
                         constraints: const BoxConstraints(maxWidth: 400),
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const ForgotPasswordPage(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              l10n.forgotPassword,
-                              style: const TextStyle(
-                                color: Color(0xFF9C7355),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                        alignment: Alignment.center,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordPage(),
                               ),
+                            );
+                          },
+                          child: Text(
+                            l10n.forgotPassword,
+                            style: const TextStyle(
+                              color: Color(0xFFB13B2E),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -347,10 +315,10 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF9C7355),
+                            backgroundColor: const Color(0xFFB13B2E),
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            shadowColor: const Color(0xFF9C7355).withOpacity(0.3),
+                            shadowColor: const Color(0xFFB13B2E).withOpacity(0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -383,7 +351,7 @@ class _LoginPageState extends State<LoginPage> {
                         constraints: const BoxConstraints(maxWidth: 400),
                         child: Row(
                           children: [
-                            Expanded(child: Divider(color: Colors.grey[300])),
+                            Expanded(child: Divider(color: const Color(0xFFE5E1DB))),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
@@ -391,7 +359,7 @@ class _LoginPageState extends State<LoginPage> {
                                 style: TextStyle(color: Colors.grey[600]),
                               ),
                             ),
-                            Expanded(child: Divider(color: Colors.grey[300])),
+                            Expanded(child: Divider(color: const Color(0xFFE5E1DB))),
                           ],
                         ),
                       ),
@@ -420,7 +388,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Text(
                               l10n.register,
                               style: const TextStyle(
-                                color: Color(0xFF9C7355),
+                                color: Color(0xFFB13B2E),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -473,7 +441,7 @@ class _LoginPageState extends State<LoginPage> {
                           const Text('Italiano'),
                           if (langService.currentLanguageCode == 'it') ...[
                             const SizedBox(width: 8),
-                            const Icon(Icons.check, size: 16, color: Color(0xFF9C7355)),
+                            const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
                           ],
                         ],
                       ),
@@ -490,7 +458,7 @@ class _LoginPageState extends State<LoginPage> {
                           const Text('English'),
                           if (langService.currentLanguageCode == 'en') ...[
                             const SizedBox(width: 8),
-                            const Icon(Icons.check, size: 16, color: Color(0xFF9C7355)),
+                            const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
                           ],
                         ],
                       ),

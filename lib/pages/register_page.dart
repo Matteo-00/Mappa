@@ -145,7 +145,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final l10n = AppLocalizations.of(langService.currentLanguageCode);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8E7),
+      backgroundColor: const Color(0xFFFFFFFF),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -187,7 +187,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const Text('Italiano'),
                       if (langService.currentLanguageCode == 'it') ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                        const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
                       ],
                     ],
                   ),
@@ -201,7 +201,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const Text('English'),
                       if (langService.currentLanguageCode == 'en') ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                        const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
                       ],
                     ],
                   ),
@@ -226,76 +226,55 @@ class _RegisterPageState extends State<RegisterPage> {
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icona e titolo
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFB22222),
-                          Colors.red[800]!,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFB22222).withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.person_add,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Text(
-                    l10n.registration,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[900],
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-
                   const SizedBox(height: 8),
-
+                  // Logo identico al login
+                  SizedBox(
+                    width: 400,
+                    height: 400,
+                    child: Image.asset(
+                      'assets/geo/logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    l10n.createAccount,
+                    'Registra il tuo account',
                     style: TextStyle(
                       fontSize: 14,
+                      fontWeight: FontWeight.w400,
                       color: Colors.grey[600],
+                      letterSpacing: 0.5,
                     ),
                   ),
+                ],
+              ),
+            ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 450, left: 24, right: 24, bottom: 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
 
-                  const SizedBox(height: 40),
-
-                  // Nome e Cognome in riga
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _nomeController,
-                            decoration: InputDecoration(
+                      // Nome e Cognome in riga
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _nomeController,
+                                cursorColor: Colors.black,
+                                decoration: InputDecoration(
                               labelText: l10n.firstName,
                               filled: true,
                               fillColor: Colors.white,
@@ -305,16 +284,16 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE5E1DB),
                                   width: 1,
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFFB22222),
-                                  width: 2,
+                                  color: Color(0xFFE5E1DB),
+                                  width: 1,
                                 ),
                               ),
                               errorBorder: OutlineInputBorder(
@@ -337,11 +316,12 @@ class _RegisterPageState extends State<RegisterPage> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _cognomeController,
-                            decoration: InputDecoration(
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _cognomeController,
+                                cursorColor: Colors.black,
+                                decoration: InputDecoration(
                               labelText: l10n.lastName,
                               filled: true,
                               fillColor: Colors.white,
@@ -351,16 +331,16 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE5E1DB),
                                   width: 1,
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFFB22222),
-                                  width: 2,
+                                  color: Color(0xFFE5E1DB),
+                                  width: 1,
                                 ),
                               ),
                               errorBorder: OutlineInputBorder(
@@ -387,15 +367,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Email
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
+                      // Email
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          cursorColor: Colors.black,
+                          decoration: InputDecoration(
                         labelText: l10n.email,
                         filled: true,
                         fillColor: Colors.white,
@@ -405,16 +386,16 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.grey[300]!,
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E1DB),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFB22222),
-                            width: 2,
+                            color: Color(0xFFE5E1DB),
+                            width: 1,
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
@@ -441,15 +422,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Password
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
+                      // Password
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          cursorColor: Colors.black,
+                          decoration: InputDecoration(
                         labelText: l10n.password,
                         filled: true,
                         fillColor: Colors.white,
@@ -459,16 +441,16 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.grey[300]!,
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E1DB),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFB22222),
-                            width: 2,
+                            color: Color(0xFFE5E1DB),
+                            width: 1,
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
@@ -508,15 +490,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Conferma Password
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirmPassword,
-                      decoration: InputDecoration(
+                      // Conferma Password
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: _obscureConfirmPassword,
+                          cursorColor: Colors.black,
+                          decoration: InputDecoration(
                         labelText: l10n.confirmPassword,
                         filled: true,
                         fillColor: Colors.white,
@@ -526,16 +509,16 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.grey[300]!,
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E1DB),
                             width: 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFB22222),
-                            width: 2,
+                            color: Color(0xFFE5E1DB),
+                            width: 1,
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
@@ -575,17 +558,17 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                  // Pulsante Registrati
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB22222),
+                      // Pulsante Registrati
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB13B2E),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -613,31 +596,31 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                  // Link per tornare al login
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        l10n.haveAccount + ' ',
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 14,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginPage(),
+                      // Link per tornare al login
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            l10n.haveAccount + ' ',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14,
                             ),
-                          );
-                        },
-                        child: Text(
-                          l10n.signIn,
-                          style: const TextStyle(
-                            color: Color(0xFFB22222),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginPage(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              l10n.signIn,
+                              style: const TextStyle(
+                                color: Color(0xFFB13B2E),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -646,11 +629,13 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
 
-                  const SizedBox(height: 16),
-                ],
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
