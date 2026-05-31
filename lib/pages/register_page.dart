@@ -243,22 +243,22 @@ class _RegisterPageState extends State<RegisterPage> {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Registra il tuo account',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey[600],
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                  // const SizedBox(height: 0),
+                  // Text(
+                  //   'Registra il tuo account',
+                  //   style: TextStyle(
+                  //     fontSize: 14,
+                  //     fontWeight: FontWeight.w400,
+                  //     color: Colors.grey[600],
+                  //     letterSpacing: 0.5,
+                  //   ),
+                  // ),
                 ],
               ),
             ),
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 450, left: 24, right: 24, bottom: 24),
+                padding: const EdgeInsets.only(top: 380, left: 24, right: 24, bottom: 24),
                 child: Form(
                   key: _formKey,
                   child: Column(

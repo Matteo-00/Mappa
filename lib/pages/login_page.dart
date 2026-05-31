@@ -120,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 64),
                   // Logo ancora più grande
                   SizedBox(
                     width: 400,
@@ -130,25 +130,25 @@ class _LoginPageState extends State<LoginPage> {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'La più bella città medioevale',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.brown,
-                      fontFamily: 'Cinzel', // Font elegante stile antico, assicurati che sia nel progetto
-                      letterSpacing: 2.0,
-                      fontStyle: FontStyle.italic,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 2,
-                          color: Colors.brown.shade200,
-                          offset: Offset(1, 1),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // const SizedBox(height: 4),
+                  // Text(
+                  //   'La più bella città medioevale',
+                  //   style: TextStyle(
+                  //     fontSize: 14,
+                  //     fontWeight: FontWeight.w400,
+                  //     color: Colors.brown,
+                  //     fontFamily: 'Cinzel', // Font elegante stile antico, assicurati che sia nel progetto
+                  //     letterSpacing: 2.0,
+                  //     fontStyle: FontStyle.italic,
+                  //     shadows: [
+                  //       Shadow(
+                  //         blurRadius: 2,
+                  //         color: Colors.brown.shade200,
+                  //         offset: Offset(1, 1),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
               ),
             ),
