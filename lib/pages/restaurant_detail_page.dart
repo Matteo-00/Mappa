@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/restaurant_model.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../widgets/premium_scaffold.dart';
+import 'map_page.dart';
 
 /// Pagina dettaglio ristorante
 class RestaurantDetailPage extends StatelessWidget {
@@ -16,33 +17,18 @@ class RestaurantDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.vgAncientParchment,
+      backgroundColor: AppColors.avorio,
       body: CustomScrollView(
         slivers: [
           // App bar con immagine
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: AppTheme.vgWarmBeige,
-            leading: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  color: AppTheme.vgDarkSlate,
-                ),
-              ),
+            automaticallyImplyLeading: false,
+            backgroundColor: AppColors.avorio,
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 8, top: 4),
+              child: HomeButton(light: true),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: restaurant.imageUrl != null
@@ -75,7 +61,7 @@ class RestaurantDetailPage extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.vgDarkSlate,
+                          color: AppColors.bluNotte,
                           height: 1.2,
                         ),
                       ),
@@ -92,7 +78,7 @@ class RestaurantDetailPage extends StatelessWidget {
                           const SizedBox(width: 8),
                           if (restaurant.rating != null)
                             _buildInfoChip(
-                              Icons.star,
+                              Icons.star_rounded,
                               restaurant.rating!.toString(),
                             ),
                           const SizedBox(width: 8),
@@ -115,10 +101,10 @@ class RestaurantDetailPage extends StatelessWidget {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.vgBronze.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
+                                color: AppColors.rossoGubbio.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: AppTheme.vgBronze.withOpacity(0.3),
+                                  color: AppColors.rossoGubbio.withOpacity(0.25),
                                 ),
                               ),
                               child: Text(
@@ -126,7 +112,7 @@ class RestaurantDetailPage extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.vgBronze,
+                                  color: AppColors.rossoGubbio,
                                 ),
                               ),
                             );
@@ -136,7 +122,7 @@ class RestaurantDetailPage extends StatelessWidget {
                   ),
                 ),
                 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 
                 // Descrizione
                 Container(
@@ -149,8 +135,8 @@ class RestaurantDetailPage extends StatelessWidget {
                         'Descrizione',
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.vgDarkSlate,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.bluNotte,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -159,14 +145,14 @@ class RestaurantDetailPage extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 15,
                           height: 1.6,
-                          color: AppTheme.vgStoneGray,
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
                 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 
                 // Informazioni di contatto
                 if (restaurant.phoneNumber != null || restaurant.website != null)
@@ -180,8 +166,8 @@ class RestaurantDetailPage extends StatelessWidget {
                           'Contatti',
                           style: TextStyle(
                             fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.vgDarkSlate,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.bluNotte,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -201,7 +187,7 @@ class RestaurantDetailPage extends StatelessWidget {
                     ),
                   ),
                 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 
                 // Indirizzo
                 Container(
@@ -214,8 +200,8 @@ class RestaurantDetailPage extends StatelessWidget {
                         'Indirizzo',
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.vgDarkSlate,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.bluNotte,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -224,7 +210,7 @@ class RestaurantDetailPage extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 15,
                           height: 1.6,
-                          color: AppTheme.vgStoneGray,
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ],
@@ -247,14 +233,19 @@ class RestaurantDetailPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.vgWarmStone, AppTheme.vgStoneGray],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.tortora.withOpacity(0.6),
+            AppColors.avorio,
+          ],
         ),
       ),
       child: Center(
         child: Icon(
-          Icons.restaurant,
-          size: 100,
-          color: Colors.white.withOpacity(0.5),
+          Icons.restaurant_menu,
+          size: 92,
+          color: AppColors.rossoGubbio.withOpacity(0.5),
         ),
       ),
     );
@@ -264,20 +255,20 @@ class RestaurantDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.vgWarmBeige,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.avorio,
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppTheme.vgBronze),
+          Icon(icon, size: 16, color: AppColors.rossoGubbio),
           const SizedBox(width: 4),
           Text(
             text,
             style: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.vgDarkSlate,
+              fontWeight: FontWeight.w700,
+              color: AppColors.bluNotte,
             ),
           ),
         ],
@@ -289,8 +280,8 @@ class RestaurantDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.vgOliveGreen,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.verdeSalvia,
+        borderRadius: BorderRadius.circular(10),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
@@ -315,25 +306,25 @@ class RestaurantDetailPage extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppTheme.vgBronze),
+            Icon(icon, size: 20, color: AppColors.rossoGubbio),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 text,
                 style: const TextStyle(
                   fontSize: 15,
-                  color: AppTheme.vgStoneGray,
-                  decoration: TextDecoration.underline,
+                  color: AppColors.bluNotte,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
             const Icon(
               Icons.arrow_forward_ios,
-              size: 16,
-              color: AppTheme.vgStoneGray,
+              size: 15,
+              color: AppColors.tortora,
             ),
           ],
         ),
@@ -348,29 +339,37 @@ class RestaurantDetailPage extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+            color: AppColors.bluNotte.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Mostra sulla mappa
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 52,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Torna indietro alla pagina ristoranti con mappa
-                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MapPage()),
+                  );
                 },
-                icon: const Icon(Icons.map),
+                icon: const Icon(Icons.map_outlined),
                 label: const Text('MOSTRA SULLA MAPPA'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.vgBronze,
+                  backgroundColor: AppColors.rossoGubbio,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
@@ -386,9 +385,12 @@ class RestaurantDetailPage extends StatelessWidget {
                     icon: const Icon(Icons.directions_walk, size: 20),
                     label: const Text('A piedi'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.vgBronze,
-                      side: const BorderSide(color: AppTheme.vgBronze),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: AppColors.rossoGubbio,
+                      side: const BorderSide(color: AppColors.rossoGubbio),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -399,9 +401,12 @@ class RestaurantDetailPage extends StatelessWidget {
                     icon: const Icon(Icons.directions_car, size: 20),
                     label: const Text('In auto'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.vgBronze,
-                      side: const BorderSide(color: AppTheme.vgBronze),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: AppColors.rossoGubbio,
+                      side: const BorderSide(color: AppColors.rossoGubbio),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),

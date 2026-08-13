@@ -1,308 +1,373 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_header.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/bar_model.dart';
+import '../data/bars_data.dart';
+import '../theme/app_colors.dart';
+import '../services/location_service.dart';
+import '../widgets/premium_scaffold.dart';
 
-/// Pagina Bar - Mostra lista bar a Gubbio
-class BarsPage extends StatelessWidget {
+/// Pagina bar con mappa integrata e lista (stesso stile dei ristoranti)
+class BarsPage extends StatefulWidget {
   const BarsPage({super.key});
+
+  @override
+  State<BarsPage> createState() => _BarsPageState();
+}
+
+class _BarsPageState extends State<BarsPage> {
+  GoogleMapController? _mapController;
+  final TextEditingController _searchController = TextEditingController();
+  final LocationService _locationService = LocationService();
+
+  List<BarModel> _allBars = [];
+  List<BarModel> _filteredBars = [];
+  Set<Marker> _markers = {};
+
+  LatLng? _currentLocation;
+  String _searchQuery = '';
+
+  static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBars();
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _loadBars() {
+    _allBars = getGubbioBars();
+    _applyFilters();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    final location = await _locationService.getCurrentLocation();
+    if (location != null) {
+      setState(() {
+        _currentLocation = location;
+      });
+      _sortByDistance();
+    }
+  }
+
+  void _applyFilters() {
+    List<BarModel> filtered = List.from(_allBars);
+
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((bar) {
+        return bar.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    setState(() {
+      _filteredBars = filtered;
+    });
+
+    _sortByDistance();
+    _createMarkers();
+  }
+
+  void _sortByDistance() {
+    if (_currentLocation != null) {
+      _filteredBars.sort((a, b) {
+        final distA = a.calculateDistance(_currentLocation!);
+        final distB = b.calculateDistance(_currentLocation!);
+        return distA.compareTo(distB);
+      });
+    }
+  }
+
+  void _createMarkers() {
+    final markers = <Marker>{};
+
+    for (final bar in _filteredBars) {
+      markers.add(
+        Marker(
+          markerId: MarkerId(bar.id),
+          position: bar.coordinates,
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
+          infoWindow: InfoWindow(
+            title: bar.name,
+            snippet: bar.priceRange,
+          ),
+          onTap: () => _onMarkerTap(bar),
+        ),
+      );
+    }
+
+    setState(() {
+      _markers = markers;
+    });
+  }
+
+  void _onMarkerTap(BarModel bar) {
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(bar.coordinates, 17),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const CustomHeader(),
+      backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          // Titolo pagina
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey[200]!,
-                  width: 1,
+          const PremiumHeader(title: 'Bar'),
+          // Mappa
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: SizedBox(
+                height: 240,
+                child: GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: _centerGubbio,
+                    zoom: 15,
+                  ),
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                  },
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  mapType: MapType.normal,
+                  zoomControlsEnabled: false,
                 ),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Bar',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'I migliori bar di Gubbio',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
           ),
-
+          // Barra di ricerca
+          _buildSearchBar(),
           // Lista bar
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildBarCard(
-                  context,
-                  name: 'Caffè del Centro',
-                  address: 'Piazza Grande, Gubbio',
-                  description: 'Bar storico nel cuore di Gubbio. Ottimo caffè e pasticceria artigianale.',
-                  rating: 4.6,
-                  imageIcon: Icons.local_cafe,
-                ),
-                const SizedBox(height: 16),
-                _buildBarCard(
-                  context,
-                  name: 'Bar San Francesco',
-                  address: 'Via Cairoli, 15, Gubbio',
-                  description: 'Bar moderno con terrazza panoramica. Aperitivi e cocktail.',
-                  rating: 4.4,
-                  imageIcon: Icons.local_bar,
-                ),
-                const SizedBox(height: 16),
-                _buildBarCard(
-                  context,
-                  name: 'Caffetteria dei Ceri',
-                  address: 'Corso Garibaldi, 32, Gubbio',
-                  description: 'Caffetteria tradizionale con specialità locali. Ambiente familiare.',
-                  rating: 4.5,
-                  imageIcon: Icons.coffee,
-                ),
-              ],
-            ),
+            child: _filteredBars.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    itemCount: _filteredBars.length,
+                    itemBuilder: (context, index) {
+                      return _buildBarCard(_filteredBars[index]);
+                    },
+                  ),
           ),
-
-          // Footer con Home
-          _buildFooter(context),
         ],
       ),
     );
   }
 
-  Widget _buildBarCard(
-    BuildContext context, {
-    required String name,
-    required String address,
-    required String description,
-    required double rating,
-    required IconData imageIcon,
-  }) {
+  /// Barra di ricerca
+  Widget _buildSearchBar() {
     return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Immagine placeholder
-          Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFF9C7355).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Icon(
-              imageIcon,
-              size: 64,
-              color: const Color(0xFF9C7355),
-            ),
-          ),
-
-          // Contenuto
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nome e rating
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.star,
-                            size: 16,
-                            color: Colors.amber,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating.toString(),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Indirizzo
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        address,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Descrizione
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                    height: 1.4,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Azioni
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Mostra $name sulla mappa'),
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: const Color(0xFF9C7355),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.map,
-                        size: 18,
-                      ),
-                      label: const Text('Mappa'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF9C7355),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+          _applyFilters();
+        },
+        decoration: InputDecoration(
+          hintText: 'Cerca bar per nome...',
+          hintStyle: const TextStyle(color: AppColors.textMuted),
+          prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: AppColors.tortora),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                    _applyFilters();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
       ),
     );
   }
 
-  Widget _buildFooter(BuildContext context) {
+  /// Card singolo bar
+  Widget _buildBarCard(BarModel bar) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: InkWell(
+        onTap: () => _onMarkerTap(bar),
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).pop();
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.home,
-                        color: Colors.grey[800],
-                        size: 22,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Home',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
+              // Icona
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.tortora.withOpacity(0.45),
+                      AppColors.avorio,
                     ],
                   ),
+                ),
+                child: const Icon(
+                  Icons.local_cafe_outlined,
+                  size: 38,
+                  color: AppColors.rossoGubbio,
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Informazioni
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            bar.name,
+                            style: const TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.bluNotte,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (bar.rating != null) ...[
+                          const Icon(Icons.star_rounded,
+                              size: 16, color: AppColors.rossoGubbio),
+                          const SizedBox(width: 2),
+                          Text(
+                            bar.rating!.toString(),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.rossoGubbio,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      bar.description,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_currentLocation != null) ...[
+                          const Icon(Icons.place_outlined,
+                              size: 14, color: AppColors.rossoGubbio),
+                          const SizedBox(width: 4),
+                          Text(
+                            bar.formatDistance(_currentLocation!),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.rossoGubbio,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Text(
+                          bar.priceRange,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Stato vuoto
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.local_cafe_outlined,
+            size: 76,
+            color: AppColors.tortora.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Nessun bar trovato',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.bluNotte,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Prova a modificare la ricerca',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ],
       ),
     );
   }

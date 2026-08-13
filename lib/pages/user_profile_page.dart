@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../widgets/custom_header.dart';
+import '../theme/app_colors.dart';
+import '../widgets/premium_scaffold.dart';
+import 'login_page.dart';
 
-/// Schermata profilo utente che mostra tutte le informazioni di registrazione
-/// Header e footer sempre visibili
+/// Schermata profilo utente che mostra le informazioni di registrazione.
 class UserProfilePage extends StatelessWidget {
   const UserProfilePage({super.key});
 
@@ -15,138 +16,158 @@ class UserProfilePage extends StatelessWidget {
 
     if (user == null) {
       return Scaffold(
-        appBar: const CustomHeader(),
-        body: const Center(
-          child: Text('Nessun utente autenticato'),
+        backgroundColor: AppColors.avorio,
+        body: Column(
+          children: const [
+            PremiumHeader(title: 'Utente'),
+            Expanded(
+              child: Center(child: Text('Nessun utente autenticato')),
+            ),
+          ],
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      appBar: const CustomHeader(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Titolo pagina
-            Center(
-              child: const Text(
-                'Profilo Utente',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Header con icona
-            Center(
+      backgroundColor: AppColors.avorio,
+      body: Column(
+        children: [
+          const PremiumHeader(title: 'Utente'),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.person,
-                    size: 100,
-                    color: Colors.black,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    user.nomeCompleto,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Card informazioni personali
-            _buildInfoCard(
-              title: 'Informazioni Personali',
-              items: [
-                _InfoItem(
-                  icon: Icons.badge_outlined,
-                  label: 'Nome',
-                  value: user.nome,
-                ),
-                _InfoItem(
-                  icon: Icons.badge_outlined,
-                  label: 'Cognome',
-                  value: user.cognome,
-                ),
-                _InfoItem(
-                  icon: Icons.email_outlined,
-                  label: 'Email',
-                  value: user.email,
-                ),
-              ],
-            ),
-
-
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).pop(); // Torna alla home
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  // Avatar + nome
+                  Center(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.home,
-                          color: Colors.grey[800],
-                          size: 22,
+                        Container(
+                          width: 108,
+                          height: 108,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.tortora.withOpacity(0.5),
+                                AppColors.avorio,
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.bluNotte.withOpacity(0.08),
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              _initials(user.nome, user.cognome),
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'serif',
+                                color: AppColors.rossoGubbio,
+                              ),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 16),
                         Text(
-                          'Home',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[800],
+                          user.nomeCompleto,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.bluNotte,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 32),
+
+                  // Card informazioni personali
+                  _buildInfoCard(
+                    title: 'Informazioni Personali',
+                    items: [
+                      _InfoItem(
+                        icon: Icons.badge_outlined,
+                        label: 'Nome',
+                        value: user.nome,
+                      ),
+                      _InfoItem(
+                        icon: Icons.badge_outlined,
+                        label: 'Cognome',
+                        value: user.cognome,
+                      ),
+                      _InfoItem(
+                        icon: Icons.email_outlined,
+                        label: 'Email',
+                        value: user.email,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Logout
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleLogout(context),
+                      icon: const Icon(Icons.logout_rounded, size: 20),
+                      label: const Text('Esci dall\'account'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.rossoGubbio,
+                        side: const BorderSide(color: AppColors.rossoGubbio),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  String _initials(String nome, String cognome) {
+    final a = nome.isNotEmpty ? nome[0] : '';
+    final b = cognome.isNotEmpty ? cognome[0] : '';
+    final res = '$a$b'.toUpperCase();
+    return res.isEmpty ? 'U' : res;
+  }
+
+  void _handleLogout(BuildContext context) async {
+    final authService = context.read<AuthService>();
+    await authService.logout();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    }
   }
 
   Widget _buildInfoCard({
@@ -156,24 +177,30 @@ class UserProfilePage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEAEAEA)),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.bluNotte,
               ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFEAEAEA)),
+          const Divider(height: 1, color: AppColors.grigioChiaro),
           ...items.map((item) => _buildInfoRow(item)),
         ],
       ),
@@ -185,10 +212,13 @@ class UserProfilePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          Icon(
-            item.icon,
-            size: 24,
-            color: Colors.black,
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: AppColors.rossoGubbio.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(item.icon, size: 20, color: AppColors.rossoGubbio),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -198,18 +228,18 @@ class UserProfilePage extends StatelessWidget {
                 Text(
                   item.label,
                   style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6B6B6B),
+                    fontSize: 12.5,
+                    color: AppColors.textMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   item.value,
                   style: const TextStyle(
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: AppColors.bluNotte,
                   ),
                 ),
               ],

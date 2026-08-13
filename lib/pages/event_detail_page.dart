@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/event_model.dart';
-import '../widgets/custom_header.dart';
-import '../widgets/custom_bottom_nav.dart';
-import 'home_page.dart';
+import '../theme/app_colors.dart';
+import '../widgets/premium_scaffold.dart';
+import 'map_page.dart';
 
 /// Pagina dettaglio evento con informazioni complete
-/// Header e footer sempre visibili
 class EventDetailPage extends StatelessWidget {
   final EventModel event;
 
@@ -17,64 +16,63 @@ class EventDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
-      appBar: const CustomHeader(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Immagine grande in alto
-            _buildEventImage(),
-            
-            // Contenuto dettagli
-            Padding(
-              padding: const EdgeInsets.all(20),
+      backgroundColor: AppColors.avorio,
+      body: Column(
+        children: [
+          const PremiumHeader(title: 'Evento'),
+          Expanded(
+            child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Orario con icona
-                  _buildTimeSection(),
-                  const SizedBox(height: 16),
-                  
-                  // Titolo evento
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      height: 1.3,
+                  // Immagine grande in alto
+                  _buildEventImage(),
+
+                  // Contenuto dettagli
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Orario con icona
+                        _buildTimeSection(),
+                        const SizedBox(height: 16),
+
+                        // Titolo evento
+                        Text(
+                          event.title,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.bluNotte,
+                            height: 1.25,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Descrizione completa
+                        _buildDescriptionSection(),
+                        const SizedBox(height: 24),
+
+                        // Informazioni storiche
+                        _buildHistoricalSection(),
+                        const SizedBox(height: 24),
+
+                        // Curiosità (se disponibili)
+                        _buildCuriositySection(),
+                        const SizedBox(height: 24),
+
+                        // Luogo
+                        _buildLocationSection(context),
+                        const SizedBox(height: 24),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  
-                  // Descrizione completa
-                  _buildDescriptionSection(),
-                  const SizedBox(height: 24),
-                  
-                  // Informazioni storiche
-                  _buildHistoricalSection(),
-                  const SizedBox(height: 24),
-                  
-                  // Curiosità (se disponibili)
-                  _buildCuriositySection(),
-                  const SizedBox(height: 24),
-                  
-                  // Luogo
-                  _buildLocationSection(context),
-                  const SizedBox(height: 80), // Spazio per il footer
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: CustomBottomNav(
-        selectedIndex: 2, // Programma selezionato
-        onTap: (index) => _handleNavigation(context, index),
-        showMute: false, // Da gestire dinamicamente se necessario
-        onLocationMenuTap: () {}, // Non utilizzato in questa pagina
-        isLocationMenuOpen: false,
+          ),
+        ],
       ),
     );
   }
@@ -83,41 +81,37 @@ class EventDetailPage extends StatelessWidget {
   Widget _buildEventImage() {
     return Container(
       width: double.infinity,
-      height: 250,
+      height: 220,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        border: Border(
-          bottom: BorderSide(
-            color: const Color(0xFFEAEAEA),
-            width: 1,
-          ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.tortora.withOpacity(0.4),
+            AppColors.avorio,
+          ],
         ),
       ),
-      child: Stack(
-        children: [
-          // Segnaposto immagine
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.festival_rounded,
-                  size: 80,
-                  color: const Color(0xFF2F80ED).withOpacity(0.3),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Festa dei Ceri',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: const Color(0xFF6B6B6B),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.festival_outlined,
+              size: 72,
+              color: AppColors.rossoGubbio.withOpacity(0.5),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            const Text(
+              'Festa dei Ceri',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -127,7 +121,7 @@ class EventDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2F80ED).withOpacity(0.1),
+        color: AppColors.rossoGubbio.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -135,7 +129,7 @@ class EventDetailPage extends StatelessWidget {
         children: [
           const Icon(
             Icons.access_time_rounded,
-            color: Color(0xFF2F80ED),
+            color: AppColors.rossoGubbio,
             size: 22,
           ),
           const SizedBox(width: 10),
@@ -144,7 +138,7 @@ class EventDetailPage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2F80ED),
+              color: AppColors.rossoGubbio,
             ),
           ),
         ],
@@ -161,8 +155,8 @@ class EventDetailPage extends StatelessWidget {
           'Descrizione',
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
           ),
         ),
         const SizedBox(height: 12),
@@ -174,7 +168,7 @@ class EventDetailPage extends StatelessWidget {
                   'il cuore pulsante della città.',
           style: const TextStyle(
             fontSize: 16,
-            color: Color(0xFF6B6B6B),
+            color: AppColors.textMuted,
             height: 1.6,
           ),
         ),
@@ -185,14 +179,17 @@ class EventDetailPage extends StatelessWidget {
   /// Sezione informazioni storiche
   Widget _buildHistoricalSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFEAEAEA),
-          width: 1,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluNotte.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,12 +199,12 @@ class EventDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2F80ED).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.rossoGubbio.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.menu_book_rounded,
-                  color: Color(0xFF2F80ED),
+                  color: AppColors.rossoGubbio,
                   size: 20,
                 ),
               ),
@@ -216,8 +213,8 @@ class EventDetailPage extends StatelessWidget {
                 'Contesto Storico',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.bluNotte,
                 ),
               ),
             ],
@@ -227,7 +224,7 @@ class EventDetailPage extends StatelessWidget {
             _getHistoricalContext(event.id),
             style: const TextStyle(
               fontSize: 15,
-              color: Color(0xFF6B6B6B),
+              color: AppColors.textMuted,
               height: 1.5,
             ),
           ),
@@ -242,12 +239,12 @@ class EventDetailPage extends StatelessWidget {
     if (curiosities.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFB22222).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.rossoGubbio.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFFB22222).withOpacity(0.2),
+          color: AppColors.rossoGubbio.withOpacity(0.18),
           width: 1,
         ),
       ),
@@ -259,12 +256,12 @@ class EventDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFB22222).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.rossoGubbio.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.lightbulb_outline_rounded,
-                  color: Color(0xFFB22222),
+                  color: AppColors.rossoGubbio,
                   size: 20,
                 ),
               ),
@@ -273,8 +270,8 @@ class EventDetailPage extends StatelessWidget {
                 'Lo sapevi che...',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.bluNotte,
                 ),
               ),
             ],
@@ -289,7 +286,7 @@ class EventDetailPage extends StatelessWidget {
                       '• ',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFFB22222),
+                        color: AppColors.rossoGubbio,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -298,7 +295,7 @@ class EventDetailPage extends StatelessWidget {
                         curiosity,
                         style: const TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF6B6B6B),
+                          color: AppColors.textMuted,
                           height: 1.5,
                         ),
                       ),
@@ -320,20 +317,23 @@ class EventDetailPage extends StatelessWidget {
           'Posizione',
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
           ),
         ),
         const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFEAEAEA),
-              width: 1,
-            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.bluNotte.withOpacity(0.05),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -341,7 +341,7 @@ class EventDetailPage extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.location_on_rounded,
-                    color: Color(0xFF2F80ED),
+                    color: AppColors.rossoGubbio,
                     size: 22,
                   ),
                   const SizedBox(width: 12),
@@ -350,8 +350,8 @@ class EventDetailPage extends StatelessWidget {
                       event.location,
                       style: const TextStyle(
                         fontSize: 16,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
+                        color: AppColors.bluNotte,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -362,22 +362,21 @@ class EventDetailPage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Naviga alla home con l'evento selezionato
-                    Navigator.of(context).pushReplacement(
+                    Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => HomePage(initialEventId: event.id),
+                        builder: (_) => const MapPage(),
                       ),
                     );
                   },
                   icon: const Icon(Icons.map_rounded, size: 20),
                   label: const Text('Vedi sulla mappa'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2F80ED),
+                    backgroundColor: AppColors.rossoGubbio,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
@@ -424,17 +423,5 @@ class EventDetailPage extends StatelessWidget {
       ],
     };
     return curiositiesMap[eventId] ?? [];
-  }
-
-  /// Gestisce la navigazione dal footer
-  void _handleNavigation(BuildContext context, int index) {
-    if (index == 0) {
-      // Home - torna alla home
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } else if (index == 2) {
-      // Programma - torna alla pagina programma
-      Navigator.of(context).pop();
-    }
-    // Altri index gestiti dalla pagina chiamante
   }
 }

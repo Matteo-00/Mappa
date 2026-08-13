@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
-import 'modern_home_page.dart';
+import 'home_landing_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 
@@ -68,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const ModernHomePage()),
+        MaterialPageRoute(builder: (_) => const HomeLandingPage()),
       );
     } catch (e) {
       if (!mounted) return;

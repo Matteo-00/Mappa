@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/restaurant_model.dart';
 import '../data/restaurants_data.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
 import '../services/location_service.dart';
 import 'restaurant_detail_page.dart';
-import '../widgets/custom_header.dart';
+import '../widgets/premium_scaffold.dart';
 
 /// Pagina ristoranti con mappa integrata e lista
 class RestaurantsPage extends StatefulWidget {
@@ -127,27 +127,32 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.vgAncientParchment,
+      backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          // Header
-          const CustomHeader(),
+          const PremiumHeader(title: 'Ristoranti'),
           // Mappa
-          SizedBox(
-            height: 300,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _centerGubbio,
-                zoom: 15,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: SizedBox(
+                height: 240,
+                child: GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: _centerGubbio,
+                    zoom: 15,
+                  ),
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                  },
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  mapType: MapType.normal,
+                  zoomControlsEnabled: false,
+                ),
               ),
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-              markers: _markers,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-              mapType: MapType.normal,
-              zoomControlsEnabled: false,
             ),
           ),
           // Barra di ricerca
@@ -157,15 +162,13 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
             child: _filteredRestaurants.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.only(bottom: 24),
                     itemCount: _filteredRestaurants.length,
                     itemBuilder: (context, index) {
                       return _buildRestaurantCard(_filteredRestaurants[index]);
                     },
                   ),
           ),
-          // Footer
-          _buildFooter(context),
         ],
       ),
     );
@@ -174,15 +177,15 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   /// Barra di ricerca
   Widget _buildSearchBar() {
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.vgStoneGray.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -196,11 +199,11 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         },
         decoration: InputDecoration(
           hintText: 'Cerca ristoranti per nome...',
-          hintStyle: TextStyle(color: AppTheme.vgStoneGray.withOpacity(0.6)),
-          prefixIcon: const Icon(Icons.search, color: AppTheme.vgBronze),
+          hintStyle: const TextStyle(color: AppColors.textMuted),
+          prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear, color: AppTheme.vgStoneGray),
+                  icon: const Icon(Icons.clear, color: AppColors.tortora),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
@@ -211,7 +214,8 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       ),
     );
@@ -220,21 +224,21 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   /// Card singolo ristorante
   Widget _buildRestaurantCard(RestaurantModel restaurant) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.vgStoneGray.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: InkWell(
         onTap: () => _openRestaurantDetail(restaurant),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -242,100 +246,89 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
             children: [
               // Immagine/icona
               Container(
-                width: 80,
-                height: 80,
+                width: 84,
+                height: 84,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
-                    colors: [AppTheme.vgWarmStone, AppTheme.vgStoneGray],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.tortora.withOpacity(0.45),
+                      AppColors.avorio,
+                    ],
                   ),
                 ),
-                child: Icon(
-                  Icons.restaurant,
-                  size: 40,
-                  color: Colors.white.withOpacity(0.8),
+                child: const Icon(
+                  Icons.restaurant_menu,
+                  size: 38,
+                  color: AppColors.rossoGubbio,
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Informazioni
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Nome ristorante
                     Text(
                       restaurant.name,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.vgDarkSlate,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.bluNotte,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
                     const SizedBox(height: 4),
-                    
-                    // Descrizione breve
                     Text(
                       restaurant.description,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
-                        color: AppTheme.vgStoneGray,
+                        color: AppColors.textMuted,
                         height: 1.3,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Info aggiuntive
+                    const SizedBox(height: 10),
                     Row(
                       children: [
-                        // Distanza
                         if (_currentLocation != null) ...[
-                          Icon(
-                            Icons.location_on,
-                            size: 14,
-                            color: AppTheme.vgBronze,
-                          ),
+                          const Icon(Icons.place_outlined,
+                              size: 14, color: AppColors.rossoGubbio),
                           const SizedBox(width: 4),
                           Text(
                             restaurant.formatDistance(_currentLocation!),
                             style: const TextStyle(
                               fontSize: 12,
-                              color: AppTheme.vgBronze,
-                              fontWeight: FontWeight.w600,
+                              color: AppColors.rossoGubbio,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(width: 12),
                         ],
-                        
-                        // Prezzo
                         Text(
                           restaurant.priceRange,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: AppTheme.vgStoneGray,
+                            color: AppColors.textMuted,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        
                         const SizedBox(width: 12),
-                        
-                        // Sconto
                         if (restaurant.hasDiscount)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 2,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.vgOliveGreen,
-                              borderRadius: BorderRadius.circular(6),
+                              color: AppColors.verdeSalvia,
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
                               '5% SCONTO',
@@ -366,82 +359,27 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         children: [
           Icon(
             Icons.restaurant_menu,
-            size: 80,
-            color: AppTheme.vgStoneGray.withOpacity(0.3),
+            size: 76,
+            color: AppColors.tortora.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Nessun ristorante trovato',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.vgStoneGray,
+              fontWeight: FontWeight.w700,
+              color: AppColors.bluNotte,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Prova a modificare la ricerca',
             style: TextStyle(
               fontSize: 14,
-              color: AppTheme.vgStoneGray.withOpacity(0.7),
+              color: AppColors.textMuted,
             ),
           ),
         ],
-      ),
-    );
-  }
-  
-  Widget _buildFooter(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).pop(); // Torna alla home
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.home,
-                        color: Colors.grey[800],
-                        size: 22,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Home',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

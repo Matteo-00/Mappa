@@ -1,171 +1,131 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_header.dart';
+import '../theme/app_colors.dart';
+import '../widgets/premium_scaffold.dart';
 
-/// Pagina Storia di Gubbio - Magazine style
+/// Pagina Storia di Gubbio - stile premium magazine
 class StoriaPage extends StatelessWidget {
   const StoriaPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const CustomHeader(),
+      backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          // Header con immagine
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFF9C7355).withOpacity(0.2),
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey[200]!,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Stack(
-              children: [
-                // Placeholder immagine
-                Center(
-                  child: Icon(
-                    Icons.castle,
-                    size: 80,
-                    color: const Color(0xFF9C7355).withOpacity(0.6),
-                  ),
-                ),
-                // Titolo sovrapposto
-                Positioned(
-                  bottom: 24,
-                  left: 24,
-                  right: 24,
-                  child: const Text(
-                    'Storia di Gubbio',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      shadows: [
-                        Shadow(
-                          color: Colors.white,
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Contenuto scrollabile
+          const PremiumHeader(title: 'Storia di Gubbio'),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
               children: [
-                // Introduzione
-                const Text(
-                  'La Città dei Ceri',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Gubbio è una delle città medievali meglio conservate d\'Italia, situata sulle pendici del Monte Ingino in Umbria. La sua storia millenaria si intreccia con la leggenda e la tradizione, rendendola una meta imperdibile per chi ama l\'arte, la cultura e le antiche tradizioni italiane.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[800],
-                    height: 1.6,
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Sezione Origini
-                _buildSection(
-                  title: 'Origini Antiche',
-                  content: 'Le origini di Gubbio risalgono all\'epoca umbra, quando era conosciuta come Ikuvium. La città divenne poi un importante centro romano con il nome di Iguvium. Le famose Tavole Eugubine, sette tavole di bronzo che documentano le lingue umbra e latina, testimoniano l\'importanza religiosa e culturale della città in epoca romana.',
-                  icon: Icons.history_edu,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Sezione Medioevo
-                _buildSection(
-                  title: 'Il Medioevo d\'Oro',
-                  content: 'Durante il Medioevo, Gubbio raggiunse il suo massimo splendore. Il Palazzo dei Consoli, costruito nel XIV secolo, è uno dei più impressionanti palazzi comunali d\'Italia. La città si arricchì di chiese, torri e palazzi nobiliari che ancora oggi caratterizzano il suo profilo urbanistico.',
-                  icon: Icons.church,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Sezione San Francesco
-                _buildSection(
-                  title: 'San Francesco e il Lupo',
-                  content: 'Gubbio è famosa anche per la leggenda di San Francesco e il lupo. Secondo la tradizione, San Francesco ammansì un lupo feroce che terrorizzava la città, facendo patto con l\'animale davanti alla popolazione. Questa storia è diventata uno dei racconti più celebri legati al santo di Assisi.',
-                  icon: Icons.pets,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Sezione Festa dei Ceri
-                _buildSection(
-                  title: 'La Festa dei Ceri',
-                  content: 'La manifestazione più importante di Gubbio è la Festa dei Ceri, che si svolge ogni anno il 15 maggio. Questa corsa spettacolare con enormi strutture di legno dedicate ai santi patroni della città (Sant\'Ubaldo, San Giorgio e Sant\'Antonio) è una delle feste più antiche e sentite d\'Italia, patrimonio immateriale dell\'umanità.',
-                  icon: Icons.local_fire_department,
-                  iconColor: Colors.red,
-                ),
-
-                const SizedBox(height: 32),
-
-                // Call to action
+                // Hero card
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  height: 180,
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF9C7355).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF9C7355).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.bluNotte,
+                        AppColors.bluNotte.withOpacity(0.75),
+                      ],
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.explore,
-                        size: 48,
-                        color: Color(0xFF9C7355),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.bluNotte.withOpacity(0.18),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Scopri di più',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -10,
+                        top: -10,
+                        child: Icon(
+                          Icons.castle,
+                          size: 150,
+                          color: Colors.white.withOpacity(0.08),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Visita i luoghi storici sulla mappa interattiva',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
+                      Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Icon(Icons.castle,
+                                color: AppColors.tortora, size: 34),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'La Città dei Ceri',
+                              style: TextStyle(
+                                fontFamily: 'serif',
+                                fontSize: 26,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Un viaggio nella storia millenaria',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.85),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                const Text(
+                  'Gubbio è una delle città medievali meglio conservate d\'Italia, situata sulle pendici del Monte Ingino in Umbria. La sua storia millenaria si intreccia con la leggenda e la tradizione, rendendola una meta imperdibile per chi ama l\'arte, la cultura e le antiche tradizioni italiane.',
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    color: AppColors.bluNotte,
+                    height: 1.6,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                _buildSection(
+                  title: 'Origini Antiche',
+                  content:
+                      'Le origini di Gubbio risalgono all\'epoca umbra, quando era conosciuta come Ikuvium. La città divenne poi un importante centro romano con il nome di Iguvium. Le famose Tavole Eugubine, sette tavole di bronzo che documentano le lingue umbra e latina, testimoniano l\'importanza religiosa e culturale della città in epoca romana.',
+                  icon: Icons.history_edu,
+                ),
+                const SizedBox(height: 16),
+                _buildSection(
+                  title: 'Il Medioevo d\'Oro',
+                  content:
+                      'Durante il Medioevo, Gubbio raggiunse il suo massimo splendore. Il Palazzo dei Consoli, costruito nel XIV secolo, è uno dei più impressionanti palazzi comunali d\'Italia. La città si arricchì di chiese, torri e palazzi nobiliari che ancora oggi caratterizzano il suo profilo urbanistico.',
+                  icon: Icons.church,
+                ),
+                const SizedBox(height: 16),
+                _buildSection(
+                  title: 'San Francesco e il Lupo',
+                  content:
+                      'Gubbio è famosa anche per la leggenda di San Francesco e il lupo. Secondo la tradizione, San Francesco ammansì un lupo feroce che terrorizzava la città, facendo patto con l\'animale davanti alla popolazione. Questa storia è diventata uno dei racconti più celebri legati al santo di Assisi.',
+                  icon: Icons.pets,
+                ),
+                const SizedBox(height: 16),
+                _buildSection(
+                  title: 'La Festa dei Ceri',
+                  content:
+                      'La manifestazione più importante di Gubbio è la Festa dei Ceri, che si svolge ogni anno il 15 maggio. Questa corsa spettacolare con enormi strutture di legno dedicate ai santi patroni della città (Sant\'Ubaldo, San Giorgio e Sant\'Antonio) è una delle feste più antiche e sentite d\'Italia, patrimonio immateriale dell\'umanità.',
+                  icon: Icons.local_fire_department,
+                ),
               ],
             ),
           ),
-
-          // Footer
-          _buildFooter(context),
         ],
       ),
     );
@@ -175,103 +135,64 @@ class StoriaPage extends StatelessWidget {
     required String title,
     required String content,
     required IconData icon,
-    Color? iconColor,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: (iconColor ?? const Color(0xFF9C7355)).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            size: 28,
-            color: iconColor ?? const Color(0xFF9C7355),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                content,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey[700],
-                  height: 1.6,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFooter(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).pop();
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.home,
-                        color: Colors.grey[800],
-                        size: 22,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Home',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.tortora.withOpacity(0.45),
+                  AppColors.avorio,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 26, color: AppColors.rossoGubbio),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.bluNotte,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  content,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textMuted,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
