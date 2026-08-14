@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/auth_service.dart';
 import 'services/language_service.dart';
 import 'theme/app_colors.dart';
-import 'pages/login_page.dart';
+import 'pages/splash_intro_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,7 +104,7 @@ class VisitGubbioApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const LoginPage(),
+        home: const SplashIntroPage(),
       ),
     );
   }

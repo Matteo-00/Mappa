@@ -6,6 +6,7 @@ import '../pages/restaurants_page.dart';
 import '../pages/bars_page.dart';
 import '../pages/map_page.dart';
 import '../pages/storia_page.dart';
+import '../pages/itinerari_page.dart';
 import '../pages/user_profile_page.dart';
 
 /// Menu laterale di Visit Gubbio.
@@ -126,6 +127,18 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const StoriaPage()),
+                      );
+                    },
+                  ),
+                  _menuItem(
+                    context,
+                    icon: Icons.map_outlined,
+                    title: 'Itinerari consigliati',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ItinerariPage()),
                       );
                     },
                   ),
