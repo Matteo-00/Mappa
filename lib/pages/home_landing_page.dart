@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
+import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
 import 'events_list_page.dart';
@@ -25,7 +26,17 @@ class HomeLandingPage extends StatefulWidget {
 
 class _HomeLandingPageState extends State<HomeLandingPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final LocationService _locationService = LocationService();
   bool _showPanel = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // All'apertura chiediamo (una volta) il consenso alla posizione.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _locationService.ensureLocationPermission(context);
+    });
+  }
 
   void _openEvents() {
     Navigator.push(
@@ -102,10 +113,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                       _glassIconButton(
                         icon: Icons.menu,
                         onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                      ),
-                      _glassIconButton(
-                        icon: Icons.favorite_border,
-                        onTap: () {},
                       ),
                     ],
                   ),

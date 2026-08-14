@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../services/consent_service.dart';
 import 'login_page.dart';
+import 'privacy_consent_page.dart';
 
 /// ============================================================
 /// VISIT GUBBIO — Intro cinematografica
@@ -97,21 +99,25 @@ class _SplashIntroPageState extends State<SplashIntroPage>
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _goToLogin();
+        _goToNext();
       }
     });
 
     _controller.forward();
   }
 
-  void _goToLogin() {
+  Future<void> _goToNext() async {
     if (_navigated || !mounted) return;
     _navigated = true;
+
+    final accepted = await ConsentService.hasAcceptedPrivacy();
+    if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 550),
-        pageBuilder: (_, __, ___) => const LoginPage(),
+        pageBuilder: (_, __, ___) =>
+            accepted ? const LoginPage() : const PrivacyConsentPage(),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
             opacity: CurvedAnimation(

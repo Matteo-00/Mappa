@@ -6,6 +6,7 @@ import '../models/restaurant_model.dart';
 import '../models/bar_model.dart';
 import '../data/restaurants_data.dart';
 import '../data/bars_data.dart';
+import '../data/gubbio_boundary.dart';
 import '../services/location_service.dart';
 import 'restaurant_detail_page.dart';
 
@@ -34,34 +35,8 @@ class _MapPageState extends State<MapPage> {
 
   static const LatLng _gubbioCenter = LatLng(43.3504, 12.5755);
 
-  // Poligono perimetro COMUNALE di Gubbio (include tutte le frazioni)
-  static final List<LatLng> _gubbioMunicipalBoundary = [
-    const LatLng(43.4100, 12.5200),
-    const LatLng(43.4150, 12.5450),
-    const LatLng(43.4180, 12.5650),
-    const LatLng(43.4150, 12.5900),
-    const LatLng(43.4100, 12.6150),
-    const LatLng(43.4000, 12.6400),
-    const LatLng(43.3850, 12.6550),
-    const LatLng(43.3650, 12.6650),
-    const LatLng(43.3450, 12.6700),
-    const LatLng(43.3250, 12.6650),
-    const LatLng(43.3050, 12.6550),
-    const LatLng(43.2850, 12.6350),
-    const LatLng(43.2700, 12.6150),
-    const LatLng(43.2650, 12.5900),
-    const LatLng(43.2650, 12.5650),
-    const LatLng(43.2700, 12.5400),
-    const LatLng(43.2750, 12.5200),
-    const LatLng(43.2850, 12.5000),
-    const LatLng(43.3000, 12.4850),
-    const LatLng(43.3200, 12.4800),
-    const LatLng(43.3450, 12.4850),
-    const LatLng(43.3650, 12.4950),
-    const LatLng(43.3850, 12.5050),
-    const LatLng(43.4000, 12.5100),
-    const LatLng(43.4100, 12.5200),
-  ];
+  // Poligono perimetro COMUNALE di Gubbio (confine amministrativo OSM)
+  static const List<LatLng> _gubbioMunicipalBoundary = gubbioMunicipalBoundary;
 
   @override
   void initState() {
@@ -491,6 +466,9 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _startLocationTracking() async {
+    final granted = await _locationService.ensureLocationPermission(context);
+    if (!granted) return;
+
     final location = await _locationService.getCurrentLocation();
     final target = location ?? const LatLng(43.3520, 12.5770);
 

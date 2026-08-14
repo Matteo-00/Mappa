@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/bar_model.dart';
 import '../data/bars_data.dart';
+import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
 import '../services/location_service.dart';
 import '../widgets/premium_scaffold.dart';
@@ -136,6 +137,16 @@ class _BarsPageState extends State<BarsPage> {
                     _mapController = controller;
                   },
                   markers: _markers,
+                  polygons: {
+                    Polygon(
+                      polygonId: const PolygonId('gubbio_municipal_boundary'),
+                      points: gubbioMunicipalBoundary,
+                      strokeWidth: 4,
+                      strokeColor: Colors.red,
+                      fillColor: Colors.red.withOpacity(0.05),
+                      geodesic: true,
+                    ),
+                  },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   mapType: MapType.normal,

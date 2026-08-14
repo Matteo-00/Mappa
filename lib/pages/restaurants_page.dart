@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/restaurant_model.dart';
 import '../data/restaurants_data.dart';
+import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
 import '../services/location_service.dart';
 import 'restaurant_detail_page.dart';
@@ -147,6 +148,16 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                     _mapController = controller;
                   },
                   markers: _markers,
+                  polygons: {
+                    Polygon(
+                      polygonId: const PolygonId('gubbio_municipal_boundary'),
+                      points: gubbioMunicipalBoundary,
+                      strokeWidth: 4,
+                      strokeColor: Colors.red,
+                      fillColor: Colors.red.withOpacity(0.05),
+                      geodesic: true,
+                    ),
+                  },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   mapType: MapType.normal,

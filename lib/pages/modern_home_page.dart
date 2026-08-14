@@ -5,6 +5,7 @@ import '../widgets/modern_header.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/visit_gubbio_welcome_dialog.dart';
 import '../services/auth_service.dart';
+import '../data/gubbio_boundary.dart';
 import 'user_profile_page.dart';
 
 /// HomePage moderna stile Google Maps
@@ -27,43 +28,8 @@ class _ModernHomePageState extends State<ModernHomePage> {
   // Coordinate di Gubbio, Italia
   static const LatLng _gubbioCenter = LatLng(43.3504, 12.5755);
   
-  // Poligono perimetro COMUNALE di Gubbio (include tutte le frazioni)
-  // Territorio comunale completo: Spada, Torre Calzolari, Branca, Mocaiana, Scritto, Cipolleto, Padule, Monteleto, ecc.
-  static final List<LatLng> _gubbioMunicipalBoundary = [
-    // Nord-Ovest estremo
-    const LatLng(43.4100, 12.5200),
-    const LatLng(43.4150, 12.5450),
-    const LatLng(43.4180, 12.5650),
-    // Nord-Est (Torre Calzolari e dintorni)
-    const LatLng(43.4150, 12.5900),
-    const LatLng(43.4100, 12.6150),
-    const LatLng(43.4000, 12.6400),
-    // Est estremo (Branca, Mocaiana, zone orientali)
-    const LatLng(43.3850, 12.6550),
-    const LatLng(43.3650, 12.6650),
-    const LatLng(43.3450, 12.6700),
-    const LatLng(43.3250, 12.6650),
-    const LatLng(43.3050, 12.6550),
-    // Sud-Est (Scritto e dintorni)
-    const LatLng(43.2850, 12.6350),
-    const LatLng(43.2700, 12.6150),
-    // Sud (Cipolleto, Padule)
-    const LatLng(43.2650, 12.5900),
-    const LatLng(43.2650, 12.5650),
-    const LatLng(43.2700, 12.5400),
-    const LatLng(43.2750, 12.5200),
-    // Sud-Ovest (Monteleto e zone occidentali)
-    const LatLng(43.2850, 12.5000),
-    const LatLng(43.3000, 12.4850),
-    const LatLng(43.3200, 12.4800),
-    // Ovest (Spada e zone occidentali)
-    const LatLng(43.3450, 12.4850),
-    const LatLng(43.3650, 12.4950),
-    const LatLng(43.3850, 12.5050),
-    // Nord-Ovest (chiusura)
-    const LatLng(43.4000, 12.5100),
-    const LatLng(43.4100, 12.5200),
-  ];
+  // Poligono perimetro COMUNALE di Gubbio (confine amministrativo OSM)
+  static const List<LatLng> _gubbioMunicipalBoundary = gubbioMunicipalBoundary;
 
   @override
   void initState() {

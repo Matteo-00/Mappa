@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
+import '../services/auth_service.dart';
 import '../pages/events_list_page.dart';
 import '../pages/event_detail_page.dart';
 import '../pages/restaurants_page.dart';
@@ -8,6 +10,7 @@ import '../pages/map_page.dart';
 import '../pages/storia_page.dart';
 import '../pages/itinerari_page.dart';
 import '../pages/user_profile_page.dart';
+import '../pages/login_page.dart';
 
 /// Menu laterale di Visit Gubbio.
 /// Sfondo avorio, logo centrato, voci minimali con divider.
@@ -160,6 +163,33 @@ class AppDrawer extends StatelessWidget {
             ),
 
             Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleLogout(context),
+                  icon: const Icon(Icons.logout_rounded,
+                      color: AppColors.rossoGubbio, size: 22),
+                  label: const Text(
+                    'Esci',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.rossoGubbio,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.rossoGubbio),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
                 'Versione 1.0.0',
@@ -172,6 +202,36 @@ class AppDrawer extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Esci'),
+        content: const Text('Vuoi uscire dal tuo account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Esci'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    await context.read<AuthService>().logout();
+    if (!context.mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
     );
   }
 

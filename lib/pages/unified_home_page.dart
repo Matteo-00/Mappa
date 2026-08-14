@@ -11,6 +11,7 @@ import '../widgets/festa_ceri_loading_screen.dart';
 import '../services/location_service.dart';
 import '../models/event_model.dart';
 import '../data/events_data.dart';
+import '../data/gubbio_boundary.dart';
 import 'events_list_page.dart';
 import 'restaurants_page.dart';
 import 'program_page.dart';
@@ -295,6 +296,16 @@ class _UnifiedHomePageState extends State<UnifiedHomePage> {
       },
       markers: _markers,
       polylines: _ceriRoute,
+      polygons: {
+        Polygon(
+          polygonId: const PolygonId('gubbio_municipal_boundary'),
+          points: gubbioMunicipalBoundary,
+          strokeWidth: 4,
+          strokeColor: Colors.red,
+          fillColor: Colors.red.withOpacity(0.05),
+          geodesic: true,
+        ),
+      },
       myLocationEnabled: true,
       myLocationButtonEnabled: false,
       mapType: MapType.normal,

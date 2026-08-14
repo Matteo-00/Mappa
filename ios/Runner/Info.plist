@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Visit Gubbio usa la tua posizione per mostrarti dove ti trovi sulla mappa e i luoghi di interesse vicini.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Visit Gubbio usa la tua posizione per mostrarti dove ti trovi sulla mappa e i luoghi di interesse vicini.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

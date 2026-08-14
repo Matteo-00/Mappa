@@ -7,6 +7,7 @@ import '../services/location_service.dart';
 import '../models/user_mode.dart';
 import '../models/event_model.dart';
 import '../data/events_data.dart';
+import '../data/gubbio_boundary.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/welcome_popup.dart';
@@ -225,6 +226,16 @@ class _HomePageState extends State<HomePage> {
       ),
       polylines: _polylines,
       markers: _markers,
+      polygons: {
+        Polygon(
+          polygonId: const PolygonId('gubbio_municipal_boundary'),
+          points: gubbioMunicipalBoundary,
+          strokeWidth: 4,
+          strokeColor: Colors.red,
+          fillColor: Colors.red.withOpacity(0.05),
+          geodesic: true,
+        ),
+      },
       myLocationButtonEnabled: false,
       zoomControlsEnabled: false,
       mapToolbarEnabled: false,
