@@ -5,6 +5,7 @@ class UserModel {
   final String cognome;
   final String email;
   final DateTime? dataNascita;
+  final String ruolo;
 
   const UserModel({
     required this.id,
@@ -12,7 +13,11 @@ class UserModel {
     required this.cognome,
     required this.email,
     this.dataNascita,
+    this.ruolo = 'utente',
   });
+
+  /// True se l'utente è un amministratore
+  bool get isAdmin => ruolo == 'admin';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -23,6 +28,7 @@ class UserModel {
       dataNascita: json['data_nascita'] != null
           ? DateTime.parse(json['data_nascita'] as String)
           : null,
+      ruolo: (json['ruolo'] as String?) ?? 'utente',
     );
   }
 
@@ -33,6 +39,7 @@ class UserModel {
       'cognome': cognome,
       'email': email,
       'data_nascita': dataNascita?.toIso8601String(),
+      'ruolo': ruolo,
     };
   }
 

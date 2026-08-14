@@ -46,7 +46,7 @@ class RestaurantDetailPage extends StatelessWidget {
           // Contenuto
           SliverToBoxAdapter(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header con nome e info
                 Container(
@@ -64,27 +64,6 @@ class RestaurantDetailPage extends StatelessWidget {
                           color: AppColors.bluNotte,
                           height: 1.2,
                         ),
-                      ),
-                      
-                      const SizedBox(height: 12),
-                      
-                      // Info rapide
-                      Row(
-                        children: [
-                          _buildInfoChip(
-                            Icons.euro,
-                            restaurant.priceRange,
-                          ),
-                          const SizedBox(width: 8),
-                          if (restaurant.rating != null)
-                            _buildInfoChip(
-                              Icons.star_rounded,
-                              restaurant.rating!.toString(),
-                            ),
-                          const SizedBox(width: 8),
-                          if (restaurant.hasDiscount)
-                            _buildDiscountChip(),
-                        ],
                       ),
                       
                       const SizedBox(height: 16),
@@ -247,56 +226,6 @@ class RestaurantDetailPage extends StatelessWidget {
           size: 92,
           color: AppColors.rossoGubbio.withOpacity(0.5),
         ),
-      ),
-    );
-  }
-  
-  Widget _buildInfoChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.avorio,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.rossoGubbio),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.bluNotte,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildDiscountChip() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.verdeSalvia,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.local_offer, size: 16, color: Colors.white),
-          SizedBox(width: 4),
-          Text(
-            '5% SCONTO',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
     );
   }

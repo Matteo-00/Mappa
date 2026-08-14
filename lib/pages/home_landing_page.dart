@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
 import '../services/location_service.dart';
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
+import 'admin/add_place_page.dart';
+import 'admin/add_event_page.dart';
+import 'admin/add_itinerario_page.dart';
 import 'events_list_page.dart';
 import 'event_detail_page.dart';
 import 'restaurants_page.dart';
@@ -84,6 +89,77 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
         MaterialPageRoute(builder: (_) => ItinerarioDetailPage(itinerario: it)),
       );
 
+  /// Menu amministratore: aggiungi contenuti.
+  void _showAdminMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.avorio,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        Widget tile(IconData icon, String label, Widget page) {
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppColors.rossoGubbio.withOpacity(0.12),
+              child: Icon(icon, color: AppColors.rossoGubbio),
+            ),
+            title: Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, color: AppColors.bluNotte)),
+            trailing: const Icon(Icons.chevron_right, color: AppColors.tortora),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => page),
+              );
+            },
+          );
+        }
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grigioChiaro,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'AGGIUNGI CONTENUTO',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.bluNotte,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ),
+              tile(Icons.restaurant_menu, 'Aggiungi Ristorante',
+                  const AddPlacePage(isBar: false)),
+              tile(Icons.local_cafe_outlined, 'Aggiungi Bar',
+                  const AddPlacePage(isBar: true)),
+              tile(Icons.event, 'Aggiungi Evento', const AddEventPage()),
+              tile(Icons.route, 'Aggiungi Itinerario',
+                  const AddItinerarioPage()),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -114,6 +190,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                         icon: Icons.menu,
                         onTap: () => _scaffoldKey.currentState?.openDrawer(),
                       ),
+                      if (context.watch<AuthService>().isAdmin)
+                        _glassIconButton(
+                          icon: Icons.add,
+                          onTap: _showAdminMenu,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 18),

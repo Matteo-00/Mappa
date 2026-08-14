@@ -8,13 +8,10 @@ class RestaurantModel {
   final String address;
   final LatLng coordinates;
   final String? imageUrl;
-  final double? rating;
   final String? phoneNumber;
   final String? website;
   final List<String> cuisineTypes;
-  final String priceRange; // €, ££, €€€
-  final bool hasDiscount; // Promozione 5%
-  
+
   const RestaurantModel({
     required this.id,
     required this.name,
@@ -22,14 +19,45 @@ class RestaurantModel {
     required this.address,
     required this.coordinates,
     this.imageUrl,
-    this.rating,
     this.phoneNumber,
     this.website,
     this.cuisineTypes = const [],
-    this.priceRange = '€€',
-    this.hasDiscount = false,
   });
-  
+
+  /// Crea un ristorante dai dati di Supabase
+  factory RestaurantModel.fromJson(Map<String, dynamic> json) {
+    return RestaurantModel(
+      id: json['id'].toString(),
+      name: (json['nome'] ?? '') as String,
+      description: (json['descrizione'] ?? '') as String,
+      address: (json['indirizzo'] ?? '') as String,
+      coordinates: LatLng(
+        (json['latitudine'] as num?)?.toDouble() ?? 43.3519,
+        (json['longitudine'] as num?)?.toDouble() ?? 12.5773,
+      ),
+      imageUrl: json['image_url'] as String?,
+      phoneNumber: json['telefono'] as String?,
+      website: json['sito_web'] as String?,
+      cuisineTypes:
+          (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    );
+  }
+
+  /// Serializza per l'inserimento su Supabase
+  Map<String, dynamic> toJson() {
+    return {
+      'nome': name,
+      'descrizione': description,
+      'indirizzo': address,
+      'latitudine': coordinates.latitude,
+      'longitudine': coordinates.longitude,
+      'image_url': imageUrl,
+      'telefono': phoneNumber,
+      'sito_web': website,
+      'tags': cuisineTypes,
+    };
+  }
+
   /// Calcola la distanza da una posizione (in metri)
   double calculateDistance(LatLng currentPosition) {
     // Calcolo approssimativo usando formula di Haversine

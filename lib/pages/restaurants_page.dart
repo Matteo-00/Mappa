@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/restaurant_model.dart';
-import '../data/restaurants_data.dart';
 import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
 import '../services/location_service.dart';
+import '../services/content_service.dart';
+import '../services/auth_service.dart';
+import 'admin/admin_widgets.dart';
 import 'restaurant_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 
@@ -43,8 +46,12 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     super.dispose();
   }
   
-  void _loadRestaurants() {
-    _allRestaurants = getGubbioRestaurants();
+  Future<void> _loadRestaurants() async {
+    final restaurants = await ContentService.fetchRestaurants();
+    if (!mounted) return;
+    setState(() {
+      _allRestaurants = restaurants;
+    });
     _applyFilters();
   }
   
@@ -97,7 +104,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           infoWindow: InfoWindow(
             title: restaurant.name,
-            snippet: restaurant.priceRange,
+            snippet: 'Ristorante',
             onTap: () => _openRestaurantDetail(restaurant),
           ),
           onTap: () => _onMarkerTap(restaurant),
@@ -232,8 +239,34 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     );
   }
   
+  Future<void> _deleteRestaurant(RestaurantModel restaurant) async {
+    final ok = await confirmDelete(context, restaurant.name);
+    if (!ok) return;
+    try {
+      await ContentService.deleteRestaurant(restaurant.id);
+      await _loadRestaurants();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ristorante eliminato'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: const Color(0xFFB71C1C),
+        ),
+      );
+    }
+  }
+
   /// Card singolo ristorante
   Widget _buildRestaurantCard(RestaurantModel restaurant) {
+    final canDelete = context.watch<AuthService>().isAdmin &&
+        ContentService.isRemoteId(restaurant.id);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
@@ -284,15 +317,25 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      restaurant.name,
-                      style: const TextStyle(
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.bluNotte,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            restaurant.name,
+                            style: const TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.bluNotte,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (canDelete)
+                          DeleteIconButton(
+                            onPressed: () => _deleteRestaurant(restaurant),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -320,36 +363,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(width: 12),
                         ],
-                        Text(
-                          restaurant.priceRange,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        if (restaurant.hasDiscount)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.verdeSalvia,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              '5% SCONTO',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ],

@@ -11,9 +11,8 @@ List<BarModel> getGubbioBars() {
           'Bar storico nel cuore di Gubbio. Ottimo caffè e pasticceria artigianale.',
       address: 'Piazza Grande, 06024 Gubbio PG',
       coordinates: LatLng(43.3517, 12.5766),
-      rating: 4.6,
       phoneNumber: '+39 075 927 1122',
-      priceRange: '€',
+      cuisineTypes: ['Caffè', 'Pasticceria'],
     ),
     const BarModel(
       id: 'bar_2',
@@ -22,9 +21,8 @@ List<BarModel> getGubbioBars() {
           'Bar moderno con terrazza panoramica. Perfetto per aperitivi e cocktail.',
       address: 'Via Cairoli, 15, 06024 Gubbio PG',
       coordinates: LatLng(43.3512, 12.5788),
-      rating: 4.4,
       phoneNumber: '+39 075 922 3344',
-      priceRange: '€€',
+      cuisineTypes: ['Aperitivi', 'Cocktail'],
     ),
     const BarModel(
       id: 'bar_3',
@@ -33,9 +31,8 @@ List<BarModel> getGubbioBars() {
           'Caffetteria tradizionale con specialità locali. Ambiente familiare.',
       address: 'Corso Garibaldi, 32, 06024 Gubbio PG',
       coordinates: LatLng(43.3524, 12.5758),
-      rating: 4.5,
       phoneNumber: '+39 075 927 5566',
-      priceRange: '€',
+      cuisineTypes: ['Caffè', 'Colazioni'],
     ),
     const BarModel(
       id: 'bar_4',
@@ -44,9 +41,8 @@ List<BarModel> getGubbioBars() {
           'Elegante caffè con dehors sulla piazza. Colazioni e brunch di qualità.',
       address: 'Via dei Consoli, 40, 06024 Gubbio PG',
       coordinates: LatLng(43.3510, 12.5792),
-      rating: 4.7,
       phoneNumber: '+39 075 927 7788',
-      priceRange: '€€',
+      cuisineTypes: ['Colazioni', 'Brunch'],
     ),
     const BarModel(
       id: 'bar_5',
@@ -55,9 +51,8 @@ List<BarModel> getGubbioBars() {
           'Punto di ritrovo del quartiere. Caffè espresso e snack veloci.',
       address: 'Via della Repubblica, 78, 06024 Gubbio PG',
       coordinates: LatLng(43.3528, 12.5752),
-      rating: 4.2,
       phoneNumber: '+39 075 922 9900',
-      priceRange: '€',
+      cuisineTypes: ['Caffè', 'Snack'],
     ),
     const BarModel(
       id: 'bar_6',
@@ -66,9 +61,8 @@ List<BarModel> getGubbioBars() {
           'Enoteca e wine bar con selezione di vini umbri e taglieri locali.',
       address: 'Largo del Bargello, 8, 06024 Gubbio PG',
       coordinates: LatLng(43.3506, 12.5779),
-      rating: 4.8,
       phoneNumber: '+39 075 927 4433',
-      priceRange: '€€€',
+      cuisineTypes: ['Enoteca', 'Vini'],
     ),
   ];
 }

@@ -11,12 +11,9 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via Ansidei, 21, 06024 Gubbio PG',
       coordinates: const LatLng(43.3525, 12.5780),
       imageUrl: null,
-      rating: 4.5,
       phoneNumber: '+39 075 927 4368',
       website: 'https://www.tavernadellupo.it',
       cuisineTypes: ['Umbra', 'Italiana', 'Medievale'],
-      priceRange: '€€€',
-      hasDiscount: true,
     ),
     
     RestaurantModel(
@@ -26,11 +23,8 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via Dante, 42, 06024 Gubbio PG',
       coordinates: const LatLng(43.3518, 12.5768),
       imageUrl: null,
-      rating: 4.3,
       phoneNumber: '+39 075 922 1234',
       cuisineTypes: ['Umbra', 'Italiana'],
-      priceRange: '€€',
-      hasDiscount: true,
     ),
     
     RestaurantModel(
@@ -40,12 +34,9 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via Gioia, 47, 06024 Gubbio PG',
       coordinates: const LatLng(43.3530, 12.5775),
       imageUrl: null,
-      rating: 4.7,
       phoneNumber: '+39 075 927 3438',
       website: 'https://www.grottadellangelo.it',
       cuisineTypes: ['Gourmet', 'Umbra', 'Tartufo'],
-      priceRange: '€€€',
-      hasDiscount: true,
     ),
     
     RestaurantModel(
@@ -55,11 +46,8 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via dei Consoli, 55, 06024 Gubbio PG',
       coordinates: const LatLng(43.3512, 12.5790),
       imageUrl: null,
-      rating: 4.2,
       phoneNumber: '+39 075 927 5678',
       cuisineTypes: ['Umbra', 'Casalinga'],
-      priceRange: '€',
-      hasDiscount: false,
     ),
     
     RestaurantModel(
@@ -69,12 +57,9 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via Piccardi, 12, 06024 Gubbio PG',
       coordinates: const LatLng(43.3508, 12.5762),
       imageUrl: null,
-      rating: 4.6,
       phoneNumber: '+39 075 927 8901',
       website: 'https://www.locandadelduca.com',
       cuisineTypes: ['Contemporanea', 'Umbra'],
-      priceRange: '€€€',
-      hasDiscount: true,
     ),
     
     RestaurantModel(
@@ -84,11 +69,8 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via della Repubblica, 89, 06024 Gubbio PG',
       coordinates: const LatLng(43.3522, 12.5755),
       imageUrl: null,
-      rating: 4.4,
       phoneNumber: '+39 075 922 3344',
       cuisineTypes: ['Pizzeria', 'Italiana'],
-      priceRange: '€',
-      hasDiscount: false,
     ),
     
     RestaurantModel(
@@ -98,12 +80,9 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Piazza 40 Martiri, 26, 06024 Gubbio PG',
       coordinates: const LatLng(43.3540, 12.5770),
       imageUrl: null,
-      rating: 4.8,
       phoneNumber: '+39 075 927 6390',
       website: 'https://www.ristorantefabiani.it',
       cuisineTypes: ['Gourmet', 'Umbra'],
-      priceRange: '€€€',
-      hasDiscount: true,
     ),
     
     RestaurantModel(
@@ -113,11 +92,8 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via Cairoli, 33, 06024 Gubbio PG',
       coordinates: const LatLng(43.3515, 12.5785),
       imageUrl: null,
-      rating: 4.1,
       phoneNumber: '+39 075 922 5566',
       cuisineTypes: ['Umbra', 'Medievale'],
-      priceRange: '€€',
-      hasDiscount: false,
     ),
     
     RestaurantModel(
@@ -127,11 +103,8 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via XX Settembre, 22, 06024 Gubbio PG',
       coordinates: const LatLng(43.3535, 12.5765),
       imageUrl: null,
-      rating: 4.3,
       phoneNumber: '+39 075 922 0246',
       cuisineTypes: ['Mediterranea', 'Italiana'],
-      priceRange: '€€',
-      hasDiscount: true,
     ),
     
     RestaurantModel(
@@ -141,11 +114,8 @@ List<RestaurantModel> getGubbioRestaurants() {
       address: 'Via Mastro Giorgio, 2, 06024 Gubbio PG',
       coordinates: const LatLng(43.3505, 12.5795),
       imageUrl: null,
-      rating: 4.0,
       phoneNumber: '+39 075 922 1789',
       cuisineTypes: ['Grill', 'Umbra'],
-      priceRange: '€',
-      hasDiscount: false,
     ),
   ];
 }

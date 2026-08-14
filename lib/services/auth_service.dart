@@ -13,6 +13,9 @@ class AuthService extends ChangeNotifier {
   UserMode? get userMode => _userMode;
   UserModel? get currentUser => _currentUser;
 
+  /// True se l'utente collegato è un amministratore
+  bool get isAdmin => _currentUser?.isAdmin ?? false;
+
   /// Login con Supabase - chiamato dopo signInWithPassword
   void loginWithSupabase(Map<String, dynamic> userData) {
     _currentUser = UserModel.fromJson(userData);

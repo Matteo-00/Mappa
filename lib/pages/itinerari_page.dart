@@ -1,13 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
+import '../services/content_service.dart';
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
+import 'admin/admin_widgets.dart';
 import 'itinerario_detail_page.dart';
 
 /// Elenco degli itinerari consigliati per visitare Gubbio.
-class ItinerariPage extends StatelessWidget {
+class ItinerariPage extends StatefulWidget {
   const ItinerariPage({super.key});
+
+  @override
+  State<ItinerariPage> createState() => _ItinerariPageState();
+}
+
+class _ItinerariPageState extends State<ItinerariPage> {
+  List<ItinerarioModel> _itinerari = itinerariConsigliati;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final items = await ContentService.fetchItinerari();
+    if (!mounted) return;
+    setState(() => _itinerari = items);
+  }
 
   void _openItinerario(BuildContext context, ItinerarioModel itinerario) {
     Navigator.of(context).push(
@@ -15,6 +38,30 @@ class ItinerariPage extends StatelessWidget {
         builder: (_) => ItinerarioDetailPage(itinerario: itinerario),
       ),
     );
+  }
+
+  Future<void> _deleteItinerario(ItinerarioModel it) async {
+    final ok = await confirmDelete(context, it.titolo);
+    if (!ok) return;
+    try {
+      await ContentService.deleteItinerario(it.id);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Itinerario eliminato'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: const Color(0xFFB71C1C),
+        ),
+      );
+    }
   }
 
   @override
@@ -38,7 +85,7 @@ class ItinerariPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                ...itinerariConsigliati.map(
+                ..._itinerari.map(
                   (it) => Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: _buildItinerarioCard(context, it),
@@ -83,10 +130,20 @@ class ItinerariPage extends StatelessWidget {
                     child: SizedBox(
                       height: 160,
                       width: double.infinity,
-                      child: itinerarioImagePlaceholder(
-                        it.immagineLabel,
-                        icon: it.icona,
-                      ),
+                      child: it.imageUrl != null
+                          ? Image.network(
+                              it.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  itinerarioImagePlaceholder(
+                                it.immagineLabel,
+                                icon: it.icona,
+                              ),
+                            )
+                          : itinerarioImagePlaceholder(
+                              it.immagineLabel,
+                              icon: it.icona,
+                            ),
                     ),
                   ),
                   Positioned(
@@ -109,6 +166,27 @@ class ItinerariPage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (context.watch<AuthService>().isAdmin &&
+                      ContentService.isRemoteId(it.id))
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Material(
+                        color: Colors.white,
+                        shape: const CircleBorder(),
+                        elevation: 2,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _deleteItinerario(it),
+                          child: const SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: Icon(Icons.delete_outline,
+                                size: 20, color: AppColors.rossoGubbio),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
               Padding(

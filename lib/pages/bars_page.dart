@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/bar_model.dart';
-import '../data/bars_data.dart';
 import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
 import '../services/location_service.dart';
+import '../services/content_service.dart';
+import '../services/auth_service.dart';
+import 'admin/admin_widgets.dart';
 import '../widgets/premium_scaffold.dart';
+import 'bar_detail_page.dart';
 
 /// Pagina bar con mappa integrata e lista (stesso stile dei ristoranti)
 class BarsPage extends StatefulWidget {
@@ -42,8 +46,12 @@ class _BarsPageState extends State<BarsPage> {
     super.dispose();
   }
 
-  void _loadBars() {
-    _allBars = getGubbioBars();
+  Future<void> _loadBars() async {
+    final bars = await ContentService.fetchBars();
+    if (!mounted) return;
+    setState(() {
+      _allBars = bars;
+    });
     _applyFilters();
   }
 
@@ -96,7 +104,8 @@ class _BarsPageState extends State<BarsPage> {
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
           infoWindow: InfoWindow(
             title: bar.name,
-            snippet: bar.priceRange,
+            snippet: 'Bar',
+            onTap: () => _openBarDetail(bar),
           ),
           onTap: () => _onMarkerTap(bar),
         ),
@@ -111,6 +120,13 @@ class _BarsPageState extends State<BarsPage> {
   void _onMarkerTap(BarModel bar) {
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(bar.coordinates, 17),
+    );
+  }
+
+  void _openBarDetail(BarModel bar) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => BarDetailPage(bar: bar)),
     );
   }
 
@@ -221,8 +237,34 @@ class _BarsPageState extends State<BarsPage> {
     );
   }
 
+  Future<void> _deleteBar(BarModel bar) async {
+    final ok = await confirmDelete(context, bar.name);
+    if (!ok) return;
+    try {
+      await ContentService.deleteBar(bar.id);
+      await _loadBars();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bar eliminato'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: const Color(0xFFB71C1C),
+        ),
+      );
+    }
+  }
+
   /// Card singolo bar
   Widget _buildBarCard(BarModel bar) {
+    final canDelete = context.watch<AuthService>().isAdmin &&
+        ContentService.isRemoteId(bar.id);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
@@ -237,7 +279,7 @@ class _BarsPageState extends State<BarsPage> {
         ],
       ),
       child: InkWell(
-        onTap: () => _onMarkerTap(bar),
+        onTap: () => _openBarDetail(bar),
         borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -287,19 +329,10 @@ class _BarsPageState extends State<BarsPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (bar.rating != null) ...[
-                          const Icon(Icons.star_rounded,
-                              size: 16, color: AppColors.rossoGubbio),
-                          const SizedBox(width: 2),
-                          Text(
-                            bar.rating!.toString(),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.rossoGubbio,
-                            ),
+                        if (canDelete)
+                          DeleteIconButton(
+                            onPressed: () => _deleteBar(bar),
                           ),
-                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -328,16 +361,7 @@ class _BarsPageState extends State<BarsPage> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(width: 12),
                         ],
-                        Text(
-                          bar.priceRange,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ],
                     ),
                   ],

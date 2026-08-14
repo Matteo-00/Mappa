@@ -50,9 +50,7 @@ class _WelcomeCarouselDialogState extends State<WelcomeCarouselDialog>
       title: 'Ristoranti convenzionati',
       description: 'Scopri i ristoranti affiliati all\'app.\n\n'
           'Nella sezione Ristoranti puoi trovare i locali più vicini a te '
-          'e visualizzarli direttamente sulla mappa.\n\n'
-          'Prenotando tramite l\'app potrai accedere a promozioni dedicate.\n\n'
-          'Ad esempio: 5% di sconto fino a 50€ nei ristoranti aderenti.',
+          'e visualizzarli direttamente sulla mappa.',
     ),
     const _CarouselPage(
       imagePath: 'assets/carousel/ceri_corsa.jpg',

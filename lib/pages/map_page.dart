@@ -4,11 +4,11 @@ import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import '../models/restaurant_model.dart';
 import '../models/bar_model.dart';
-import '../data/restaurants_data.dart';
-import '../data/bars_data.dart';
 import '../data/gubbio_boundary.dart';
 import '../services/location_service.dart';
+import '../services/content_service.dart';
 import 'restaurant_detail_page.dart';
+import 'bar_detail_page.dart';
 
 /// Pagina Mappa a tutto schermo di Gubbio con punti di interesse filtrabili.
 class MapPage extends StatefulWidget {
@@ -41,8 +41,17 @@ class _MapPageState extends State<MapPage> {
   @override
   void initState() {
     super.initState();
-    _restaurants = getGubbioRestaurants();
-    _bars = getGubbioBars();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final restaurants = await ContentService.fetchRestaurants();
+    final bars = await ContentService.fetchBars();
+    if (!mounted) return;
+    setState(() {
+      _restaurants = restaurants;
+      _bars = bars;
+    });
     _rebuildMarkers();
   }
 
@@ -69,7 +78,7 @@ class _MapPageState extends State<MapPage> {
                 BitmapDescriptor.hueOrange),
             infoWindow: InfoWindow(
               title: r.name,
-              snippet: '${r.priceRange} · Ristorante',
+              snippet: 'Ristorante',
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -92,7 +101,13 @@ class _MapPageState extends State<MapPage> {
                 BitmapDescriptor.hueRose),
             infoWindow: InfoWindow(
               title: b.name,
-              snippet: '${b.priceRange} · Bar',
+              snippet: 'Bar',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BarDetailPage(bar: b),
+                ),
+              ),
             ),
           ),
         );

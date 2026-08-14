@@ -54,6 +54,9 @@ dependencies:
   # Supabase
   supabase_flutter: ^2.5.0
 
+  # Image picker (upload immagini contenuti admin)
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

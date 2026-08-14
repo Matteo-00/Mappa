@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/event_model.dart';
+import '../services/content_service.dart';
+import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
+import 'admin/admin_widgets.dart';
 
 /// Pagina lista eventi con ricerca e filtri
 class EventsListPage extends StatefulWidget {
@@ -23,7 +27,7 @@ class _EventsListPageState extends State<EventsListPage> {
   List<EventModel> _filteredEvents = [];
   
   String _searchQuery = '';
-  EventFilter _currentFilter = EventFilter.month;
+  EventFilter _currentFilter = EventFilter.all;
   
   int _currentPage = 0;
   static const int _eventsPerPage = 10;
@@ -40,9 +44,12 @@ class _EventsListPageState extends State<EventsListPage> {
     super.dispose();
   }
   
-  void _loadEvents() {
-    // Carica eventi del mese corrente
-    _allEvents = _getEventsForCurrentMonth();
+  Future<void> _loadEvents() async {
+    final events = await ContentService.fetchEvents();
+    if (!mounted) return;
+    setState(() {
+      _allEvents = events;
+    });
     _applyFilters();
   }
   
@@ -236,7 +243,33 @@ class _EventsListPageState extends State<EventsListPage> {
   }
   
   /// Card singolo evento
+  Future<void> _deleteEvent(EventModel event) async {
+    final ok = await confirmDelete(context, event.title);
+    if (!ok) return;
+    try {
+      await ContentService.deleteEvent(event.id);
+      await _loadEvents();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Evento eliminato'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: const Color(0xFFB71C1C),
+        ),
+      );
+    }
+  }
+
   Widget _buildEventCard(EventModel event) {
+    final canDelete = context.watch<AuthService>().isAdmin &&
+        ContentService.isRemoteId(event.id);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
@@ -322,6 +355,28 @@ class _EventsListPageState extends State<EventsListPage> {
                     ),
                   ),
                 ),
+
+                // Pulsante elimina (solo admin)
+                if (canDelete)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Material(
+                      color: Colors.white,
+                      shape: const CircleBorder(),
+                      elevation: 2,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => _deleteEvent(event),
+                        child: const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Icon(Icons.delete_outline,
+                              size: 20, color: AppColors.rossoGubbio),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
             
@@ -449,13 +504,6 @@ class _EventsListPageState extends State<EventsListPage> {
       'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'
     ];
     return '${date.day} ${months[date.month - 1]}';
-  }
-  
-  /// Ottieni eventi del mese corrente (placeholder)
-  List<EventModel> _getEventsForCurrentMonth() {
-    // TODO: Implementare caricamento eventi reali da database
-    // Per ora restituisce una lista vuota
-    return [];
   }
 }
 
