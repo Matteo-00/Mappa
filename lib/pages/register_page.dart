@@ -64,13 +64,15 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       // Registrazione con Supabase Auth (include metadata per il trigger)
       final response = await supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'nome': nome,
-          'cognome': cognome,
-        },
-      );
+  email: email,
+  password: password,
+  data: {
+    'nome': nome,
+    'cognome': cognome,
+  },
+  emailRedirectTo:
+      'https://matteo-00.github.io/ResetPasswodApp/confirm-email.html',
+);
 
       final user = response.user;
       if (user == null) {
@@ -78,31 +80,97 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       // Salvataggio dati utente nella tabella utenti (fallback se il trigger non funziona)
-      try {
-        await supabase.from('utenti').insert({
-          'id': user.id,
-          'nome': nome,
-          'cognome': cognome,
-          'email': email,
-        });
-      } catch (insertError) {
-        // Se l'inserimento fallisce (es. trigger già creato), ignora l'errore
-        print('Insert skipped (trigger might have handled it): $insertError');
-      }
+//      try {
+//   await supabase.from('utenti').insert({
+//     'id': user.id,
+//     'nome': nome,
+//     'cognome': cognome,
+//     'email': email,
+//   });
 
-      if (!mounted) return;
+//   print('UTENTE INSERITO CORRETTAMENTE');
+// } catch (insertError) {
+//   print('ERRORE INSERT UTENTI: $insertError');
+// }
 
-      // Successo - torna al login
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.registrationSuccess),
-          backgroundColor: const Color(0xFF4CAF50),
+      // if (!mounted) return;
+
+      // // Successo - torna al login
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(l10n.registrationSuccess),
+      //     backgroundColor: const Color(0xFF4CAF50),
+      //   ),
+      // );
+
+      // Navigator.of(context).pushReplacement(
+      //   MaterialPageRoute(builder: (_) => const LoginPage()),
+      // );
+
+if (!mounted) return;
+
+setState(() => _isLoading = false);
+
+// Mostra il messaggio di conferma email
+showDialog(
+  context: context,
+  barrierDismissible: false,
+  builder: (context) => AlertDialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    title: const Row(
+      children: [
+       Icon(
+  Icons.email_outlined,
+  color: Color(0xFFB13B2E),
+),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Conferma la tua email',
+            style: TextStyle(
+              color: Color(0xFF162B3D),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
-      );
+      ],
+    ),
+    content: Text(
+      'Ti abbiamo inviato un\'email a $email.\n\n'
+      'Apri la tua casella di posta e clicca sul pulsante '
+      '"Conferma email" per attivare il tuo account Visit Gubbio.\n\n'
+      'Dopo aver confermato l\'indirizzo, torna nell\'app ed effettua il login.',
+      style: const TextStyle(
+        color: Color(0xFF8C857D),
+        fontSize: 14,
+        height: 1.5,
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () {
+          Navigator.of(context).pop();
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const LoginPage(),
+            ),
+          );
+        },
+        child: const Text(
+          'OK, vai al login',
+          style: TextStyle(
+            color: Color(0xFFB13B2E),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
     } catch (e) {
       if (!mounted) return;
       
