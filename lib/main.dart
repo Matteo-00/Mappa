@@ -12,6 +12,11 @@ void main() async {
   await Supabase.initialize(
     url: 'https://kcoglivbakjyxszoruka.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjb2dsaXZiYWtqeXhzem9ydWthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDA0NTcsImV4cCI6MjA4ODYxNjQ1N30.ICFTE2V6Y62BjT2gagazjLvyW8RZIZUji_D575hC5sY',
+    // Implicit flow: il link di recovery arriva con i token nell'hash (#access_token=...)
+    // e non richiede il code_verifier PKCE salvato sul dispositivo che ha fatto la richiesta.
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.implicit,
+    ),
   );
 
   runApp(const VisitGubbioApp());

@@ -45,12 +45,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         SnackBar(
           content: Text(l10n.resetLinkSent),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 6),
         ),
       );
 
-      // Torna al login dopo 2 secondi
-      await Future.delayed(const Duration(seconds: 2));
+      // Tempo maggiore per leggere l'avviso sulla cartella spam prima di tornare al login
+      await Future.delayed(const Duration(seconds: 4));
       if (!mounted) return;
       Navigator.of(context).pop();
       

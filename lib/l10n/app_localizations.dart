@@ -72,8 +72,8 @@ class AppLocalizations {
       ? 'Registrazione completata! Effettua il login.' 
       : 'Registration completed! Please login.';
   String get resetLinkSent => languageCode == 'it' 
-      ? 'Link di recupero inviato! Controlla la tua email.' 
-      : 'Reset link sent! Check your email.';
+      ? 'Link di recupero inviato! Controlla la tua email (e anche la cartella spam/posta indesiderata se non la trovi).' 
+      : 'Reset link sent! Check your email (and also your spam/junk folder if you don\'t see it).';
   
   // ============== HOME PAGE ==============
   String get home => languageCode == 'it' ? 'Home' : 'Home';
