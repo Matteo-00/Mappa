@@ -64,15 +64,11 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       // Registrazione con Supabase Auth (include metadata per il trigger)
       final response = await supabase.auth.signUp(
-  email: email,
-  password: password,
-  data: {
-    'nome': nome,
-    'cognome': cognome,
-  },
-  emailRedirectTo:
-      'https://matteo-00.github.io/ResetPasswodApp/confirm-email.html',
-);
+        email: email,
+        password: password,
+        data: {'nome': nome, 'cognome': cognome},
+        emailRedirectTo: 'https://visitgubbio.eu/confirm-email.html',
+      );
 
       final user = response.user;
       if (user == null) {
@@ -80,18 +76,18 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       // Salvataggio dati utente nella tabella utenti (fallback se il trigger non funziona)
-//      try {
-//   await supabase.from('utenti').insert({
-//     'id': user.id,
-//     'nome': nome,
-//     'cognome': cognome,
-//     'email': email,
-//   });
+      //      try {
+      //   await supabase.from('utenti').insert({
+      //     'id': user.id,
+      //     'nome': nome,
+      //     'cognome': cognome,
+      //     'email': email,
+      //   });
 
-//   print('UTENTE INSERITO CORRETTAMENTE');
-// } catch (insertError) {
-//   print('ERRORE INSERT UTENTI: $insertError');
-// }
+      //   print('UTENTE INSERITO CORRETTAMENTE');
+      // } catch (insertError) {
+      //   print('ERRORE INSERT UTENTI: $insertError');
+      // }
 
       // if (!mounted) return;
 
@@ -107,91 +103,89 @@ class _RegisterPageState extends State<RegisterPage> {
       //   MaterialPageRoute(builder: (_) => const LoginPage()),
       // );
 
-if (!mounted) return;
+      if (!mounted) return;
 
-setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
 
-// Mostra il messaggio di conferma email
-showDialog(
-  context: context,
-  barrierDismissible: false,
-  builder: (context) => AlertDialog(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-    ),
-    title: const Row(
-      children: [
-       Icon(
-  Icons.email_outlined,
-  color: Color(0xFFB13B2E),
-),
-        SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Conferma la tua email',
-            style: TextStyle(
-              color: Color(0xFF162B3D),
-              fontWeight: FontWeight.w700,
+      // Mostra il messaggio di conferma email
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.email_outlined, color: Color(0xFFB13B2E)),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Conferma la tua email',
+                  style: TextStyle(
+                    color: Color(0xFF162B3D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Ti abbiamo inviato un\'email a $email.\n\n'
+            'Apri la tua casella di posta e clicca sul pulsante '
+            '"Conferma email" per attivare il tuo account Visit Gubbio.\n\n'
+            'Se non trovi l\'email, controlla anche la cartella '
+            'Spam o Posta indesiderata.\n\n'
+            'Dopo aver confermato l\'indirizzo, torna nell\'app ed effettua il login.',
+            style: const TextStyle(
+              color: Color(0xFF8C857D),
+              fontSize: 14,
+              height: 1.5,
             ),
           ),
-        ),
-      ],
-    ),
-    content: Text(
-      'Ti abbiamo inviato un\'email a $email.\n\n'
-      'Apri la tua casella di posta e clicca sul pulsante '
-      '"Conferma email" per attivare il tuo account Visit Gubbio.\n\n'
-      'Dopo aver confermato l\'indirizzo, torna nell\'app ed effettua il login.',
-      style: const TextStyle(
-        color: Color(0xFF8C857D),
-        fontSize: 14,
-        height: 1.5,
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () {
-          Navigator.of(context).pop();
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
 
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => const LoginPage(),
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              },
+              child: const Text(
+                'OK, vai al login',
+                style: TextStyle(
+                  color: Color(0xFFB13B2E),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          );
-        },
-        child: const Text(
-          'OK, vai al login',
-          style: TextStyle(
-            color: Color(0xFFB13B2E),
-            fontWeight: FontWeight.w600,
-          ),
+          ],
         ),
-      ),
-    ],
-  ),
-);
-
+      );
     } catch (e) {
       if (!mounted) return;
-      
+
       setState(() => _isLoading = false);
-      
+
       // Gestione errori specifici
       String errorMessage = l10n.registrationError;
-      
+
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('429') || errorString.contains('too many')) {
         errorMessage = l10n.tooManyAttempts;
-      } else if (errorString.contains('email') && errorString.contains('already')) {
+      } else if (errorString.contains('email') &&
+          errorString.contains('already')) {
         errorMessage = l10n.emailAlreadyInUse;
       } else if (errorString.contains('weak password')) {
         errorMessage = l10n.weakPassword;
       } else if (errorString.contains('invalid email')) {
         errorMessage = l10n.invalidEmail;
-      } else if (errorString.contains('network') || errorString.contains('connection')) {
+      } else if (errorString.contains('network') ||
+          errorString.contains('connection')) {
         errorMessage = l10n.connectionError;
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -255,7 +249,11 @@ showDialog(
                       const Text('Italiano'),
                       if (langService.currentLanguageCode == 'it') ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
+                        const Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Color(0xFFB13B2E),
+                        ),
                       ],
                     ],
                   ),
@@ -269,14 +267,21 @@ showDialog(
                       const Text('English'),
                       if (langService.currentLanguageCode == 'en') ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
+                        const Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Color(0xFFB13B2E),
+                        ),
                       ],
                     ],
                   ),
                 ),
               ],
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -326,13 +331,17 @@ showDialog(
             ),
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 380, left: 24, right: 24, bottom: 24),
+                padding: const EdgeInsets.only(
+                  top: 380,
+                  left: 24,
+                  right: 24,
+                  bottom: 24,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-
                       // Nome e Cognome in riga
                       Container(
                         constraints: const BoxConstraints(maxWidth: 500),
@@ -343,97 +352,97 @@ showDialog(
                                 controller: _nomeController,
                                 cursorColor: Colors.black,
                                 decoration: InputDecoration(
-                              labelText: l10n.firstName,
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E1DB),
-                                  width: 1,
+                                  labelText: l10n.firstName,
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE5E1DB),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE5E1DB),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFB71C1C),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.person_outline,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E1DB),
-                                  width: 1,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFB71C1C),
-                                  width: 1,
-                                ),
-                              ),
-                              prefixIcon: Icon(
-                                Icons.person_outline,
-                                color: Colors.grey[600],
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return l10n.enterFirstName;
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return l10n.enterFirstName;
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: TextFormField(
                                 controller: _cognomeController,
                                 cursorColor: Colors.black,
                                 decoration: InputDecoration(
-                              labelText: l10n.lastName,
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E1DB),
-                                  width: 1,
+                                  labelText: l10n.lastName,
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE5E1DB),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE5E1DB),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFB71C1C),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.person_outline,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E1DB),
-                                  width: 1,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFB71C1C),
-                                  width: 1,
-                                ),
-                              ),
-                              prefixIcon: Icon(
-                                Icons.person_outline,
-                                color: Colors.grey[600],
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return l10n.enterLastName;
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return l10n.enterLastName;
-                              }
-                              return null;
-                            },
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
                       const SizedBox(height: 16),
 
@@ -445,50 +454,50 @@ showDialog(
                           keyboardType: TextInputType.emailAddress,
                           cursorColor: Colors.black,
                           decoration: InputDecoration(
-                        labelText: l10n.email,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E1DB),
-                            width: 1,
+                            labelText: l10n.email,
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB71C1C),
+                                width: 1,
+                              ),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E1DB),
-                            width: 1,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFB71C1C),
-                            width: 1,
-                          ),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.email_outlined,
-                          color: Colors.grey[600],
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.enterEmail;
+                            }
+                            if (!value.contains('@')) {
+                              return l10n.invalidEmail;
+                            }
+                            return null;
+                          },
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return l10n.enterEmail;
-                        }
-                        if (!value.contains('@')) {
-                          return l10n.invalidEmail;
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
 
                       const SizedBox(height: 16),
 
@@ -500,63 +509,63 @@ showDialog(
                           obscureText: _obscurePassword,
                           cursorColor: Colors.black,
                           decoration: InputDecoration(
-                        labelText: l10n.password,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E1DB),
-                            width: 1,
+                            labelText: l10n.password,
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB71C1C),
+                                width: 1,
+                              ),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: Colors.grey[600],
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.grey[600],
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E1DB),
-                            width: 1,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFB71C1C),
-                            width: 1,
-                          ),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.lock_outline,
-                          color: Colors.grey[600],
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.enterPassword;
+                            }
+                            if (value.length < 6) {
+                              return l10n.passwordMinLength;
+                            }
+                            return null;
                           },
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return l10n.enterPassword;
-                        }
-                        if (value.length < 6) {
-                          return l10n.passwordMinLength;
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
 
                       const SizedBox(height: 16),
 
@@ -568,63 +577,64 @@ showDialog(
                           obscureText: _obscureConfirmPassword,
                           cursorColor: Colors.black,
                           decoration: InputDecoration(
-                        labelText: l10n.confirmPassword,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E1DB),
-                            width: 1,
+                            labelText: l10n.confirmPassword,
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E1DB),
+                                width: 1,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFB71C1C),
+                                width: 1,
+                              ),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: Colors.grey[600],
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureConfirmPassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.grey[600],
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
+                                });
+                              },
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE5E1DB),
-                            width: 1,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFB71C1C),
-                            width: 1,
-                          ),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.lock_outline,
-                          color: Colors.grey[600],
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
-                            });
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.confirmPasswordText;
+                            }
+                            if (value != _passwordController.text) {
+                              return l10n.passwordsDontMatch;
+                            }
+                            return null;
                           },
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return l10n.confirmPasswordText;
-                        }
-                        if (value != _passwordController.text) {
-                          return l10n.passwordsDontMatch;
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
 
                       const SizedBox(height: 32),
 
@@ -637,32 +647,33 @@ showDialog(
                           onPressed: _isLoading ? null : _register,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFB13B2E),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  l10n.register,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                         ),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Text(
-                              l10n.register,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                    ),
-                  ),
 
                       const SizedBox(height: 24),
 
@@ -689,13 +700,13 @@ showDialog(
                               l10n.signIn,
                               style: const TextStyle(
                                 color: Color(0xFFB13B2E),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
 
                       const SizedBox(height: 16),
                     ],

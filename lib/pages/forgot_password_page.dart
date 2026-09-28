@@ -36,7 +36,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     try {
       await supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'https://matteo-00.github.io/ResetPasswodApp/reset-password.html',
+        redirectTo: 'https://visitgubbio.eu/reset-password.html',
       );
 
       if (!mounted) return;
