@@ -299,16 +299,21 @@ class _RegisterPageState extends State<RegisterPage> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Column(
-            children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
               const SizedBox(height: 8),
               // Logo identico al login
               SizedBox(
-                width: 200,
-                height: 200,
+                width: 400,
+                height: 400,
                 child: Image.asset(
                   'assets/geo/logo.png',
                   fit: BoxFit.contain,
@@ -690,8 +695,11 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
               ),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

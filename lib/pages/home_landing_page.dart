@@ -450,14 +450,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                     ),
                   ),
                   _hideButton(
-                    icon: Icons.keyboard_arrow_down_rounded,
-                    onTap: () => setState(() {
-                      _closeDown = true;
-                      _showPanel = false;
-                    }),
-                  ),
-                  const SizedBox(width: 8),
-                  _hideButton(
                     icon: Icons.chevron_right_rounded,
                     onTap: () => setState(() {
                       _closeDown = false;

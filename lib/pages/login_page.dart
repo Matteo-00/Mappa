@@ -115,18 +115,27 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Contenuto scorrevole: logo e form restano in un unico flusso,
-            // così la tastiera scorre il contenuto invece di farlo "saltare".
-            SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 32),
+            // Il contenuto resta centrato come prima; quando compare la
+            // tastiera lo spazio disponibile si riduce e lo stesso layout
+            // scorre invece di "saltare".
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 48,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                   // Logo
                   SizedBox(
-                    width: 220,
-                    height: 220,
+                    width: 400,
+                    height: 400,
                     child: Image.asset(
                       'assets/geo/logo.png',
                       fit: BoxFit.contain,
@@ -376,8 +385,11 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-                ],
-              ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
 
             // Selettore lingua in alto a destra
