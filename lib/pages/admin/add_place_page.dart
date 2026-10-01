@@ -9,12 +9,23 @@ import '../../services/content_service.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
 
-/// Form per aggiungere un ristorante o un bar (stessi campi).
+/// Form per aggiungere o modificare un ristorante o un bar (stessi campi).
 class AddPlacePage extends StatefulWidget {
-  /// Se true aggiunge un bar, altrimenti un ristorante.
+  /// Se true gestisce un bar, altrimenti un ristorante.
   final bool isBar;
 
-  const AddPlacePage({super.key, required this.isBar});
+  /// Ristorante esistente da modificare (null = nuovo inserimento).
+  final RestaurantModel? editRestaurant;
+
+  /// Bar esistente da modificare (null = nuovo inserimento).
+  final BarModel? editBar;
+
+  const AddPlacePage({
+    super.key,
+    required this.isBar,
+    this.editRestaurant,
+    this.editBar,
+  });
 
   @override
   State<AddPlacePage> createState() => _AddPlacePageState();
@@ -33,9 +44,46 @@ class _AddPlacePageState extends State<AddPlacePage> {
 
   Uint8List? _imageBytes;
   String? _imageName;
+  String? _existingImageUrl;
   bool _saving = false;
+  int _rating = 0;
 
-  String get _titleLabel => widget.isBar ? 'Aggiungi Bar' : 'Aggiungi Ristorante';
+  bool get _isEditing => widget.editRestaurant != null || widget.editBar != null;
+
+  String get _titleLabel {
+    if (_isEditing) return widget.isBar ? 'Modifica Bar' : 'Modifica Ristorante';
+    return widget.isBar ? 'Aggiungi Bar' : 'Aggiungi Ristorante';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editRestaurant != null) {
+      final r = widget.editRestaurant!;
+      _name.text = r.name;
+      _description.text = r.description;
+      _address.text = r.address;
+      _phone.text = r.phoneNumber ?? '';
+      _website.text = r.website ?? '';
+      _tags.text = r.cuisineTypes.join(', ');
+      _lat.text = r.coordinates.latitude.toString();
+      _lng.text = r.coordinates.longitude.toString();
+      _existingImageUrl = r.imageUrl;
+      _rating = r.rating?.round() ?? 0;
+    } else if (widget.editBar != null) {
+      final b = widget.editBar!;
+      _name.text = b.name;
+      _description.text = b.description;
+      _address.text = b.address;
+      _phone.text = b.phoneNumber ?? '';
+      _website.text = b.website ?? '';
+      _tags.text = b.cuisineTypes.join(', ');
+      _lat.text = b.coordinates.latitude.toString();
+      _lng.text = b.coordinates.longitude.toString();
+      _existingImageUrl = b.imageUrl;
+      _rating = b.rating?.round() ?? 0;
+    }
+  }
 
   @override
   void dispose() {
@@ -61,7 +109,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
     setState(() => _saving = true);
 
     try {
-      String? imageUrl;
+      String? imageUrl = _existingImageUrl;
       if (_imageBytes != null) {
         imageUrl = await ContentService.uploadImage(
           _imageBytes!,
@@ -76,8 +124,8 @@ class _AddPlacePageState extends State<AddPlacePage> {
       );
 
       if (widget.isBar) {
-        await ContentService.addBar(BarModel(
-          id: '',
+        final bar = BarModel(
+          id: widget.editBar?.id ?? '',
           name: _name.text.trim(),
           description: _description.text.trim(),
           address: _address.text.trim(),
@@ -86,10 +134,16 @@ class _AddPlacePageState extends State<AddPlacePage> {
           phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           website: _website.text.trim().isEmpty ? null : _website.text.trim(),
           cuisineTypes: _parseTags(),
-        ));
+          rating: _rating > 0 ? _rating.toDouble() : null,
+        );
+        if (_isEditing) {
+          await ContentService.updateBar(bar);
+        } else {
+          await ContentService.addBar(bar);
+        }
       } else {
-        await ContentService.addRestaurant(RestaurantModel(
-          id: '',
+        final restaurant = RestaurantModel(
+          id: widget.editRestaurant?.id ?? '',
           name: _name.text.trim(),
           description: _description.text.trim(),
           address: _address.text.trim(),
@@ -98,14 +152,22 @@ class _AddPlacePageState extends State<AddPlacePage> {
           phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           website: _website.text.trim().isEmpty ? null : _website.text.trim(),
           cuisineTypes: _parseTags(),
-        ));
+          rating: _rating > 0 ? _rating.toDouble() : null,
+        );
+        if (_isEditing) {
+          await ContentService.updateRestaurant(restaurant);
+        } else {
+          await ContentService.addRestaurant(restaurant);
+        }
       }
 
       if (!mounted) return;
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.isBar ? 'Bar aggiunto!' : 'Ristorante aggiunto!'),
+          content: Text(_isEditing
+              ? (widget.isBar ? 'Bar aggiornato!' : 'Ristorante aggiornato!')
+              : (widget.isBar ? 'Bar aggiunto!' : 'Ristorante aggiunto!')),
           backgroundColor: const Color(0xFF4CAF50),
         ),
       );
@@ -132,6 +194,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
           padding: const EdgeInsets.all(20),
           children: [
             ImagePickerField(
+              initialImageUrl: _existingImageUrl,
               onChanged: (bytes, name) {
                 _imageBytes = bytes;
                 _imageName = name;
@@ -180,6 +243,34 @@ class _AddPlacePageState extends State<AddPlacePage> {
                   icon: Icons.language_outlined),
             ),
             const SizedBox(height: 14),
+            Text(
+              'Valutazione (media TripAdvisor / Google Maps)',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.bluNotte.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: List.generate(5, (index) {
+                final starValue = index + 1;
+                return IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => setState(() {
+                    // Tocca di nuovo la stessa stella per azzerare la valutazione.
+                    _rating = _rating == starValue ? 0 : starValue;
+                  }),
+                  icon: Icon(
+                    starValue <= _rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: const Color(0xFFF2A93B),
+                    size: 32,
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
@@ -202,7 +293,11 @@ class _AddPlacePageState extends State<AddPlacePage> {
               ],
             ),
             const SizedBox(height: 24),
-            AdminSaveButton(loading: _saving, onPressed: _save),
+            AdminSaveButton(
+              loading: _saving,
+              onPressed: _save,
+              label: _isEditing ? 'SALVA MODIFICHE' : 'SALVA',
+            ),
             const SizedBox(height: 24),
           ],
         ),

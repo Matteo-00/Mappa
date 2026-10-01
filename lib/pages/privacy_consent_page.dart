@@ -78,6 +78,29 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                             'interesse vicini. Non la salviamo sui nostri server.',
                       ),
                       _Bullet(
+                        title: 'Foto',
+                        text:
+                            'Gli utenti master possono caricare immagini da galleria '
+                            'per creare schede di ristoranti, bar ed eventi. Le foto '
+                            'vengono salvate sui nostri server per essere mostrate '
+                            'nell\'app.',
+                      ),
+                      _Bullet(
+                        title: 'Fornitori terzi',
+                        text:
+                            'I dati sono conservati sui server di Supabase (fornitore '
+                            'di database e autenticazione) che agisce come '
+                            'responsabile del trattamento per nostro conto.',
+                      ),
+                      _Bullet(
+                        title: 'Conservazione dei dati',
+                        text:
+                            'I tuoi dati vengono conservati finché il tuo account è '
+                            'attivo. Puoi richiederne la cancellazione in qualsiasi '
+                            'momento dalla sezione Profilo dell\'app ("Elimina il mio '
+                            'account") oppure scrivendo a privacy@visitgubbio.eu.',
+                      ),
+                      _Bullet(
                         title: 'I tuoi diritti',
                         text:
                             'Puoi richiedere in qualsiasi momento l\'accesso, la '
@@ -88,7 +111,9 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                       SizedBox(height: 8),
                       Text(
                         'Proseguendo dichiari di aver letto e compreso questa '
-                        'informativa ai sensi del Regolamento (UE) 2016/679 (GDPR).',
+                        'informativa ai sensi del Regolamento (UE) 2016/679 (GDPR). '
+                        'L\'informativa completa è disponibile su '
+                        'visitgubbio.eu/privacy-policy.',
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,

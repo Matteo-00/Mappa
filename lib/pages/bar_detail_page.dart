@@ -24,6 +24,7 @@ class BarDetailPage extends StatelessWidget {
         phoneNumber: bar.phoneNumber,
         website: bar.website,
         cuisineTypes: bar.cuisineTypes,
+        rating: bar.rating,
       ),
     );
   }

@@ -38,6 +38,24 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cancella il profilo utente (riga nella tabella 'utenti') e termina la sessione.
+  /// Nota: la rimozione definitiva dell'account di autenticazione Supabase
+  /// richiede una funzione server-side con service role key (non deve mai
+  /// essere inclusa nell'app), da implementare lato backend.
+  Future<void> deleteAccount() async {
+    final supabase = Supabase.instance.client;
+    final userId = _currentUser?.id;
+    if (userId != null) {
+      await supabase.from('utenti').delete().eq('id', userId);
+    }
+    await supabase.auth.signOut();
+
+    _isAuthenticated = false;
+    _userMode = null;
+    _currentUser = null;
+    notifyListeners();
+  }
+
   /// Controlla se l'utente è già autenticato all'avvio
   Future<void> checkAuthStatus() async {
     final supabase = Supabase.instance.client;

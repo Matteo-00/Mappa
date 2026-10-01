@@ -11,6 +11,8 @@ class BarModel {
   final String? phoneNumber;
   final String? website;
   final List<String> cuisineTypes;
+  /// Valutazione da 1 a 5 (media TripAdvisor/Google Maps), impostata dal master.
+  final double? rating;
 
   const BarModel({
     required this.id,
@@ -22,6 +24,7 @@ class BarModel {
     this.phoneNumber,
     this.website,
     this.cuisineTypes = const [],
+    this.rating,
   });
 
   /// Crea un bar dai dati di Supabase
@@ -40,6 +43,7 @@ class BarModel {
       website: json['sito_web'] as String?,
       cuisineTypes:
           (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      rating: (json['rating'] as num?)?.toDouble(),
     );
   }
 
@@ -55,6 +59,7 @@ class BarModel {
       'telefono': phoneNumber,
       'sito_web': website,
       'tags': cuisineTypes,
+      'rating': rating,
     };
   }
 

@@ -8,9 +8,12 @@ import '../../services/content_service.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
 
-/// Form per aggiungere un evento.
+/// Form per aggiungere o modificare un evento.
 class AddEventPage extends StatefulWidget {
-  const AddEventPage({super.key});
+  /// Evento esistente da modificare (null = nuovo inserimento).
+  final EventModel? editEvent;
+
+  const AddEventPage({super.key, this.editEvent});
 
   @override
   State<AddEventPage> createState() => _AddEventPageState();
@@ -33,7 +36,30 @@ class _AddEventPageState extends State<AddEventPage> {
 
   Uint8List? _imageBytes;
   String? _imageName;
+  String? _existingImageUrl;
   bool _saving = false;
+
+  bool get _isEditing => widget.editEvent != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.editEvent;
+    if (e != null) {
+      _title.text = e.title;
+      _description.text = e.description;
+      _location.text = e.location;
+      _category.text = e.category;
+      _phone.text = e.phoneNumber ?? '';
+      _website.text = e.website ?? '';
+      _lat.text = e.coordinates.latitude.toString();
+      _lng.text = e.coordinates.longitude.toString();
+      _date = e.startTime;
+      _start = TimeOfDay(hour: e.startTime.hour, minute: e.startTime.minute);
+      _end = TimeOfDay(hour: e.endTime.hour, minute: e.endTime.minute);
+      _existingImageUrl = e.imageUrl;
+    }
+  }
 
   @override
   void dispose() {
@@ -85,7 +111,7 @@ class _AddEventPageState extends State<AddEventPage> {
     setState(() => _saving = true);
 
     try {
-      String? imageUrl;
+      String? imageUrl = _existingImageUrl;
       if (_imageBytes != null) {
         imageUrl = await ContentService.uploadImage(
           _imageBytes!,
@@ -97,8 +123,8 @@ class _AddEventPageState extends State<AddEventPage> {
       final start = _combine(_start);
       final end = _combine(_end);
 
-      await ContentService.addEvent(EventModel(
-        id: '',
+      final event = EventModel(
+        id: widget.editEvent?.id ?? '',
         time: _fmtTime(_start),
         title: _title.text.trim(),
         description: _description.text.trim(),
@@ -113,14 +139,20 @@ class _AddEventPageState extends State<AddEventPage> {
         category: _category.text.trim().isEmpty ? 'Eventi' : _category.text.trim(),
         phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
         website: _website.text.trim().isEmpty ? null : _website.text.trim(),
-      ));
+      );
+
+      if (_isEditing) {
+        await ContentService.updateEvent(event);
+      } else {
+        await ContentService.addEvent(event);
+      }
 
       if (!mounted) return;
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Evento aggiunto!'),
-          backgroundColor: Color(0xFF4CAF50),
+        SnackBar(
+          content: Text(_isEditing ? 'Evento aggiornato!' : 'Evento aggiunto!'),
+          backgroundColor: const Color(0xFF4CAF50),
         ),
       );
     } catch (e) {
@@ -139,13 +171,14 @@ class _AddEventPageState extends State<AddEventPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.avorio,
-      appBar: AppBar(title: const Text('Aggiungi Evento')),
+      appBar: AppBar(title: Text(_isEditing ? 'Modifica Evento' : 'Aggiungi Evento')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
             ImagePickerField(
+              initialImageUrl: _existingImageUrl,
               onChanged: (bytes, name) {
                 _imageBytes = bytes;
                 _imageName = name;
@@ -216,7 +249,11 @@ class _AddEventPageState extends State<AddEventPage> {
               ],
             ),
             const SizedBox(height: 24),
-            AdminSaveButton(loading: _saving, onPressed: _save),
+            AdminSaveButton(
+              loading: _saving,
+              onPressed: _save,
+              label: _isEditing ? 'SALVA MODIFICHE' : 'SALVA',
+            ),
             const SizedBox(height: 24),
           ],
         ),

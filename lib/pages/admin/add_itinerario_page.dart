@@ -7,9 +7,12 @@ import '../../services/content_service.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
 
-/// Form per aggiungere un itinerario con le sue tappe.
+/// Form per aggiungere o modificare un itinerario con le sue tappe.
 class AddItinerarioPage extends StatefulWidget {
-  const AddItinerarioPage({super.key});
+  /// Itinerario esistente da modificare (null = nuovo inserimento).
+  final ItinerarioModel? editItinerario;
+
+  const AddItinerarioPage({super.key, this.editItinerario});
 
   @override
   State<AddItinerarioPage> createState() => _AddItinerarioPageState();
@@ -40,7 +43,35 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
 
   Uint8List? _imageBytes;
   String? _imageName;
+  String? _existingImageUrl;
   bool _saving = false;
+
+  bool get _isEditing => widget.editItinerario != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final it = widget.editItinerario;
+    if (it != null) {
+      _titolo.text = it.titolo;
+      _sottotitolo.text = it.sottotitolo;
+      _descrizione.text = it.descrizione;
+      _durata.text = it.durata;
+      _difficolta.text = it.difficolta;
+      _tema.text = it.tema;
+      _existingImageUrl = it.imageUrl;
+      if (it.tappe.isNotEmpty) {
+        _tappe.clear();
+        for (final t in it.tappe) {
+          final c = _TappaControllers();
+          c.nome.text = t.nome;
+          c.descrizione.text = t.descrizione;
+          c.durata.text = t.durata;
+          _tappe.add(c);
+        }
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -70,7 +101,7 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
     setState(() => _saving = true);
 
     try {
-      String? imageUrl;
+      String? imageUrl = _existingImageUrl;
       if (_imageBytes != null) {
         imageUrl = await ContentService.uploadImage(
           _imageBytes!,
@@ -88,8 +119,8 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
               ))
           .toList();
 
-      await ContentService.addItinerario(ItinerarioModel(
-        id: '',
+      final itinerario = ItinerarioModel(
+        id: widget.editItinerario?.id ?? '',
         titolo: _titolo.text.trim(),
         sottotitolo: _sottotitolo.text.trim(),
         descrizione: _descrizione.text.trim(),
@@ -99,14 +130,21 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
         immagineLabel: _titolo.text.trim(),
         imageUrl: imageUrl,
         tappe: tappe,
-      ));
+      );
+
+      if (_isEditing) {
+        await ContentService.updateItinerario(itinerario);
+      } else {
+        await ContentService.addItinerario(itinerario);
+      }
 
       if (!mounted) return;
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Itinerario aggiunto!'),
-          backgroundColor: Color(0xFF4CAF50),
+        SnackBar(
+          content:
+              Text(_isEditing ? 'Itinerario aggiornato!' : 'Itinerario aggiunto!'),
+          backgroundColor: const Color(0xFF4CAF50),
         ),
       );
     } catch (e) {
@@ -125,13 +163,14 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.avorio,
-      appBar: AppBar(title: const Text('Aggiungi Itinerario')),
+      appBar: AppBar(title: Text(_isEditing ? 'Modifica Itinerario' : 'Aggiungi Itinerario')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
             ImagePickerField(
+              initialImageUrl: _existingImageUrl,
               onChanged: (bytes, name) {
                 _imageBytes = bytes;
                 _imageName = name;
@@ -206,7 +245,11 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
             const SizedBox(height: 8),
             ...List.generate(_tappe.length, (i) => _buildTappa(i)),
             const SizedBox(height: 24),
-            AdminSaveButton(loading: _saving, onPressed: _save),
+            AdminSaveButton(
+              loading: _saving,
+              onPressed: _save,
+              label: _isEditing ? 'SALVA MODIFICHE' : 'SALVA',
+            ),
             const SizedBox(height: 24),
           ],
         ),

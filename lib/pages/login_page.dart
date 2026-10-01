@@ -111,52 +111,29 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Stack(
           children: [
-            // Contenuto principale
-            Align(
-              alignment: Alignment.topCenter,
+            // Contenuto scorrevole: logo e form restano in un unico flusso,
+            // così la tastiera scorre il contenuto invece di farlo "saltare".
+            SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 64),
-                  // Logo ancora più grande
+                  const SizedBox(height: 32),
+                  // Logo
                   SizedBox(
-                    width: 400,
-                    height: 400,
+                    width: 220,
+                    height: 220,
                     child: Image.asset(
                       'assets/geo/logo.png',
                       fit: BoxFit.contain,
                     ),
                   ),
-                  // const SizedBox(height: 4),
-                  // Text(
-                  //   'La più bella città medioevale',
-                  //   style: TextStyle(
-                  //     fontSize: 14,
-                  //     fontWeight: FontWeight.w400,
-                  //     color: Colors.brown,
-                  //     fontFamily: 'Cinzel', // Font elegante stile antico, assicurati che sia nel progetto
-                  //     letterSpacing: 2.0,
-                  //     fontStyle: FontStyle.italic,
-                  //     shadows: [
-                  //       Shadow(
-                  //         blurRadius: 2,
-                  //         color: Colors.brown.shade200,
-                  //         offset: Offset(1, 1),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                ],
-              ),
-            ),
-            // Form principale centrato
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 380, left: 24, right: 24, bottom: 24),
-                child: Form(
+                  const SizedBox(height: 16),
+                  Form(
                   key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -399,6 +376,7 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
+                ],
               ),
             ),
 

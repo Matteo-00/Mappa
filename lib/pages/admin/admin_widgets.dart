@@ -53,6 +53,31 @@ class DeleteIconButton extends StatelessWidget {
   }
 }
 
+/// Pulsante rotondo per modificare un elemento (solo admin).
+class EditIconButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const EditIconButton({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 34,
+      height: 34,
+      child: Material(
+        color: AppColors.bluNotte.withOpacity(0.08),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: const Icon(Icons.edit_outlined,
+              size: 18, color: AppColors.bluNotte),
+        ),
+      ),
+    );
+  }
+}
+
 /// Decorazione uniforme per i campi dei form admin.
 InputDecoration adminInputDecoration(String label, {IconData? icon}) {
   return InputDecoration(
@@ -79,7 +104,14 @@ InputDecoration adminInputDecoration(String label, {IconData? icon}) {
 class ImagePickerField extends StatefulWidget {
   final void Function(Uint8List? bytes, String? fileName) onChanged;
 
-  const ImagePickerField({super.key, required this.onChanged});
+  /// URL di un'immagine già esistente da mostrare in modalità modifica.
+  final String? initialImageUrl;
+
+  const ImagePickerField({
+    super.key,
+    required this.onChanged,
+    this.initialImageUrl,
+  });
 
   @override
   State<ImagePickerField> createState() => _ImagePickerFieldState();
@@ -133,21 +165,42 @@ class _ImagePickerFieldState extends State<ImagePickerField> {
                   ),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_a_photo_outlined,
-                      size: 44, color: AppColors.rossoGubbio.withOpacity(0.7)),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Tocca per scegliere una foto',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+            : (widget.initialImageUrl != null
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(widget.initialImageUrl!, fit: BoxFit.cover),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Material(
+                          color: Colors.black54,
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            icon: const Icon(Icons.edit,
+                                color: Colors.white, size: 20),
+                            onPressed: _pick,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_a_photo_outlined,
+                          size: 44,
+                          color: AppColors.rossoGubbio.withOpacity(0.7)),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Tocca per scegliere una foto',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )),
       ),
     );
   }

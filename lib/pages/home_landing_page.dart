@@ -33,6 +33,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final LocationService _locationService = LocationService();
   bool _showPanel = true;
+  // Direzione di chiusura del pannello: true = verso il basso, false = verso destra.
+  bool _closeDown = false;
+  double _dragDy = 0;
+  bool _isDraggingPanel = false;
 
   @override
   void initState() {
@@ -222,7 +226,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
             ),
           ),
 
-          // Pannello "Esplora Gubbio" scorrevole
+          // Pannello "Esplora Gubbio" scorrevole (trascinabile anche verso il basso)
           Positioned(
             left: 0,
             right: 0,
@@ -230,8 +234,41 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
             child: AnimatedSlide(
               duration: const Duration(milliseconds: 380),
               curve: Curves.easeInOutCubic,
-              offset: _showPanel ? Offset.zero : const Offset(1.05, 0),
-              child: _buildPanel(panelHeight),
+              offset: _showPanel
+                  ? Offset.zero
+                  : (_closeDown ? const Offset(0, 1.05) : const Offset(1.05, 0)),
+              child: AnimatedContainer(
+                duration: _isDraggingPanel
+                    ? Duration.zero
+                    : const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                transform: Matrix4.translationValues(0, _dragDy, 0),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragStart: (_) =>
+                      setState(() => _isDraggingPanel = true),
+                  onVerticalDragUpdate: (details) {
+                    setState(() {
+                      _dragDy = (_dragDy + details.delta.dy)
+                          .clamp(0.0, panelHeight);
+                    });
+                  },
+                  onVerticalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    final shouldClose =
+                        _dragDy > panelHeight * 0.3 || velocity > 700;
+                    setState(() {
+                      _isDraggingPanel = false;
+                      _dragDy = 0;
+                      if (shouldClose) {
+                        _closeDown = true;
+                        _showPanel = false;
+                      }
+                    });
+                  },
+                  child: _buildPanel(panelHeight),
+                ),
+              ),
             ),
           ),
         ],
@@ -382,11 +419,23 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header con titolo e freccetta per nascondere
+              // Maniglia per trascinare il pannello verso il basso
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.grigioChiaro,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              // Header con titolo e pulsanti per nascondere
               Row(
                 children: [
                   const Expanded(
@@ -400,7 +449,21 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                       ),
                     ),
                   ),
-                  _hideButton(),
+                  _hideButton(
+                    icon: Icons.keyboard_arrow_down_rounded,
+                    onTap: () => setState(() {
+                      _closeDown = true;
+                      _showPanel = false;
+                    }),
+                  ),
+                  const SizedBox(width: 8),
+                  _hideButton(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => setState(() {
+                      _closeDown = false;
+                      _showPanel = false;
+                    }),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -457,18 +520,17 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
     );
   }
 
-  Widget _hideButton() {
+  Widget _hideButton({required IconData icon, required VoidCallback onTap}) {
     return Material(
       color: AppColors.grigioChiaro.withOpacity(0.6),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: () => setState(() => _showPanel = false),
-        child: const SizedBox(
+        onTap: onTap,
+        child: SizedBox(
           width: 34,
           height: 34,
-          child: Icon(Icons.chevron_right_rounded,
-              color: AppColors.bluNotte, size: 24),
+          child: Icon(icon, color: AppColors.bluNotte, size: 24),
         ),
       ),
     );

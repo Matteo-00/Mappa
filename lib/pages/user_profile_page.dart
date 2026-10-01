@@ -143,6 +143,26 @@ class UserProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 12),
+
+                  // Eliminazione account (richiesto da Play Store/App Store)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: TextButton.icon(
+                      onPressed: () => _handleDeleteAccount(context),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      label: const Text('Elimina il mio account'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -162,6 +182,48 @@ class UserProfilePage extends StatelessWidget {
   void _handleLogout(BuildContext context) async {
     final authService = context.read<AuthService>();
     await authService.logout();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    }
+  }
+
+  void _handleDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Elimina account'),
+        content: const Text(
+          'Questa azione cancellerà definitivamente il tuo profilo (nome, '
+          'cognome, email) e disconnetterà il tuo account. L\'operazione non '
+          'è reversibile. Vuoi continuare?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Elimina',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final authService = context.read<AuthService>();
+    try {
+      await authService.deleteAccount();
+    } catch (_) {
+      // Prosegue comunque con logout/navigazione anche in caso di errore parziale
+    }
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginPage()),

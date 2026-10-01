@@ -8,6 +8,7 @@ import '../services/location_service.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import 'admin/admin_widgets.dart';
+import 'admin/add_place_page.dart';
 import 'restaurant_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 
@@ -90,6 +91,13 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         final distB = b.calculateDistance(_currentLocation!);
         return distA.compareTo(distB);
       });
+    } else {
+      // Senza posizione, ordina dal più stellato al meno stellato.
+      _filteredRestaurants.sort((a, b) {
+        final ratingA = a.rating ?? 0;
+        final ratingB = b.rating ?? 0;
+        return ratingB.compareTo(ratingA);
+      });
     }
   }
   
@@ -130,6 +138,18 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         builder: (_) => RestaurantDetailPage(restaurant: restaurant),
       ),
     );
+  }
+
+  Future<void> _editRestaurant(RestaurantModel restaurant) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPlacePage(isBar: false, editRestaurant: restaurant),
+      ),
+    );
+    if (updated == true) {
+      await _loadRestaurants();
+    }
   }
 
   @override
@@ -292,6 +312,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
               Container(
                 width: 84,
                 height: 84,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
@@ -303,11 +324,22 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                     ],
                   ),
                 ),
-                child: const Icon(
-                  Icons.restaurant_menu,
-                  size: 38,
-                  color: AppColors.rossoGubbio,
-                ),
+                child: restaurant.imageUrl != null
+                    ? Image.network(
+                        restaurant.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                          Icons.restaurant_menu,
+                          size: 38,
+                          color: AppColors.rossoGubbio,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.restaurant_menu,
+                        size: 38,
+                        color: AppColors.rossoGubbio,
+                      ),
               ),
 
               const SizedBox(width: 16),
@@ -332,8 +364,17 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                           ),
                         ),
                         if (canDelete)
-                          DeleteIconButton(
-                            onPressed: () => _deleteRestaurant(restaurant),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              EditIconButton(
+                                onPressed: () => _editRestaurant(restaurant),
+                              ),
+                              const SizedBox(width: 6),
+                              DeleteIconButton(
+                                onPressed: () => _deleteRestaurant(restaurant),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -348,7 +389,10 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
+                    if (restaurant.rating != null)
+                      _buildMiniRating(restaurant.rating!),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         if (_currentLocation != null) ...[
@@ -376,6 +420,31 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     );
   }
   
+  Widget _buildMiniRating(double rating) {
+    final fullStars = rating.floor();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...List.generate(5, (index) {
+          return Icon(
+            index < fullStars ? Icons.star_rounded : Icons.star_outline_rounded,
+            color: const Color(0xFFF2A93B),
+            size: 15,
+          );
+        }),
+        const SizedBox(width: 4),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Stato vuoto
   Widget _buildEmptyState() {
     return Center(

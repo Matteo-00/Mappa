@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'admin/admin_widgets.dart';
+import 'admin/add_event_page.dart';
 
 /// Pagina lista eventi con ricerca e filtri
 class EventsListPage extends StatefulWidget {
@@ -243,6 +244,16 @@ class _EventsListPageState extends State<EventsListPage> {
   }
   
   /// Card singolo evento
+  Future<void> _editEvent(EventModel event) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => AddEventPage(editEvent: event)),
+    );
+    if (updated == true) {
+      await _loadEvents();
+    }
+  }
+
   Future<void> _deleteEvent(EventModel event) async {
     final ok = await confirmDelete(context, event.title);
     if (!ok) return;
@@ -356,25 +367,45 @@ class _EventsListPageState extends State<EventsListPage> {
                   ),
                 ),
 
-                // Pulsante elimina (solo admin)
+                // Pulsanti modifica/elimina (solo admin)
                 if (canDelete)
                   Positioned(
                     top: 12,
                     left: 12,
-                    child: Material(
-                      color: Colors.white,
-                      shape: const CircleBorder(),
-                      elevation: 2,
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => _deleteEvent(event),
-                        child: const SizedBox(
-                          width: 36,
-                          height: 36,
-                          child: Icon(Icons.delete_outline,
-                              size: 20, color: AppColors.rossoGubbio),
+                    child: Row(
+                      children: [
+                        Material(
+                          color: Colors.white,
+                          shape: const CircleBorder(),
+                          elevation: 2,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _editEvent(event),
+                            child: const SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Icon(Icons.edit_outlined,
+                                  size: 18, color: AppColors.bluNotte),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Material(
+                          color: Colors.white,
+                          shape: const CircleBorder(),
+                          elevation: 2,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _deleteEvent(event),
+                            child: const SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Icon(Icons.delete_outline,
+                                  size: 20, color: AppColors.rossoGubbio),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],

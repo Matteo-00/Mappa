@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/restaurant_model.dart';
@@ -32,172 +34,145 @@ class RestaurantDetailPage extends StatelessWidget {
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: restaurant.imageUrl != null
-                  ? Image.network(
-                      restaurant.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildImagePlaceholder();
-                      },
-                    )
+                  ? _buildHeroImage(restaurant.imageUrl!)
                   : _buildImagePlaceholder(),
             ),
           ),
           
           // Contenuto
           SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header con nome e info
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  color: Colors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Nome
-                      Text(
-                        restaurant.name,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.bluNotte,
-                          height: 1.2,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Tipi di cucina
-                      if (restaurant.cuisineTypes.isNotEmpty)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: restaurant.cuisineTypes.map((type) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.rossoGubbio.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.rossoGubbio.withOpacity(0.25),
-                                ),
-                              ),
-                              child: Text(
-                                type,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.rossoGubbio,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Descrizione
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  color: Colors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Descrizione',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.bluNotte,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        restaurant.description,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Informazioni di contatto
-                if (restaurant.phoneNumber != null || restaurant.website != null)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    color: Colors.white,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Contatti',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.bluNotte,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (restaurant.phoneNumber != null)
-                          _buildContactRow(
-                            Icons.phone,
-                            restaurant.phoneNumber!,
-                            () => _makePhoneCall(restaurant.phoneNumber!),
-                          ),
-                        if (restaurant.website != null)
-                          _buildContactRow(
-                            Icons.language,
-                            'Sito web',
-                            () => _openWebsite(restaurant.website!),
-                          ),
-                      ],
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nome
+                  Text(
+                    restaurant.name,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.bluNotte,
+                      height: 1.2,
                     ),
                   ),
-                
-                const SizedBox(height: 12),
-                
-                // Indirizzo
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  color: Colors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Indirizzo',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.bluNotte,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        restaurant.address,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
+
+                  if (restaurant.rating != null) ...[
+                    const SizedBox(height: 10),
+                    _buildRatingRow(context, restaurant.rating!),
+                  ],
+
+                  if (restaurant.cuisineTypes.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: restaurant.cuisineTypes.map((type) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.rossoGubbio.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppColors.rossoGubbio.withOpacity(0.25),
+                            ),
+                          ),
+                          child: Text(
+                            type,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.rossoGubbio,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+                  const Divider(height: 1, color: AppColors.grigioChiaro),
+                  const SizedBox(height: 20),
+
+                  // Descrizione
+                  const Text(
+                    'Descrizione',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.bluNotte,
+                    ),
                   ),
-                ),
-                
-                const SizedBox(height: 100),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    restaurant.description,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.6,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+
+                  if (restaurant.phoneNumber != null ||
+                      restaurant.website != null) ...[
+                    const SizedBox(height: 20),
+                    const Divider(height: 1, color: AppColors.grigioChiaro),
+                    const SizedBox(height: 20),
+
+                    // Informazioni di contatto
+                    const Text(
+                      'Contatti',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.bluNotte,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (restaurant.phoneNumber != null)
+                      _buildContactRow(
+                        Icons.phone,
+                        restaurant.phoneNumber!,
+                        () => _makePhoneCall(restaurant.phoneNumber!),
+                      ),
+                    if (restaurant.website != null)
+                      _buildContactRow(
+                        Icons.language,
+                        'Sito web',
+                        () => _openWebsite(restaurant.website!),
+                      ),
+                  ],
+
+                  const SizedBox(height: 20),
+                  const Divider(height: 1, color: AppColors.grigioChiaro),
+                  const SizedBox(height: 20),
+
+                  // Indirizzo
+                  const Text(
+                    'Indirizzo',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.bluNotte,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    restaurant.address,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.6,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+
+                  const SizedBox(height: 90),
+                ],
+              ),
             ),
           ),
         ],
@@ -205,6 +180,60 @@ class RestaurantDetailPage extends StatelessWidget {
       
       // Pulsanti azione fissi in basso
       bottomNavigationBar: _buildActionButtons(context),
+    );
+  }
+
+  Widget _buildRatingRow(BuildContext context, double rating) {
+    final fullStars = rating.floor();
+    return Row(
+      children: [
+        ...List.generate(5, (index) {
+          return Icon(
+            index < fullStars ? Icons.star_rounded : Icons.star_outline_rounded,
+            color: const Color(0xFFF2A93B),
+            size: 22,
+          );
+        }),
+        const SizedBox(width: 8),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
+          ),
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Text('Valutazione'),
+                content: const Text(
+                  'Questa valutazione è una media indicativa calcolata dai '
+                  'punteggi presenti su TripAdvisor e Google Maps, per '
+                  'aiutarti a capire che si tratta di dati reali.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          },
+          child: Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: AppColors.textMuted.withOpacity(0.8),
+          ),
+        ),
+      ],
     );
   }
   
@@ -227,6 +256,32 @@ class RestaurantDetailPage extends StatelessWidget {
           color: AppColors.rossoGubbio.withOpacity(0.5),
         ),
       ),
+    );
+  }
+
+  /// Mostra la foto intera senza tagliarla: sfondo sfocato (riempito con la
+  /// stessa immagine in cover) e la foto completa in primo piano con
+  /// `BoxFit.contain`.
+  Widget _buildHeroImage(String url) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              _buildImagePlaceholder(),
+        ),
+        BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: Container(color: Colors.black.withOpacity(0.15)),
+        ),
+        Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+        ),
+      ],
     );
   }
   

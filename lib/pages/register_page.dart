@@ -299,45 +299,23 @@ class _RegisterPageState extends State<RegisterPage> {
         ],
       ),
       body: SafeArea(
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.topCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 8),
-                  // Logo identico al login
-                  SizedBox(
-                    width: 400,
-                    height: 400,
-                    child: Image.asset(
-                      'assets/geo/logo.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // const SizedBox(height: 0),
-                  // Text(
-                  //   'Registra il tuo account',
-                  //   style: TextStyle(
-                  //     fontSize: 14,
-                  //     fontWeight: FontWeight.w400,
-                  //     color: Colors.grey[600],
-                  //     letterSpacing: 0.5,
-                  //   ),
-                  // ),
-                ],
-              ),
-            ),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(
-                  top: 380,
-                  left: 24,
-                  right: 24,
-                  bottom: 24,
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              // Logo identico al login
+              SizedBox(
+                width: 200,
+                height: 200,
+                child: Image.asset(
+                  'assets/geo/logo.png',
+                  fit: BoxFit.contain,
                 ),
-                child: Form(
+              ),
+              const SizedBox(height: 16),
+              Form(
                   key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -711,10 +689,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 16),
                     ],
                   ),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

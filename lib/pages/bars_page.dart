@@ -8,6 +8,7 @@ import '../services/location_service.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import 'admin/admin_widgets.dart';
+import 'admin/add_place_page.dart';
 import '../widgets/premium_scaffold.dart';
 import 'bar_detail_page.dart';
 
@@ -89,6 +90,13 @@ class _BarsPageState extends State<BarsPage> {
         final distB = b.calculateDistance(_currentLocation!);
         return distA.compareTo(distB);
       });
+    } else {
+      // Senza posizione, ordina dal più stellato al meno stellato.
+      _filteredBars.sort((a, b) {
+        final ratingA = a.rating ?? 0;
+        final ratingB = b.rating ?? 0;
+        return ratingB.compareTo(ratingA);
+      });
     }
   }
 
@@ -128,6 +136,18 @@ class _BarsPageState extends State<BarsPage> {
       context,
       MaterialPageRoute(builder: (_) => BarDetailPage(bar: bar)),
     );
+  }
+
+  Future<void> _editBar(BarModel bar) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPlacePage(isBar: true, editBar: bar),
+      ),
+    );
+    if (updated == true) {
+      await _loadBars();
+    }
   }
 
   @override
@@ -290,6 +310,7 @@ class _BarsPageState extends State<BarsPage> {
               Container(
                 width: 84,
                 height: 84,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
@@ -301,11 +322,22 @@ class _BarsPageState extends State<BarsPage> {
                     ],
                   ),
                 ),
-                child: const Icon(
-                  Icons.local_cafe_outlined,
-                  size: 38,
-                  color: AppColors.rossoGubbio,
-                ),
+                child: bar.imageUrl != null
+                    ? Image.network(
+                        bar.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                          Icons.local_cafe_outlined,
+                          size: 38,
+                          color: AppColors.rossoGubbio,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.local_cafe_outlined,
+                        size: 38,
+                        color: AppColors.rossoGubbio,
+                      ),
               ),
 
               const SizedBox(width: 16),
@@ -330,8 +362,17 @@ class _BarsPageState extends State<BarsPage> {
                           ),
                         ),
                         if (canDelete)
-                          DeleteIconButton(
-                            onPressed: () => _deleteBar(bar),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              EditIconButton(
+                                onPressed: () => _editBar(bar),
+                              ),
+                              const SizedBox(width: 6),
+                              DeleteIconButton(
+                                onPressed: () => _deleteBar(bar),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -346,7 +387,9 @@ class _BarsPageState extends State<BarsPage> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
+                    if (bar.rating != null) _buildMiniRating(bar.rating!),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         if (_currentLocation != null) ...[
@@ -404,6 +447,31 @@ class _BarsPageState extends State<BarsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMiniRating(double rating) {
+    final fullStars = rating.floor();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...List.generate(5, (index) {
+          return Icon(
+            index < fullStars ? Icons.star_rounded : Icons.star_outline_rounded,
+            color: const Color(0xFFF2A93B),
+            size: 15,
+          );
+        }),
+        const SizedBox(width: 4),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
+          ),
+        ),
+      ],
     );
   }
 }

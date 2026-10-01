@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'admin/admin_widgets.dart';
+import 'admin/add_itinerario_page.dart';
 import 'itinerario_detail_page.dart';
 
 /// Elenco degli itinerari consigliati per visitare Gubbio.
@@ -38,6 +39,18 @@ class _ItinerariPageState extends State<ItinerariPage> {
         builder: (_) => ItinerarioDetailPage(itinerario: itinerario),
       ),
     );
+  }
+
+  Future<void> _editItinerario(ItinerarioModel it) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddItinerarioPage(editItinerario: it),
+      ),
+    );
+    if (updated == true) {
+      await _load();
+    }
   }
 
   Future<void> _deleteItinerario(ItinerarioModel it) async {
@@ -171,20 +184,40 @@ class _ItinerariPageState extends State<ItinerariPage> {
                     Positioned(
                       top: 8,
                       right: 8,
-                      child: Material(
-                        color: Colors.white,
-                        shape: const CircleBorder(),
-                        elevation: 2,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => _deleteItinerario(it),
-                          child: const SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Icon(Icons.delete_outline,
-                                size: 20, color: AppColors.rossoGubbio),
+                      child: Row(
+                        children: [
+                          Material(
+                            color: Colors.white,
+                            shape: const CircleBorder(),
+                            elevation: 2,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => _editItinerario(it),
+                              child: const SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: Icon(Icons.edit_outlined,
+                                    size: 18, color: AppColors.bluNotte),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Material(
+                            color: Colors.white,
+                            shape: const CircleBorder(),
+                            elevation: 2,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => _deleteItinerario(it),
+                              child: const SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: Icon(Icons.delete_outline,
+                                    size: 20, color: AppColors.rossoGubbio),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
