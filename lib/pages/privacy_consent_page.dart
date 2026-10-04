@@ -98,7 +98,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                             'I tuoi dati vengono conservati finché il tuo account è '
                             'attivo. Puoi richiederne la cancellazione in qualsiasi '
                             'momento dalla sezione Profilo dell\'app ("Elimina il mio '
-                            'account") oppure scrivendo a privacy@visitgubbio.eu.',
+                            'account") oppure scrivendo a visitgubbioapp@gmail.com.',
                       ),
                       _Bullet(
                         title: 'I tuoi diritti',
@@ -113,7 +113,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                         'Proseguendo dichiari di aver letto e compreso questa '
                         'informativa ai sensi del Regolamento (UE) 2016/679 (GDPR). '
                         'L\'informativa completa è disponibile su '
-                        'visitgubbio.eu/privacy-policy.',
+                        'visitgubbio.eu/privacy-policy.html.',
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
@@ -143,7 +143,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                         child: Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: Text(
-                            'Ho letto e accetto l\'informativa sulla privacy',
+                            'Ho letto l\'informativa sulla privacy',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -181,7 +181,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                           ),
                         )
                       : const Text(
-                          'Accetta e continua',
+                          'Continua',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

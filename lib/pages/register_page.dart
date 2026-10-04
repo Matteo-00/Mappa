@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import 'login_page.dart';
+import '../widgets/privacy_policy_link.dart';
 
 /// Schermata di registrazione semplificata
 class RegisterPage extends StatefulWidget {
@@ -691,7 +692,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         ],
                       ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      PrivacyPolicyLink(l10n: l10n),
+                      const SizedBox(height: 8),
                     ],
                   ),
               ),

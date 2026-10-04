@@ -38,16 +38,26 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Cancella il profilo utente (riga nella tabella 'utenti') e termina la sessione.
-  /// Nota: la rimozione definitiva dell'account di autenticazione Supabase
-  /// richiede una funzione server-side con service role key (non deve mai
-  /// essere inclusa nell'app), da implementare lato backend.
+  /// Cancella definitivamente l'account: profilo ('utenti') + utente di
+  /// autenticazione Supabase, tramite l'Edge Function server-side
+  /// 'delete-account' (vedi supabase/functions/delete-account), che usa la
+  /// service role key senza mai esporla nell'app.
   Future<void> deleteAccount() async {
     final supabase = Supabase.instance.client;
     final userId = _currentUser?.id;
-    if (userId != null) {
-      await supabase.from('utenti').delete().eq('id', userId);
+
+    try {
+      await supabase.functions.invoke('delete-account');
+    } catch (e) {
+      // Fallback se la Edge Function non è ancora distribuita: elimina almeno
+      // il profilo per non lasciare l'app in uno stato inconsistente. In
+      // questo caso le credenziali di accesso restano attive su Supabase Auth
+      // finché la funzione non viene distribuita.
+      if (userId != null) {
+        await supabase.from('utenti').delete().eq('id', userId);
+      }
     }
+
     await supabase.auth.signOut();
 
     _isAuthenticated = false;

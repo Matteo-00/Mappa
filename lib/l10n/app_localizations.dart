@@ -21,6 +21,7 @@ class AppLocalizations {
   String get enterEmail => languageCode == 'it' ? 'Inserisci email' : 'Enter email';
   String get invalidEmail => languageCode == 'it' ? 'Email non valida' : 'Invalid email';
   String get enterPassword => languageCode == 'it' ? 'Inserisci password' : 'Enter password';
+  String get privacyPolicy => languageCode == 'it' ? 'Informativa sulla privacy' : 'Privacy Policy';
   
   // ============== REGISTER PAGE ==============
   String get registration => languageCode == 'it' ? 'Registrazione' : 'Registration';

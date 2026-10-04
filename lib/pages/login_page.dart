@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import 'home_landing_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
+import '../widgets/privacy_policy_link.dart';
 
 /// Schermata di Login con stile Visit Gubbio
 class LoginPage extends StatefulWidget {
@@ -382,6 +383,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ],
                       ),
+
+                      const SizedBox(height: 8),
+                      PrivacyPolicyLink(l10n: l10n),
                     ],
                   ),
                 ),
