@@ -8,6 +8,7 @@ import '../models/bar_model.dart';
 import '../models/event_model.dart';
 import '../models/itinerario_model.dart';
 import '../models/restaurant_model.dart';
+import '../models/storia_model.dart';
 
 /// Servizio per leggere e scrivere i contenuti (ristoranti, bar, eventi,
 /// itinerari) su Supabase. In lettura unisce i dati locali di base con quelli
@@ -123,6 +124,43 @@ class ContentService {
 
   static Future<void> deleteItinerario(String id) async {
     await _db.from('itinerari').delete().eq('id', id);
+  }
+
+  // -------------------------------------------------- Storia di Gubbio
+  static Future<List<StoriaEpoca>> fetchStoriaEpoche() async {
+    try {
+      final rows =
+          await _db.from('storia_epoche').select().order('sort_order');
+      return (rows as List)
+          .map((e) => StoriaEpoca.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<List<StoriaContenuto>> fetchStoriaContenuti() async {
+    try {
+      final rows =
+          await _db.from('storia_contenuti').select().order('sort_order');
+      return (rows as List)
+          .map((e) => StoriaContenuto.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> addStoriaContenuto(StoriaContenuto c) async {
+    await _db.from('storia_contenuti').insert(c.toJson());
+  }
+
+  static Future<void> updateStoriaContenuto(StoriaContenuto c) async {
+    await _db.from('storia_contenuti').update(c.toJson()).eq('id', c.id);
+  }
+
+  static Future<void> deleteStoriaContenuto(String id) async {
+    await _db.from('storia_contenuti').delete().eq('id', id);
   }
 
   // -------------------------------------------------- Immagini

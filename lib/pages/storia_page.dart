@@ -1,50 +1,204 @@
 import 'package:flutter/material.dart';
-import '../data/storia_data.dart';
+import 'package:provider/provider.dart';
+
 import '../models/storia_model.dart';
+import '../services/auth_service.dart';
+import '../services/content_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
+import 'admin/add_storia_content_page.dart';
+import 'admin/admin_widgets.dart';
 import 'storia_detail_page.dart';
 
-/// Indice della sezione "Storia di Gubbio" — un piccolo museo digitale.
-/// Introduzione scenografica, timeline del viaggio nel tempo e card
-/// visive per ogni epoca.
-class StoriaPage extends StatelessWidget {
+const Map<String, String> _categoriaLabels = {
+  'chiesa': 'Chiese',
+  'palazzo': 'Palazzi',
+  'piazza': 'Piazze',
+  'monumento': 'Monumenti',
+  'natura': 'Natura',
+};
+
+/// Sezione "Storia di Gubbio" — un viaggio nel tempo attraverso le epoche
+/// della città, con timeline verticale, ricerca e filtri.
+class StoriaPage extends StatefulWidget {
   const StoriaPage({super.key});
 
-  void _openCapitolo(BuildContext context, StoriaCapitolo capitolo) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => StoriaDetailPage(capitolo: capitolo)),
+  @override
+  State<StoriaPage> createState() => _StoriaPageState();
+}
+
+class _StoriaPageState extends State<StoriaPage> {
+  final _searchController = TextEditingController();
+
+  bool _loading = true;
+  List<StoriaEpoca> _epoche = [];
+  List<StoriaContenuto> _contenuti = [];
+
+  String _searchQuery = '';
+  String? _selectedEraId;
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final epoche = await ContentService.fetchStoriaEpoche();
+    final contenuti = await ContentService.fetchStoriaContenuti();
+    if (!mounted) return;
+    setState(() {
+      _epoche = epoche;
+      _contenuti = contenuti;
+      _loading = false;
+    });
+  }
+
+  StoriaEpoca? _eraOf(StoriaContenuto c) {
+    for (final e in _epoche) {
+      if (e.id == c.eraId) return e;
+    }
+    return null;
+  }
+
+  List<StoriaContenuto> get _filtered {
+    final query = _searchQuery.trim().toLowerCase();
+    return _contenuti.where((c) {
+      if (c.isPublished == false &&
+          !context.read<AuthService>().isAdmin) {
+        return false;
+      }
+      if (_selectedEraId != null && c.eraId != _selectedEraId) return false;
+      if (_selectedCategory != null && c.category != _selectedCategory) {
+        return false;
+      }
+      if (query.isNotEmpty && !c.searchableText.contains(query)) return false;
+      return true;
+    }).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Future<void> _openDetail(StoriaContenuto c) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoriaDetailPage(contenuto: c, epoca: _eraOf(c)),
+      ),
     );
+    if (changed == true) _load();
+  }
+
+  Future<void> _addContent() async {
+    final added = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddStoriaContentPage()),
+    );
+    if (added == true) _load();
+  }
+
+  Future<void> _editContent(StoriaContenuto c) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => AddStoriaContentPage(editContenuto: c)),
+    );
+    if (updated == true) _load();
+  }
+
+  Future<void> _deleteContent(StoriaContenuto c) async {
+    final ok = await confirmDelete(context, c.title);
+    if (!ok) return;
+    try {
+      await ContentService.deleteStoriaContenuto(c.id);
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: const Color(0xFFB71C1C),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.watch<AuthService>().isAdmin;
+    final filtered = _filtered;
+
+    // Raggruppa i contenuti filtrati per epoca, rispettando l'ordine delle epoche.
+    final epocheOrdinate = [..._epoche]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final gruppi = <StoriaEpoca, List<StoriaContenuto>>{};
+    for (final epoca in epocheOrdinate) {
+      final items = filtered.where((c) => c.eraId == epoca.id).toList();
+      if (items.isNotEmpty) gruppi[epoca] = items;
+    }
+    // Contenuti senza epoca associata (fallback, non dovrebbero essercene).
+    final senzaEpoca = filtered.where((c) => _eraOf(c) == null).toList();
+
     return Scaffold(
       backgroundColor: AppColors.avorio,
+      floatingActionButton: isAdmin
+          ? FloatingActionButton.extended(
+              onPressed: _addContent,
+              backgroundColor: AppColors.rossoGubbio,
+              icon: const Icon(Icons.add),
+              label: const Text('Aggiungi'),
+            )
+          : null,
       body: Column(
         children: [
           const PremiumHeader(title: 'Storia di Gubbio'),
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildIntroHero(),
-                const SizedBox(height: 24),
-                _buildIntroText(),
-                const SizedBox(height: 28),
-                _buildTimeline(context),
-                const SizedBox(height: 28),
-                _buildSezioneTitolo(),
-                const SizedBox(height: 16),
-                ...List.generate(storiaCapitoli.length, (i) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                    child: _buildEpocaCard(context, storiaCapitoli[i]),
-                  );
-                }),
-                const SizedBox(height: 24),
-              ],
-            ),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView(
+                      padding: const EdgeInsets.only(bottom: 100),
+                      children: [
+                        _buildIntroHero(),
+                        const SizedBox(height: 22),
+                        _buildSearchBar(),
+                        const SizedBox(height: 14),
+                        _buildEraFilterChips(),
+                        const SizedBox(height: 10),
+                        _buildCategoryFilterChips(),
+                        const SizedBox(height: 22),
+                        if (filtered.isEmpty)
+                          _buildEmptyState()
+                        else ...[
+                          for (final epoca in gruppi.keys) ...[
+                            _buildEraHeader(epoca),
+                            const SizedBox(height: 14),
+                            ...gruppi[epoca]!.map(
+                              (c) => Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                                child: _buildContentCard(c, epoca, isAdmin),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          if (senzaEpoca.isNotEmpty)
+                            ...senzaEpoca.map(
+                              (c) => Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                                child: _buildContentCard(c, null, isAdmin),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -55,375 +209,456 @@ class StoriaPage extends StatelessWidget {
   Widget _buildIntroHero() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: SizedBox(
-          height: 240,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _imagePlaceholderStoria('Panorama di Gubbio', icon: Icons.castle),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x11000000),
-                      Color(0xCC16283D),
-                    ],
-                    stops: [0.35, 1.0],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(22),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.rossoGubbio,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: const Text(
-                        'MUSEO DIGITALE',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      storiaIntroTitolo,
-                      style: TextStyle(
-                        fontFamily: 'serif',
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        height: 1.05,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Oltre 2000 anni di storia',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIntroText() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Text(
-        storiaIntroTesto,
-        style: const TextStyle(
-          fontSize: 15.5,
-          height: 1.65,
-          color: AppColors.bluNotte,
-        ),
-      ),
-    );
-  }
-
-  // -------------------------------------------------- Timeline del viaggio
-  Widget _buildTimeline(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Il viaggio nel tempo',
-            style: TextStyle(
-              fontFamily: 'serif',
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: AppColors.bluNotte,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Umbri → Romani → Medioevo → Comune → Rinascimento → Ceri → Oggi',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: AppColors.textMuted,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 108,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: storiaCapitoli.length,
-            itemBuilder: (context, i) {
-              final capitolo = storiaCapitoli[i];
-              final isLast = i == storiaCapitoli.length - 1;
-              return _buildTimelineNode(context, capitolo, isLast);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimelineNode(
-      BuildContext context, StoriaCapitolo capitolo, bool isLast) {
-    return GestureDetector(
-      onTap: () => _openCapitolo(context, capitolo),
-      child: SizedBox(
-        width: 92,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.rossoGubbio.withOpacity(0.35),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.bluNotte.withOpacity(0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(capitolo.icona,
-                      color: AppColors.rossoGubbio, size: 22),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      height: 2,
-                      color: AppColors.tortora.withOpacity(0.5),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              capitolo.epocaBreve,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.bluNotte,
-                height: 1.15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // -------------------------------------------------- Titolo sezione card
-  Widget _buildSezioneTitolo() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Text(
-        'Le epoche di Gubbio',
-        style: TextStyle(
-          fontFamily: 'serif',
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-          color: AppColors.bluNotte,
-        ),
-      ),
-    );
-  }
-
-  // -------------------------------------------------- Card epoca (compatta)
-  Widget _buildEpocaCard(BuildContext context, StoriaCapitolo capitolo) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => _openCapitolo(context, capitolo),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.bluNotte.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Miniatura con numero
-              Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: SizedBox(
+              height: 210,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: SizedBox(
-                      width: 78,
-                      height: 78,
-                      child: _imagePlaceholderStoriaCompact(capitolo.icona),
+                  DecoratedBox(
+                    decoration: BoxDecoration(gradient: AppColors.heroFallback),
+                    child: Center(
+                      child: Icon(Icons.castle,
+                          size: 60, color: Colors.white.withOpacity(0.85)),
                     ),
                   ),
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.rossoGubbio,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        capitolo.numero,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                  const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.heroOverlay)),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'La storia di Gubbio',
+                          style: TextStyle(
+                            fontFamily: 'serif',
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            height: 1.05,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Un viaggio attraverso più di 2.000 anni di storia',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            color: Colors.white.withOpacity(0.92),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: 14),
-              // Testi
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      capitolo.epocaBreve.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.rossoGubbio,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      capitolo.titolo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'serif',
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.bluNotte,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      capitolo.sottotitolo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Dall\'antica Iguvium romana al Libero Comune, dal Rinascimento dei '
+            'Montefeltro fino ai giorni nostri: scopri le epoche, i monumenti e '
+            'i racconti che hanno reso unica Gubbio.',
+            style: TextStyle(fontSize: 14.5, height: 1.55, color: AppColors.bluNotte),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Ricerca
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.bluNotte.withOpacity(0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (v) => setState(() => _searchQuery = v),
+          decoration: InputDecoration(
+            hintText: 'Cerca per nome, epoca, curiosità...',
+            hintStyle: const TextStyle(color: AppColors.textMuted),
+            prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: AppColors.tortora),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Filtro epoca
+  Widget _buildEraFilterChips() {
+    final epocheOrdinate = [..._epoche]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          _filterChip('Tutte le epoche', _selectedEraId == null,
+              () => setState(() => _selectedEraId = null)),
+          const SizedBox(width: 8),
+          for (final e in epocheOrdinate) ...[
+            _filterChip(e.nome, _selectedEraId == e.id,
+                () => setState(() => _selectedEraId = e.id)),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Filtro categoria
+  Widget _buildCategoryFilterChips() {
+    final categorie = _contenuti.map((c) => c.category).toSet().toList()..sort();
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          _filterChip('Tutte le categorie', _selectedCategory == null,
+              () => setState(() => _selectedCategory = null)),
+          const SizedBox(width: 8),
+          for (final cat in categorie) ...[
+            _filterChip(_categoriaLabels[cat] ?? cat, _selectedCategory == cat,
+                () => setState(() => _selectedCategory = cat)),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.rossoGubbio : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.rossoGubbio : AppColors.grigioChiaro,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : AppColors.bluNotte,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Intestazione epoca
+  Widget _buildEraHeader(StoriaEpoca epoca) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: const BoxDecoration(
+                  color: AppColors.rossoGubbio,
+                  shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.tortora, size: 24),
+              Container(
+                width: 2,
+                height: 56,
+                color: AppColors.tortora.withOpacity(0.4),
+              ),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  epoca.nome,
+                  style: const TextStyle(
+                    fontFamily: 'serif',
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.bluNotte,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  epoca.periodo,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.rossoGubbio,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                if (epoca.descrizione.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    epoca.descrizione,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.45,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+                if (epoca.eventiImportanti.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: epoca.eventiImportanti
+                        .map((ev) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.tortora.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                ev,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.bluNotte,
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Card contenuto
+  Widget _buildContentCard(StoriaContenuto c, StoriaEpoca? epoca, bool isAdmin) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 0,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _openDetail(c),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.bluNotte.withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      width: 84,
+                      height: 84,
+                      child: c.coverImage != null
+                          ? Image.network(
+                              c.coverImage!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _cardPlaceholder(c.category),
+                            )
+                          : _cardPlaceholder(c.category),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                c.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'serif',
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.bluNotte,
+                                ),
+                              ),
+                            ),
+                            if (isAdmin)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  EditIconButton(onPressed: () => _editContent(c)),
+                                  const SizedBox(width: 6),
+                                  DeleteIconButton(onPressed: () => _deleteContent(c)),
+                                ],
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            if (c.displayDate.isNotEmpty)
+                              _miniBadge(c.displayDate, AppColors.rossoGubbio),
+                            if (epoca != null)
+                              _miniBadge(epoca.nome, AppColors.tortora, dark: true),
+                            if (!c.isPublished)
+                              _miniBadge('Bozza', Colors.grey, dark: true),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                c.shortDescription,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _openDetail(c),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.rossoGubbio),
+                  icon: const Text('Approfondisci',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  label: const Icon(Icons.arrow_forward_rounded, size: 16),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-/// Miniatura compatta per le card indice.
-Widget _imagePlaceholderStoriaCompact(IconData icon) {
-  return DecoratedBox(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [AppColors.grigioChiaro, AppColors.tortora],
+  Widget _miniBadge(String text, Color color, {bool dark = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(dark ? 0.2 : 0.12),
+        borderRadius: BorderRadius.circular(10),
       ),
-    ),
-    child: Center(
-      child: Icon(icon, size: 30, color: Colors.white.withOpacity(0.9)),
-    ),
-  );
-}
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: dark ? AppColors.bluNotte : color,
+        ),
+      ),
+    );
+  }
 
-/// Placeholder elegante per un'immagine ancora da inserire.
-Widget _imagePlaceholderStoria(String label,
-    {IconData icon = Icons.image_outlined}) {
-  return DecoratedBox(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          AppColors.grigioChiaro,
-          AppColors.tortora,
-        ],
+  Widget _cardPlaceholder(String category) {
+    IconData icon;
+    switch (category) {
+      case 'chiesa':
+        icon = Icons.church_outlined;
+        break;
+      case 'palazzo':
+        icon = Icons.account_balance_outlined;
+        break;
+      case 'piazza':
+        icon = Icons.location_city_outlined;
+        break;
+      case 'natura':
+        icon = Icons.park_outlined;
+        break;
+      default:
+        icon = Icons.castle_outlined;
+    }
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.grigioChiaro, AppColors.tortora],
+        ),
       ),
-    ),
-    child: Center(
+      child: Center(child: Icon(icon, size: 30, color: Colors.white.withOpacity(0.9))),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 38, color: Colors.white.withOpacity(0.85)),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Immagine: $label',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.95),
-              ),
-            ),
+          Icon(Icons.search_off_rounded, size: 48, color: AppColors.tortora.withOpacity(0.7)),
+          const SizedBox(height: 14),
+          const Text(
+            'Nessun contenuto trovato',
+            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.bluNotte),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Prova a modificare la ricerca o i filtri selezionati.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppColors.textMuted),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
+
