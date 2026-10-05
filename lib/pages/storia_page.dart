@@ -29,10 +29,13 @@ class StoriaPage extends StatefulWidget {
 
 class _StoriaPageState extends State<StoriaPage> {
   final _searchController = TextEditingController();
+  final _timelineBarKey = GlobalKey();
+  final Map<String, GlobalKey> _cardKeys = {};
 
   bool _loading = true;
   List<StoriaEpoca> _epoche = [];
   List<StoriaContenuto> _contenuti = [];
+  StoriaContenuto? _currentCard;
 
   String _searchQuery = '';
   String? _selectedEraId;
@@ -67,6 +70,34 @@ class _StoriaPageState extends State<StoriaPage> {
       if (e.id == c.eraId) return e;
     }
     return null;
+  }
+
+  GlobalKey _keyForCard(String id) =>
+      _cardKeys.putIfAbsent(id, () => GlobalKey());
+
+  /// Trova la card il cui titolo è attualmente sotto la barra del tempo
+  /// (cioè quella che l'utente sta leggendo) e aggiorna il puntino.
+  void _recomputeCurrentCard() {
+    final barBox =
+        _timelineBarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (barBox == null || !barBox.attached) return;
+    final readingY = barBox.localToGlobal(Offset.zero).dy + barBox.size.height;
+
+    StoriaContenuto? best;
+    double bestTop = double.negativeInfinity;
+    for (final c in _filtered) {
+      final box = _cardKeys[c.id]?.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) continue;
+      final top = box.localToGlobal(Offset.zero).dy;
+      if (top <= readingY && top > bestTop) {
+        bestTop = top;
+        best = c;
+      }
+    }
+    best ??= _filtered.isNotEmpty ? _filtered.first : null;
+    if (best?.id != _currentCard?.id) {
+      setState(() => _currentCard = best);
+    }
   }
 
   List<StoriaContenuto> get _filtered {
@@ -145,6 +176,12 @@ class _StoriaPageState extends State<StoriaPage> {
     // Contenuti senza epoca associata (fallback, non dovrebbero essercene).
     final senzaEpoca = filtered.where((c) => _eraOf(c) == null).toList();
 
+    if (!_loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _recomputeCurrentCard();
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.avorio,
       floatingActionButton: isAdmin
@@ -161,45 +198,213 @@ class _StoriaPageState extends State<StoriaPage> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.only(bottom: 100),
-                      children: [
-                        _buildIntroHero(),
-                        const SizedBox(height: 22),
-                        _buildSearchBar(),
-                        const SizedBox(height: 14),
-                        _buildEraFilterChips(),
-                        const SizedBox(height: 10),
-                        _buildCategoryFilterChips(),
-                        const SizedBox(height: 22),
-                        if (filtered.isEmpty)
-                          _buildEmptyState()
-                        else ...[
-                          for (final epoca in gruppi.keys) ...[
-                            _buildEraHeader(epoca),
-                            const SizedBox(height: 14),
-                            ...gruppi[epoca]!.map(
-                              (c) => Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                                child: _buildContentCard(c, epoca, isAdmin),
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (n) {
+                      _recomputeCurrentCard();
+                      return false;
+                    },
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(child: _buildIntroHero()),
+                          const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                          SliverToBoxAdapter(child: _buildSearchBar()),
+                          const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                          SliverToBoxAdapter(child: _buildEraFilterChips()),
+                          const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                          SliverToBoxAdapter(child: _buildCategoryFilterChips()),
+                          const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                          if (filtered.isNotEmpty)
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: _StickyTimelineDelegate(
+                                child: _buildTimelineBar(filtered),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                          ],
-                          if (senzaEpoca.isNotEmpty)
-                            ...senzaEpoca.map(
-                              (c) => Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                                child: _buildContentCard(c, null, isAdmin),
-                              ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 12, bottom: 100),
+                              child: filtered.isEmpty
+                                  ? _buildEmptyState()
+                                  : Column(
+                                      children: [
+                                        for (final epoca in gruppi.keys) ...[
+                                          _buildEraHeader(epoca),
+                                          const SizedBox(height: 14),
+                                          ...gruppi[epoca]!.map(
+                                            (c) => Padding(
+                                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                                              child: _buildContentCard(c, epoca, isAdmin,
+                                                  key: _keyForCard(c.id)),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                        ],
+                                        if (senzaEpoca.isNotEmpty)
+                                          ...senzaEpoca.map(
+                                            (c) => Padding(
+                                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                                              child: _buildContentCard(c, null, isAdmin,
+                                                  key: _keyForCard(c.id)),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                             ),
+                          ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Timeline orizzontale fissa
+  Widget _buildTimelineBar(List<StoriaContenuto> filtered) {
+    final conAnno = filtered.where((c) => c.startYear != null).toList();
+    final current = _currentCard;
+
+    double fraction = 0;
+    int? minYear;
+    int? maxYear;
+    if (conAnno.isNotEmpty) {
+      minYear = conAnno.map((c) => c.startYear!).reduce((a, b) => a < b ? a : b);
+      maxYear = conAnno.map((c) => c.startYear!).reduce((a, b) => a > b ? a : b);
+      if (current?.startYear != null && maxYear != minYear) {
+        fraction = (current!.startYear! - minYear) / (maxYear - minYear);
+        fraction = fraction.clamp(0.0, 1.0);
+      }
+    }
+
+    return Container(
+      key: _timelineBarKey,
+      color: AppColors.avorio,
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+      decoration: BoxDecoration(
+        color: AppColors.avorio,
+        border: Border(
+          bottom: BorderSide(color: AppColors.grigioChiaro.withOpacity(0.8)),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (current != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      current.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'serif',
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.bluNotte,
+                      ),
+                    ),
+                  ),
+                  if (current.displayDate.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      current.displayDate,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.rossoGubbio,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          if (minYear != null && maxYear != null)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const dotSize = 14.0;
+                final trackWidth = constraints.maxWidth;
+                final dotLeft =
+                    (fraction * trackWidth - dotSize / 2).clamp(0.0, trackWidth - dotSize);
+                return SizedBox(
+                  height: 18,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        top: 7,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.grigioChiaro,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 7,
+                        left: 0,
+                        width: (fraction * trackWidth).clamp(0.0, trackWidth),
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.rossoGubbio,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: dotLeft,
+                        top: 2,
+                        child: Container(
+                          width: dotSize,
+                          height: dotSize,
+                          decoration: BoxDecoration(
+                            color: AppColors.rossoGubbio,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.bluNotte.withOpacity(0.3),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          if (minYear != null && maxYear != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  minYear < 0 ? '${-minYear} a.C.' : '$minYear',
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                ),
+                const Text(
+                  'Oggi',
+                  style: TextStyle(
+                      fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -477,8 +682,9 @@ class _StoriaPageState extends State<StoriaPage> {
   }
 
   // -------------------------------------------------- Card contenuto
-  Widget _buildContentCard(StoriaContenuto c, StoriaEpoca? epoca, bool isAdmin) {
+  Widget _buildContentCard(StoriaContenuto c, StoriaEpoca? epoca, bool isAdmin, {Key? key}) {
     return Material(
+      key: key,
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
       elevation: 0,
@@ -661,4 +867,26 @@ class _StoriaPageState extends State<StoriaPage> {
     );
   }
 }
+
+/// Header fisso (sempre visibile durante lo scroll) per la timeline orizzontale.
+class _StickyTimelineDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyTimelineDelegate({required this.child});
+
+  @override
+  double get minExtent => 74;
+
+  @override
+  double get maxExtent => 74;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyTimelineDelegate oldDelegate) => true;
+}
+
 
