@@ -1,8 +1,11 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/restaurant_model.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'map_page.dart';
@@ -18,6 +21,8 @@ class RestaurantDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: CustomScrollView(
@@ -99,8 +104,8 @@ class RestaurantDetailPage extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Descrizione
-                  const Text(
-                    'Descrizione',
+                  Text(
+                    l10n.description,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -124,8 +129,8 @@ class RestaurantDetailPage extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // Informazioni di contatto
-                    const Text(
-                      'Contatti',
+                    Text(
+                      l10n.contactsSection,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,

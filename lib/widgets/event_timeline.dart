@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/event_model.dart';
 import '../pages/event_detail_page.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 
 /// Widget per visualizzare la timeline degli eventi con stati automatici
 /// Linea verticale del tempo a sinistra, eventi ordinati per orario
@@ -14,6 +17,8 @@ class EventTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: events.length,
@@ -26,6 +31,7 @@ class EventTimeline extends StatelessWidget {
           event: event,
           status: status,
           isLast: index == events.length - 1,
+          l10n: l10n,
         );
       },
     );
@@ -37,6 +43,7 @@ class EventTimeline extends StatelessWidget {
     required EventModel event,
     required EventStatus status,
     required bool isLast,
+    required AppLocalizations l10n,
   }) {
     // Colori in base allo stato
     Color cardColor;
@@ -145,8 +152,8 @@ class EventTimeline extends StatelessWidget {
                               color: const Color(0xFF9E9E9E),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text(
-                              'CONCLUSO',
+                            child: Text(
+                              l10n.concluded,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -167,8 +174,8 @@ class EventTimeline extends StatelessWidget {
                               color: const Color(0xFFB22222),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text(
-                              'IN CORSO',
+                            child: Text(
+                              l10n.ongoing,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -234,8 +241,8 @@ class EventTimeline extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text(
-                          'Vai ai dettagli',
+                        child: Text(
+                          l10n.goToDetails,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 
 /// Footer uniformato per entrambe le modalità
 /// Struttura identica, cambiano solo colori e nomi dei pulsanti
@@ -21,6 +23,8 @@ class UnifiedFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         final mode = themeProvider.currentMode;
@@ -54,7 +58,7 @@ class UnifiedFooter extends StatelessWidget {
               // SINISTRA: Home
               _buildNavItem(
                 icon: Icons.home_rounded,
-                label: 'Home',
+                label: l10n.home,
                 isSelected: selectedIndex == 0,
                 selectedColor: selectedColor,
                 unselectedColor: unselectedColor,
@@ -65,12 +69,13 @@ class UnifiedFooter extends StatelessWidget {
               _buildLocationButton(
                 mode: mode,
                 selectedColor: selectedColor,
+                l10n: l10n,
               ),
               
               // DESTRA: Eventi (Visit Gubbio) o Programma (Festa dei Ceri)
               _buildNavItem(
                 icon: Icons.calendar_today_rounded,
-                label: themeProvider.isVisitGubbio ? 'Eventi' : 'Programma',
+                label: themeProvider.isVisitGubbio ? l10n.events : l10n.programNav,
                 isSelected: selectedIndex == 1,
                 selectedColor: selectedColor,
                 unselectedColor: unselectedColor,
@@ -128,6 +133,7 @@ class UnifiedFooter extends StatelessWidget {
   Widget _buildLocationButton({
     required AppMode mode,
     required Color selectedColor,
+    required AppLocalizations l10n,
   }) {
     return Expanded(
       child: InkWell(
@@ -149,7 +155,7 @@ class UnifiedFooter extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Mappa',
+              l10n.mapNav,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

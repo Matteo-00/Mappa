@@ -5,6 +5,8 @@ import '../widgets/custom_header.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../data/events_data.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../models/user_mode.dart';
 
 /// Pagina Programma con tabs per i tre eventi (15 Mag, 19 Mag, 2 Giu)
@@ -35,6 +37,8 @@ class _ProgramPageState extends State<ProgramPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     final authService = context.watch<AuthService>();
     final isCeraiolo = authService.userMode == UserMode.ceraiolo;
 
@@ -47,7 +51,7 @@ class _ProgramPageState extends State<ProgramPage>
           Padding(
             padding: const EdgeInsets.all(20),
             child: Text(
-              'Programma Festa dei Ceri',
+              l10n.programTitle,
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -79,10 +83,10 @@ class _ProgramPageState extends State<ProgramPage>
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
-              tabs: const [
-                Tab(text: '15 Mag'),
-                Tab(text: '19 Mag'),
-                Tab(text: '2 Giu'),
+              tabs: [
+                Tab(text: l10n.tab15Mag),
+                Tab(text: l10n.tab19Mag),
+                Tab(text: l10n.tab2Giu),
               ],
             ),
           ),
@@ -96,9 +100,9 @@ class _ProgramPageState extends State<ProgramPage>
                   events: get15MaggioEvents(),
                 ),
                 // 19 Maggio - Ceri Mezzani
-                _buildComingSoonTab('Ceri Mezzani'),
+                _buildComingSoonTab(l10n.ceriMezzani, l10n),
                 // 2 Giugno - Ceri Piccoli
-                _buildComingSoonTab('Ceri Piccoli'),
+                _buildComingSoonTab(l10n.ceriPiccoli, l10n),
               ],
             ),
           ),
@@ -115,7 +119,7 @@ class _ProgramPageState extends State<ProgramPage>
   }
 
   /// Tab "Coming soon" per eventi futuri
-  Widget _buildComingSoonTab(String eventName) {
+  Widget _buildComingSoonTab(String eventName, AppLocalizations l10n) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -135,9 +139,9 @@ class _ProgramPageState extends State<ProgramPage>
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Programma in arrivo',
-            style: TextStyle(
+          Text(
+            l10n.comingSoonProgram,
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF9E9E9E),
             ),

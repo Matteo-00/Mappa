@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/event_model.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'map_page.dart';
@@ -15,11 +18,13 @@ class EventDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Evento'),
+          PremiumHeader(title: l10n.eventHeaderTitle),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -51,19 +56,19 @@ class EventDetailPage extends StatelessWidget {
                         const SizedBox(height: 24),
 
                         // Descrizione completa
-                        _buildDescriptionSection(),
+                        _buildDescriptionSection(l10n),
                         const SizedBox(height: 24),
 
                         // Informazioni storiche
-                        _buildHistoricalSection(),
+                        _buildHistoricalSection(l10n),
                         const SizedBox(height: 24),
 
                         // Curiosità (se disponibili)
-                        _buildCuriositySection(),
+                        _buildCuriositySection(l10n),
                         const SizedBox(height: 24),
 
                         // Luogo
-                        _buildLocationSection(context),
+                        _buildLocationSection(context, l10n),
                         const SizedBox(height: 24),
                       ],
                     ),
@@ -147,13 +152,13 @@ class EventDetailPage extends StatelessWidget {
   }
 
   /// Sezione descrizione
-  Widget _buildDescriptionSection() {
+  Widget _buildDescriptionSection(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Descrizione',
-          style: TextStyle(
+        Text(
+          l10n.description,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: AppColors.bluNotte,
@@ -163,9 +168,7 @@ class EventDetailPage extends StatelessWidget {
         Text(
           event.description.isNotEmpty
               ? event.description
-              : 'Uno degli eventi più importanti della Festa dei Ceri di Gubbio, '
-                  'una tradizione che si tramanda da secoli e che rappresenta '
-                  'il cuore pulsante della città.',
+              : l10n.defaultEventDescription,
           style: const TextStyle(
             fontSize: 16,
             color: AppColors.textMuted,
@@ -177,7 +180,7 @@ class EventDetailPage extends StatelessWidget {
   }
 
   /// Sezione informazioni storiche
-  Widget _buildHistoricalSection() {
+  Widget _buildHistoricalSection(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -209,9 +212,9 @@ class EventDetailPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Contesto Storico',
-                style: TextStyle(
+              Text(
+                l10n.historicalContextLabel,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.bluNotte,
@@ -234,7 +237,7 @@ class EventDetailPage extends StatelessWidget {
   }
 
   /// Sezione curiosità
-  Widget _buildCuriositySection() {
+  Widget _buildCuriositySection(AppLocalizations l10n) {
     final curiosities = _getCuriosities(event.id);
     if (curiosities.isEmpty) return const SizedBox.shrink();
 
@@ -266,9 +269,9 @@ class EventDetailPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Lo sapevi che...',
-                style: TextStyle(
+              Text(
+                l10n.didYouKnowLabel,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.bluNotte,
@@ -309,13 +312,13 @@ class EventDetailPage extends StatelessWidget {
   }
 
   /// Sezione posizione
-  Widget _buildLocationSection(BuildContext context) {
+  Widget _buildLocationSection(BuildContext context, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Posizione',
-          style: TextStyle(
+        Text(
+          l10n.positionLabel,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: AppColors.bluNotte,
@@ -369,7 +372,7 @@ class EventDetailPage extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.map_rounded, size: 20),
-                  label: const Text('Vedi sulla mappa'),
+                  label: Text(l10n.viewOnMapLabel),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.rossoGubbio,
                     foregroundColor: Colors.white,

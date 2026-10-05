@@ -3,6 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/unified_header.dart';
 import '../widgets/unified_footer.dart';
 import '../widgets/app_drawer.dart';
@@ -176,6 +178,8 @@ class _UnifiedHomePageState extends State<UnifiedHomePage> {
   }
   
   void _onWhereAmITap() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     setState(() {
       _isLocationMenuOpen = false;
     });
@@ -186,9 +190,9 @@ class _UnifiedHomePageState extends State<UnifiedHomePage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Posizione non disponibile'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(l10n.positionUnavailable),
+          duration: const Duration(seconds: 2),
         ),
       );
     }

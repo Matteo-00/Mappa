@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/muta_model.dart';
 import '../data/mute_data.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'mute_form_page.dart';
@@ -23,6 +26,8 @@ class MuteListPage extends StatefulWidget {
 class _MuteListPageState extends State<MuteListPage> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
       appBar: const CustomHeader(),
@@ -34,9 +39,9 @@ class _MuteListPageState extends State<MuteListPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Mute',
-                  style: TextStyle(
+                Text(
+                  l10n.muteTitle,
+                  style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFB22222),
@@ -46,7 +51,7 @@ class _MuteListPageState extends State<MuteListPage> {
                   icon: const Icon(Icons.add_circle_rounded),
                   iconSize: 32,
                   color: const Color(0xFF2F80ED),
-                  tooltip: 'Nuova Muta',
+                  tooltip: l10n.newMuta,
                   onPressed: () => _navigateToCreateMuta(),
                 ),
               ],
@@ -55,13 +60,13 @@ class _MuteListPageState extends State<MuteListPage> {
           // Lista mute
           Expanded(
             child: muteData.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(l10n)
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: muteData.length,
                     itemBuilder: (context, index) {
                       final muta = muteData[index];
-                      return _buildMutaCard(muta);
+                      return _buildMutaCard(muta, l10n);
                     },
                   ),
           ),
@@ -77,7 +82,7 @@ class _MuteListPageState extends State<MuteListPage> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations l10n) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -88,18 +93,18 @@ class _MuteListPageState extends State<MuteListPage> {
             color: const Color(0xFF2F80ED).withOpacity(0.3),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Nessuna muta presente',
-            style: TextStyle(
+          Text(
+            l10n.noMuteYet,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Color(0xFF6B6B6B),
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Crea la prima muta',
-            style: TextStyle(
+          Text(
+            l10n.createFirstMuta,
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF9E9E9E),
             ),
@@ -108,7 +113,7 @@ class _MuteListPageState extends State<MuteListPage> {
           ElevatedButton.icon(
             onPressed: () => _navigateToCreateMuta(),
             icon: const Icon(Icons.add),
-            label: const Text('Nuova Muta'),
+            label: Text(l10n.newMuta),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2F80ED), // Blu invece di rosso
               foregroundColor: Colors.white,
@@ -124,7 +129,7 @@ class _MuteListPageState extends State<MuteListPage> {
     );
   }
 
-  Widget _buildMutaCard(MutaModel muta) {
+  Widget _buildMutaCard(MutaModel muta, AppLocalizations l10n) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -176,7 +181,7 @@ class _MuteListPageState extends State<MuteListPage> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Capo Muta: ${muta.capoMuta}',
+                              '${l10n.capoMutaLabel}: ${muta.capoMuta}',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.grey[700],
@@ -215,7 +220,7 @@ class _MuteListPageState extends State<MuteListPage> {
                     child: OutlinedButton.icon(
                       onPressed: () => _goToMapLocation(muta),
                       icon: const Icon(Icons.map, size: 18),
-                      label: const Text('Vai sulla mappa'),
+                      label: Text(l10n.goToMapLocation),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF2F80ED), // Blu
                         side: const BorderSide(color: Color(0xFF2F80ED)), // Blu
@@ -226,7 +231,7 @@ class _MuteListPageState extends State<MuteListPage> {
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     color: Colors.grey[700],
-                    tooltip: 'Modifica',
+                    tooltip: l10n.edit,
                     onPressed: () => _navigateToEditMuta(muta),
                   ),
                 ],
@@ -239,14 +244,16 @@ class _MuteListPageState extends State<MuteListPage> {
   }
 
   void _goToMapLocation(MutaModel muta) {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     if (widget.onNavigateToMuta != null) {
       // Naviga alla mappa e centra sulla muta con zoom 18
       widget.onNavigateToMuta!(muta.coordinates, 18.0, muta);
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Funzione non disponibile'),
+        SnackBar(
+          content: Text(l10n.featureUnavailable),
           backgroundColor: Colors.orange,
         ),
       );

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../pages/user_profile_page.dart';
 
 /// Header uniformato per entrambe le modalità (Visit Gubbio / Festa dei Ceri)
@@ -51,7 +53,7 @@ class UnifiedHeader extends StatelessWidget implements PreferredSizeWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // SINISTRA: Menu hamburger
-              _buildMenuButton(iconColor),
+              _buildMenuButton(context, iconColor),
               
               // CENTRO: Titolo con cornice elegante
               _buildAppTitle(themeProvider, textColor, iconColor),
@@ -66,7 +68,9 @@ class UnifiedHeader extends StatelessWidget implements PreferredSizeWidget {
   }
   
   /// Pulsante menu hamburger
-  Widget _buildMenuButton(Color iconColor) {
+  Widget _buildMenuButton(BuildContext context, Color iconColor) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return IconButton(
       onPressed: onMenuTap,
       icon: Icon(
@@ -74,7 +78,7 @@ class UnifiedHeader extends StatelessWidget implements PreferredSizeWidget {
         color: iconColor,
         size: 28,
       ),
-      tooltip: 'Menu',
+      tooltip: l10n.menu,
       splashRadius: 24,
     );
   }

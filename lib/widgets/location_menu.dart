@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 
 /// Menu espandibile del pulsante centrale del footer
 /// Mostra 2 pulsanti rotondi sopra il pulsante principale
@@ -17,6 +19,8 @@ class LocationMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         final mode = themeProvider.currentMode;
@@ -48,15 +52,15 @@ class LocationMenu extends StatelessWidget {
                         ? Icons.map_rounded 
                         : Icons.route_rounded,
                     label: themeProvider.isVisitGubbio 
-                        ? 'GubbioMaps' 
-                        : 'Mappa Percorso',
+                        ? l10n.gubbioMapsLabel 
+                        : l10n.routeMapLabel,
                     onTap: onGubbioMapsTap,
                     accentColor: accentColor,
                   ),
                   const SizedBox(width: 20),
                   _buildLocationMenuItem(
                     icon: Icons.my_location_rounded,
-                    label: 'Dove sono',
+                    label: l10n.whereAmI,
                     onTap: onWhereAmITap,
                     accentColor: accentColor,
                   ),

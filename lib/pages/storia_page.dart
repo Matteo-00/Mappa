@@ -4,18 +4,21 @@ import 'package:provider/provider.dart';
 import '../models/storia_model.dart';
 import '../services/auth_service.dart';
 import '../services/content_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'admin/add_storia_content_page.dart';
 import 'admin/admin_widgets.dart';
+import 'admin/translate_storia_migration_page.dart';
 import 'storia_detail_page.dart';
 
-const Map<String, String> _categoriaLabels = {
-  'chiesa': 'Chiese',
-  'palazzo': 'Palazzi',
-  'piazza': 'Piazze',
-  'monumento': 'Monumenti',
-  'natura': 'Natura',
+Map<String, String> _buildCategoriaLabels(AppLocalizations l10n) => {
+  'chiesa': l10n.categoryChiesa,
+  'palazzo': l10n.categoryPalazzo,
+  'piazza': l10n.categoryPiazza,
+  'monumento': l10n.categoryMonumento,
+  'natura': l10n.categoryNatura,
 };
 
 /// Sezione "Storia di Gubbio" — un viaggio nel tempo attraverso le epoche
@@ -36,6 +39,7 @@ class _StoriaPageState extends State<StoriaPage> {
   List<StoriaEpoca> _epoche = [];
   List<StoriaContenuto> _contenuti = [];
   StoriaContenuto? _currentCard;
+  String? _loadedLanguageCode;
 
   String _searchQuery = '';
   String? _selectedEraId;
@@ -48,6 +52,15 @@ class _StoriaPageState extends State<StoriaPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
+      _load();
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -55,8 +68,10 @@ class _StoriaPageState extends State<StoriaPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final epoche = await ContentService.fetchStoriaEpoche();
-    final contenuti = await ContentService.fetchStoriaContenuti();
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    _loadedLanguageCode = languageCode;
+    final epoche = await ContentService.fetchStoriaEpoche(languageCode: languageCode);
+    final contenuti = await ContentService.fetchStoriaContenuti(languageCode: languageCode);
     if (!mounted) return;
     setState(() {
       _epoche = epoche;
@@ -144,6 +159,8 @@ class _StoriaPageState extends State<StoriaPage> {
   }
 
   Future<void> _deleteContent(StoriaContenuto c) async {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final ok = await confirmDelete(context, c.title);
     if (!ok) return;
     try {
@@ -153,7 +170,7 @@ class _StoriaPageState extends State<StoriaPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore: $e'),
+          content: Text('${l10n.errorPrefix}: $e'),
           backgroundColor: const Color(0xFFB71C1C),
         ),
       );
@@ -162,6 +179,8 @@ class _StoriaPageState extends State<StoriaPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     final isAdmin = context.watch<AuthService>().isAdmin;
     final filtered = _filtered;
 
@@ -189,12 +208,27 @@ class _StoriaPageState extends State<StoriaPage> {
               onPressed: _addContent,
               backgroundColor: AppColors.rossoGubbio,
               icon: const Icon(Icons.add),
-              label: const Text('Aggiungi'),
+              label: Text(l10n.addFab),
             )
           : null,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Storia di Gubbio'),
+          PremiumHeader(
+            title: l10n.storiaTitle,
+            trailing: isAdmin
+                ? IconButton(
+                    tooltip: l10n.translateExistingContentTooltip,
+                    icon: const Icon(Icons.translate, color: AppColors.rossoGubbio),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TranslateStoriaMigrationPage(),
+                        ),
+                      );
+                    },
+                  )
+                : null,
+          ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -541,6 +575,9 @@ class _StoriaPageState extends State<StoriaPage> {
 
   // -------------------------------------------------- Filtro categoria
   Widget _buildCategoryFilterChips() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
+    final categoriaLabels = _buildCategoriaLabels(l10n);
     final categorie = _contenuti.map((c) => c.category).toSet().toList()..sort();
     return SizedBox(
       height: 38,
@@ -548,11 +585,11 @@ class _StoriaPageState extends State<StoriaPage> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
-          _filterChip('Tutte le categorie', _selectedCategory == null,
+          _filterChip(l10n.allCategories, _selectedCategory == null,
               () => setState(() => _selectedCategory = null)),
           const SizedBox(width: 8),
           for (final cat in categorie) ...[
-            _filterChip(_categoriaLabels[cat] ?? cat, _selectedCategory == cat,
+            _filterChip(categoriaLabels[cat] ?? cat, _selectedCategory == cat,
                 () => setState(() => _selectedCategory = cat)),
             const SizedBox(width: 8),
           ],

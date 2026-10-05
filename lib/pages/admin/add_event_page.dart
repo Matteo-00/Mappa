@@ -2,9 +2,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/event_model.dart';
 import '../../services/content_service.dart';
+import '../../services/language_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
 
@@ -40,6 +43,7 @@ class _AddEventPageState extends State<AddEventPage> {
   bool _saving = false;
 
   bool get _isEditing => widget.editEvent != null;
+  late AppLocalizations _l10n;
 
   @override
   void initState() {
@@ -151,7 +155,7 @@ class _AddEventPageState extends State<AddEventPage> {
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEditing ? 'Evento aggiornato!' : 'Evento aggiunto!'),
+          content: Text(_isEditing ? _l10n.eventUpdated : _l10n.eventAdded),
           backgroundColor: const Color(0xFF4CAF50),
         ),
       );
@@ -160,7 +164,7 @@ class _AddEventPageState extends State<AddEventPage> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore: $e'),
+          content: Text('${_l10n.errorPrefix}: $e'),
           backgroundColor: const Color(0xFFB71C1C),
         ),
       );
@@ -169,9 +173,11 @@ class _AddEventPageState extends State<AddEventPage> {
 
   @override
   Widget build(BuildContext context) {
+    _l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: AppColors.avorio,
-      appBar: AppBar(title: Text(_isEditing ? 'Modifica Evento' : 'Aggiungi Evento')),
+      appBar: AppBar(title: Text(_isEditing ? _l10n.editEventTitle : _l10n.addEventTitle)),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -187,28 +193,28 @@ class _AddEventPageState extends State<AddEventPage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _title,
-              decoration: adminInputDecoration('Titolo', icon: Icons.event),
+              decoration: adminInputDecoration(_l10n.titleFieldLabel, icon: Icons.event),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Inserisci il titolo' : null,
+                  (v == null || v.trim().isEmpty) ? _l10n.titleRequiredError : null,
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _description,
               maxLines: 4,
               decoration:
-                  adminInputDecoration('Descrizione', icon: Icons.notes),
+                  adminInputDecoration(_l10n.descriptionFieldLabel, icon: Icons.notes),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _location,
               decoration:
-                  adminInputDecoration('Luogo', icon: Icons.place_outlined),
+                  adminInputDecoration(_l10n.placeFieldLabel, icon: Icons.place_outlined),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _category,
               decoration:
-                  adminInputDecoration('Categoria', icon: Icons.category_outlined),
+                  adminInputDecoration(_l10n.categoryFieldLabel, icon: Icons.category_outlined),
             ),
             const SizedBox(height: 14),
             _buildDateTimeRow(),
@@ -217,13 +223,13 @@ class _AddEventPageState extends State<AddEventPage> {
               controller: _phone,
               keyboardType: TextInputType.phone,
               decoration:
-                  adminInputDecoration('Telefono', icon: Icons.phone_outlined),
+                  adminInputDecoration(_l10n.phoneFieldLabel, icon: Icons.phone_outlined),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _website,
               keyboardType: TextInputType.url,
-              decoration: adminInputDecoration('Sito web',
+              decoration: adminInputDecoration(_l10n.websiteFieldLabel,
                   icon: Icons.language_outlined),
             ),
             const SizedBox(height: 14),
@@ -234,7 +240,7 @@ class _AddEventPageState extends State<AddEventPage> {
                     controller: _lat,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: adminInputDecoration('Latitudine'),
+                    decoration: adminInputDecoration(_l10n.latitudeFieldLabel),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -243,7 +249,7 @@ class _AddEventPageState extends State<AddEventPage> {
                     controller: _lng,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: adminInputDecoration('Longitudine'),
+                    decoration: adminInputDecoration(_l10n.longitudeFieldLabel),
                   ),
                 ),
               ],
@@ -252,7 +258,7 @@ class _AddEventPageState extends State<AddEventPage> {
             AdminSaveButton(
               loading: _saving,
               onPressed: _save,
-              label: _isEditing ? 'SALVA MODIFICHE' : 'SALVA',
+              label: _isEditing ? _l10n.saveChangesLabel : _l10n.saveLabel,
             ),
             const SizedBox(height: 24),
           ],
@@ -266,7 +272,7 @@ class _AddEventPageState extends State<AddEventPage> {
       children: [
         _pickerTile(
           icon: Icons.calendar_today_outlined,
-          label: 'Data',
+          label: _l10n.dateFieldLabel,
           value:
               '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}',
           onTap: _pickDate,
@@ -277,7 +283,7 @@ class _AddEventPageState extends State<AddEventPage> {
             Expanded(
               child: _pickerTile(
                 icon: Icons.schedule,
-                label: 'Inizio',
+                label: _l10n.startFieldLabel,
                 value: _fmtTime(_start),
                 onTap: () => _pickTime(true),
               ),
@@ -286,7 +292,7 @@ class _AddEventPageState extends State<AddEventPage> {
             Expanded(
               child: _pickerTile(
                 icon: Icons.schedule,
-                label: 'Fine',
+                label: _l10n.endFieldLabel,
                 value: _fmtTime(_end),
                 onTap: () => _pickTime(false),
               ),

@@ -2,25 +2,30 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../../theme/app_colors.dart';
+import '../../services/language_service.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Mostra un dialog di conferma per eliminare un elemento.
 Future<bool> confirmDelete(BuildContext context, String name) async {
+  final l10n = AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
   final res = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Elimina'),
-      content: Text('Vuoi eliminare "$name"? L\'operazione è irreversibile.'),
+      title: Text(l10n.delete),
+      content: Text(l10n.deleteConfirmMessage(name)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Annulla'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
           style: TextButton.styleFrom(foregroundColor: AppColors.rossoGubbio),
-          child: const Text('Elimina'),
+          child: Text(l10n.delete),
         ),
       ],
     ),

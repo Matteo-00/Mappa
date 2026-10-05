@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'login_page.dart';
@@ -11,6 +13,8 @@ class UserProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     final authService = context.watch<AuthService>();
     final user = authService.currentUser;
 
@@ -18,10 +22,10 @@ class UserProfilePage extends StatelessWidget {
       return Scaffold(
         backgroundColor: AppColors.avorio,
         body: Column(
-          children: const [
-            PremiumHeader(title: 'Utente'),
+          children: [
+            PremiumHeader(title: l10n.userNav),
             Expanded(
-              child: Center(child: Text('Nessun utente autenticato')),
+              child: Center(child: Text(l10n.noAuthenticatedUser)),
             ),
           ],
         ),
@@ -32,7 +36,7 @@ class UserProfilePage extends StatelessWidget {
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Utente'),
+          PremiumHeader(title: l10n.userNav),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
@@ -100,21 +104,21 @@ class UserProfilePage extends StatelessWidget {
 
                   // Card informazioni personali
                   _buildInfoCard(
-                    title: 'Informazioni Personali',
+                    title: l10n.personalInfoSection,
                     items: [
                       _InfoItem(
                         icon: Icons.badge_outlined,
-                        label: 'Nome',
+                        label: l10n.nameLabel,
                         value: user.nome,
                       ),
                       _InfoItem(
                         icon: Icons.badge_outlined,
-                        label: 'Cognome',
+                        label: l10n.surnameLabel,
                         value: user.cognome,
                       ),
                       _InfoItem(
                         icon: Icons.email_outlined,
-                        label: 'Email',
+                        label: l10n.emailLabel,
                         value: user.email,
                       ),
                     ],
@@ -129,7 +133,7 @@ class UserProfilePage extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => _handleLogout(context),
                       icon: const Icon(Icons.logout_rounded, size: 20),
-                      label: const Text('Esci dall\'account'),
+                      label: Text(l10n.logoutAccountButton),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.rossoGubbio,
                         side: const BorderSide(color: AppColors.rossoGubbio),
@@ -153,7 +157,7 @@ class UserProfilePage extends StatelessWidget {
                     child: TextButton.icon(
                       onPressed: () => _handleDeleteAccount(context),
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                      label: const Text('Elimina il mio account'),
+                      label: Text(l10n.deleteMyAccountButton),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.grey[700],
                         textStyle: const TextStyle(
@@ -191,26 +195,24 @@ class UserProfilePage extends StatelessWidget {
   }
 
   void _handleDeleteAccount(BuildContext context) async {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Elimina account'),
-        content: const Text(
-          'Questa azione cancellerà definitivamente il tuo profilo (nome, '
-          'cognome, email) e disconnetterà il tuo account. L\'operazione non '
-          'è reversibile. Vuoi continuare?',
-        ),
+        title: Text(l10n.deleteAccountTitle),
+        content: Text(l10n.deleteAccountMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annulla'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Elimina',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              l10n.delete,
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],

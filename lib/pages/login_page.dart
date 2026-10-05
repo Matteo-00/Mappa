@@ -457,6 +457,40 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
                     ),
+                    PopupMenuItem(
+                      value: 'de',
+                      child: Row(
+                        children: [
+                          Text(
+                            '🇩🇪',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Deutsch'),
+                          if (langService.currentLanguageCode == 'de') ...[
+                            const SizedBox(width: 8),
+                            const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'fr',
+                      child: Row(
+                        children: [
+                          Text(
+                            '🇫🇷',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Français'),
+                          if (langService.currentLanguageCode == 'fr') ...[
+                            const SizedBox(width: 8),
+                            const Icon(Icons.check, size: 16, color: Color(0xFFB13B2E)),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -464,7 +498,7 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          langService.currentLanguageCode == 'it' ? '🇮🇹' : '🇬🇧',
+                          AppLocalizations.flagFor(langService.currentLanguageCode),
                           style: const TextStyle(fontSize: 20),
                         ),
                         const SizedBox(width: 4),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/event_model.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 
 /// Card per mostrare un evento della Festa dei Ceri
 class EventCard extends StatelessWidget {
@@ -16,6 +19,8 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Card(
       elevation: 0,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -118,7 +123,7 @@ class EventCard extends StatelessWidget {
                         size: 18,
                         color: Colors.red[700],
                       ),
-                      label: const Text('Mappa'),
+                      label: Text(l10n.mapNav),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red[700],
                         side: BorderSide(color: Colors.red[700]!),
@@ -133,7 +138,7 @@ class EventCard extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: onGetDirections,
                       icon: const Icon(Icons.directions_walk, size: 18),
-                      label: const Text('Indicazioni'),
+                      label: Text(l10n.directions),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red[700],
                         foregroundColor: Colors.white,
@@ -154,6 +159,8 @@ class EventCard extends StatelessWidget {
   }
 
   void _showEventDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -227,7 +234,7 @@ class EventCard extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Chiudi',
+              l10n.close,
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),
@@ -237,7 +244,7 @@ class EventCard extends StatelessWidget {
               onShowOnMap();
             },
             child: Text(
-              'Mostra sulla mappa',
+              l10n.showOnMap,
               style: TextStyle(color: Colors.red[700]),
             ),
           ),

@@ -7,6 +7,8 @@ import '../theme/app_colors.dart';
 import '../services/location_service.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/add_place_page.dart';
 import 'restaurant_detail_page.dart';
@@ -31,6 +33,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   
   LatLng? _currentLocation;
   String _searchQuery = '';
+  String? _loadedLanguageCode;
   
   static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
 
@@ -42,13 +45,25 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
+      _loadRestaurants();
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
   
   Future<void> _loadRestaurants() async {
-    final restaurants = await ContentService.fetchRestaurants();
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    _loadedLanguageCode = languageCode;
+    final restaurants =
+        await ContentService.fetchRestaurants(languageCode: languageCode);
     if (!mounted) return;
     setState(() {
       _allRestaurants = restaurants;
@@ -154,11 +169,13 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Ristoranti'),
+          PremiumHeader(title: l10n.restaurantsNav),
           // Mappa
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
@@ -260,6 +277,8 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   }
   
   Future<void> _deleteRestaurant(RestaurantModel restaurant) async {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final ok = await confirmDelete(context, restaurant.name);
     if (!ok) return;
     try {
@@ -267,16 +286,16 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
       await _loadRestaurants();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ristorante eliminato'),
-          backgroundColor: Color(0xFF4CAF50),
+        SnackBar(
+          content: Text(l10n.restaurantDeleted),
+          backgroundColor: const Color(0xFF4CAF50),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore: $e'),
+          content: Text('${l10n.errorPrefix}: $e'),
           backgroundColor: const Color(0xFFB71C1C),
         ),
       );

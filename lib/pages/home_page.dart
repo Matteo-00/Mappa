@@ -115,6 +115,8 @@ class _HomePageState extends State<HomePage> {
       };
 
   Set<Marker> get _markers {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final markers = <Marker>{};
     
     // Marker per eventi principali
@@ -150,7 +152,7 @@ class _HomePageState extends State<HomePage> {
           markerId: const MarkerId('user_location'),
           position: _currentLocation!,
           icon: BitmapDescriptor.defaultMarkerWithHue(210), // Blu #2F80ED
-          infoWindow: const InfoWindow(title: 'La tua posizione'),
+          infoWindow: InfoWindow(title: l10n.yourPosition),
         ),
       );
     }
@@ -277,6 +279,8 @@ class _HomePageState extends State<HomePage> {
 
   /// Sezione Eventi (Prossimo evento)
   Widget _buildEventsSection() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final nextEvent = getNextEvent();
 
     return Container(
@@ -286,9 +290,9 @@ class _HomePageState extends State<HomePage> {
         children: [
           // Prossimo evento
           if (nextEvent != null) ...[
-            const Text(
-              'Prossimo evento',
-              style: TextStyle(
+            Text(
+              l10n.nextEvent,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF6B6B6B),
@@ -305,6 +309,8 @@ class _HomePageState extends State<HomePage> {
 
   /// Card del prossimo evento (completa con immagine)
   Widget _buildNextEventCard(EventModel event) {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -360,9 +366,9 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Scritta "Prossimo Evento"
-                const Text(
-                  'Prossimo Evento',
-                  style: TextStyle(
+                Text(
+                  l10n.nextEvent,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF424242),

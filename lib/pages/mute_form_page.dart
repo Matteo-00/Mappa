@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/muta_model.dart';
 import '../data/mute_data.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 
 /// Pagina per creare o modificare una muta
 class MuteFormPage extends StatefulWidget {
@@ -92,9 +95,11 @@ class _MuteFormPageState extends State<MuteFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditMode ? 'Modifica Muta' : 'Nuova Muta'),
+        title: Text(_isEditMode ? l10n.editMutaTitle : l10n.newMuta),
         backgroundColor: const Color(0xFFB71C1C),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -105,15 +110,15 @@ class _MuteFormPageState extends State<MuteFormPage> {
           padding: const EdgeInsets.all(16),
           children: [
             // Informazioni generali
-            _buildSectionHeader('Informazioni Generali'),
+            _buildSectionHeader(l10n.generalInfoSection),
             const SizedBox(height: 8),
             _buildTextField(
               controller: _nomeController,
-              label: 'Nome Muta',
+              label: l10n.mutaNameLabel,
               icon: Icons.people,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Il nome è obbligatorio';
+                  return l10n.nameRequiredError;
                 }
                 return null;
               },
@@ -121,11 +126,11 @@ class _MuteFormPageState extends State<MuteFormPage> {
             const SizedBox(height: 12),
             _buildTextField(
               controller: _zoneController,
-              label: 'Zona/Località',
+              label: l10n.zoneLocationLabel,
               icon: Icons.location_on_outlined,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'La zona è obbligatoria';
+                  return l10n.zoneRequiredError;
                 }
                 return null;
               },
@@ -133,11 +138,11 @@ class _MuteFormPageState extends State<MuteFormPage> {
             const SizedBox(height: 12),
             _buildTextField(
               controller: _capoMutaController,
-              label: 'Capo Muta',
+              label: l10n.capoMutaLabel,
               icon: Icons.person,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Il capo muta è obbligatorio';
+                  return l10n.capoMutaRequiredError;
                 }
                 return null;
               },
@@ -146,15 +151,15 @@ class _MuteFormPageState extends State<MuteFormPage> {
             const SizedBox(height: 24),
             
             // Capocorsa
-            _buildSectionHeader('Capocorsa (Davanti)'),
+            _buildSectionHeader(l10n.capocorsaFrontSection),
             const SizedBox(height: 8),
             _buildTextField(
               controller: _capocorsaController,
-              label: 'Capocorsa',
+              label: l10n.capocorsaLabel,
               icon: Icons.star,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Il capocorsa è obbligatorio';
+                  return l10n.capocorsaRequiredError;
                 }
                 return null;
               },
@@ -163,18 +168,18 @@ class _MuteFormPageState extends State<MuteFormPage> {
             const SizedBox(height: 24),
             
             // Esterni Sinistra
-            _buildSectionHeader('Esterni Sinistra (4 ceraioli)'),
+            _buildSectionHeader(l10n.leftExternsSection),
             const SizedBox(height: 8),
             ..._esterniSinistraControllers.asMap().entries.map((entry) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _buildTextField(
                   controller: entry.value,
-                  label: 'Esterno Sinistro ${entry.key + 1}',
+                  label: l10n.externalLeftLabel(entry.key + 1),
                   icon: Icons.person_outline,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Campo obbligatorio';
+                      return l10n.requiredField;
                     }
                     return null;
                   },
@@ -185,18 +190,18 @@ class _MuteFormPageState extends State<MuteFormPage> {
             const SizedBox(height: 24),
             
             // Esterni Destra
-            _buildSectionHeader('Esterni Destra (4 ceraioli)'),
+            _buildSectionHeader(l10n.rightExternsSection),
             const SizedBox(height: 8),
             ..._esterniDestraControllers.asMap().entries.map((entry) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _buildTextField(
                   controller: entry.value,
-                  label: 'Esterno Destro ${entry.key + 1}',
+                  label: l10n.externalRightLabel(entry.key + 1),
                   icon: Icons.person_outline,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Campo obbligatorio';
+                      return l10n.requiredField;
                     }
                     return null;
                   },
@@ -207,18 +212,18 @@ class _MuteFormPageState extends State<MuteFormPage> {
             const SizedBox(height: 24),
             
             // Interni Posteriori
-            _buildSectionHeader('Interni Posteriori (2 ceraioli)'),
+            _buildSectionHeader(l10n.rearInternsSection),
             const SizedBox(height: 8),
             ..._interniPosterioriControllers.asMap().entries.map((entry) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _buildTextField(
                   controller: entry.value,
-                  label: 'Interno Posteriore ${entry.key + 1}',
+                  label: l10n.internalRearLabel(entry.key + 1),
                   icon: Icons.person_outline,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Campo obbligatorio';
+                      return l10n.requiredField;
                     }
                     return null;
                   },
@@ -240,7 +245,7 @@ class _MuteFormPageState extends State<MuteFormPage> {
                 ),
               ),
               child: Text(
-                _isEditMode ? 'Salva Modifiche' : 'Crea Muta',
+                _isEditMode ? l10n.saveChangesButton : l10n.createMutaButton,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -260,9 +265,9 @@ class _MuteFormPageState extends State<MuteFormPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Elimina Muta',
-                  style: TextStyle(
+                child: Text(
+                  l10n.deleteMutaButton,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -316,10 +321,12 @@ class _MuteFormPageState extends State<MuteFormPage> {
   }
 
   void _saveMuta() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Compila tutti i campi obbligatori'),
+        SnackBar(
+          content: Text(l10n.fillAllRequiredFields),
           backgroundColor: Colors.orange,
         ),
       );
@@ -352,7 +359,7 @@ class _MuteFormPageState extends State<MuteFormPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isEditMode ? 'Muta modificata con successo' : 'Muta creata con successo'),
+        content: Text(_isEditMode ? l10n.mutaUpdatedSuccess : l10n.mutaCreatedSuccess),
         backgroundColor: Colors.green,
       ),
     );
@@ -361,15 +368,17 @@ class _MuteFormPageState extends State<MuteFormPage> {
   }
 
   void _deleteMuta() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Elimina Muta'),
-        content: const Text('Sei sicuro di voler eliminare questa muta?'),
+        title: Text(l10n.deleteMutaButton),
+        content: Text(l10n.deleteMutaConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annulla'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -378,15 +387,15 @@ class _MuteFormPageState extends State<MuteFormPage> {
               Navigator.pop(context); // Torna alla lista
               
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Muta eliminata'),
+                SnackBar(
+                  content: Text(l10n.mutaDeletedSuccess),
                   backgroundColor: Colors.red,
                 ),
               );
             },
-            child: const Text(
-              'Elimina',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              l10n.delete,
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 
 /// Footer fisso con navigation bar personalizzata
 /// Altezza: 70px
@@ -21,6 +24,8 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Container(
       height: 70,
       decoration: const BoxDecoration(
@@ -38,7 +43,7 @@ class CustomBottomNav extends StatelessWidget {
           _buildNavItem(
             index: 0,
             icon: Icons.home_rounded,
-            label: 'Home',
+            label: l10n.home,
             isSelected: selectedIndex == 0,
             onTap: () => onTap(0),
           ),
@@ -47,7 +52,7 @@ class CustomBottomNav extends StatelessWidget {
           _buildNavItem(
             index: 1,
             icon: Icons.calendar_today_rounded,
-            label: 'Programma',
+            label: l10n.programNav,
             isSelected: selectedIndex == 1,
             onTap: () => onTap(1),
           ),
@@ -56,7 +61,7 @@ class CustomBottomNav extends StatelessWidget {
             _buildNavItem(
               index: 2,
               icon: Icons.groups_rounded,
-              label: 'Mute',
+              label: l10n.muteTitle,
               isSelected: selectedIndex == 2,
               onTap: () => onTap(2),
             ),
@@ -88,7 +93,7 @@ class CustomBottomNav extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Mappa',
+              l10n.mapNav,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

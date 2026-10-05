@@ -4,6 +4,8 @@ import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'admin/admin_widgets.dart';
@@ -20,6 +22,7 @@ class ItinerariPage extends StatefulWidget {
 
 class _ItinerariPageState extends State<ItinerariPage> {
   List<ItinerarioModel> _itinerari = itinerariConsigliati;
+  String? _loadedLanguageCode;
 
   @override
   void initState() {
@@ -27,8 +30,19 @@ class _ItinerariPageState extends State<ItinerariPage> {
     _load();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
+      _load();
+    }
+  }
+
   Future<void> _load() async {
-    final items = await ContentService.fetchItinerari();
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    _loadedLanguageCode = languageCode;
+    final items = await ContentService.fetchItinerari(languageCode: languageCode);
     if (!mounted) return;
     setState(() => _itinerari = items);
   }
@@ -54,6 +68,8 @@ class _ItinerariPageState extends State<ItinerariPage> {
   }
 
   Future<void> _deleteItinerario(ItinerarioModel it) async {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final ok = await confirmDelete(context, it.titolo);
     if (!ok) return;
     try {
@@ -61,16 +77,16 @@ class _ItinerariPageState extends State<ItinerariPage> {
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Itinerario eliminato'),
-          backgroundColor: Color(0xFF4CAF50),
+        SnackBar(
+          content: Text(l10n.itinerarioDeleted),
+          backgroundColor: const Color(0xFF4CAF50),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore: $e'),
+          content: Text('${l10n.errorPrefix}: $e'),
           backgroundColor: const Color(0xFFB71C1C),
         ),
       );
@@ -79,19 +95,20 @@ class _ItinerariPageState extends State<ItinerariPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Itinerari consigliati'),
+          PremiumHeader(title: l10n.itinerariTitle),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
               children: [
-                const Text(
-                  'Percorsi selezionati per vivere Gubbio al meglio, in base al '
-                  'tempo a disposizione e ai tuoi interessi.',
-                  style: TextStyle(
+                Text(
+                  l10n.itinerariDescription,
+                  style: const TextStyle(
                     fontSize: 15,
                     height: 1.55,
                     color: AppColors.textMuted,

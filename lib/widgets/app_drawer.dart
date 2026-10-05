@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../pages/events_list_page.dart';
 import '../pages/event_detail_page.dart';
 import '../pages/restaurants_page.dart';
@@ -19,6 +21,8 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Drawer(
       width: MediaQuery.of(context).size.width * 0.82,
       backgroundColor: AppColors.avorio,
@@ -64,7 +68,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.calendar_today_outlined,
-                    title: 'Eventi',
+                    title: l10n.events,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -87,7 +91,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.restaurant_menu,
-                    title: 'Ristoranti',
+                    title: l10n.restaurantsNav,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -100,7 +104,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.local_cafe_outlined,
-                    title: 'Bar',
+                    title: l10n.barsNav,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -112,7 +116,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.place_outlined,
-                    title: 'Mappa',
+                    title: l10n.mapNav,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -124,7 +128,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.auto_stories_outlined,
-                    title: 'Storia di Gubbio',
+                    title: l10n.storiaDiGubbioNav,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -136,7 +140,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.map_outlined,
-                    title: 'Itinerari consigliati',
+                    title: l10n.suggestedItinerariesNav,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -148,7 +152,7 @@ class AppDrawer extends StatelessWidget {
                   _menuItem(
                     context,
                     icon: Icons.person_outline_rounded,
-                    title: 'Utente',
+                    title: l10n.userNav,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -170,9 +174,9 @@ class AppDrawer extends StatelessWidget {
                   onPressed: () => _handleLogout(context),
                   icon: const Icon(Icons.logout_rounded,
                       color: AppColors.rossoGubbio, size: 22),
-                  label: const Text(
-                    'Esci',
-                    style: TextStyle(
+                  label: Text(
+                    l10n.logout,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.rossoGubbio,
@@ -192,7 +196,7 @@ class AppDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                'Versione 1.0.0',
+                l10n.appVersionLabel('1.0.0'),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textMuted.withOpacity(0.8),
@@ -206,19 +210,21 @@ class AppDrawer extends StatelessWidget {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Esci'),
-        content: const Text('Vuoi uscire dal tuo account?'),
+        title: Text(l10n.logout),
+        content: Text(l10n.exitConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annulla'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Esci'),
+            child: Text(l10n.logout),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import '../models/restaurant_model.dart';
@@ -7,6 +8,7 @@ import '../models/bar_model.dart';
 import '../data/gubbio_boundary.dart';
 import '../services/location_service.dart';
 import '../services/content_service.dart';
+import '../services/language_service.dart';
 import 'restaurant_detail_page.dart';
 import 'bar_detail_page.dart';
 
@@ -32,6 +34,7 @@ class _MapPageState extends State<MapPage> {
   List<BarModel> _bars = [];
   Set<Marker> _markers = {};
   LatLng? _userLocation;
+  String? _loadedLanguageCode;
 
   static const LatLng _gubbioCenter = LatLng(43.3504, 12.5755);
 
@@ -44,9 +47,21 @@ class _MapPageState extends State<MapPage> {
     _loadData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
+      _loadData();
+    }
+  }
+
   Future<void> _loadData() async {
-    final restaurants = await ContentService.fetchRestaurants();
-    final bars = await ContentService.fetchBars();
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    _loadedLanguageCode = languageCode;
+    final restaurants =
+        await ContentService.fetchRestaurants(languageCode: languageCode);
+    final bars = await ContentService.fetchBars(languageCode: languageCode);
     if (!mounted) return;
     setState(() {
       _restaurants = restaurants;

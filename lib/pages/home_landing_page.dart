@@ -4,6 +4,8 @@ import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
 import 'admin/add_place_page.dart';
@@ -37,6 +39,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
   bool _closeDown = false;
   double _dragDy = 0;
   bool _isDraggingPanel = false;
+  late AppLocalizations _l10n;
 
   @override
   void initState() {
@@ -135,13 +138,13 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'AGGIUNGI CONTENUTO',
-                    style: TextStyle(
+                    _l10n.addContentTitle,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: AppColors.bluNotte,
                       letterSpacing: 0.8,
@@ -149,12 +152,12 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                   ),
                 ),
               ),
-              tile(Icons.restaurant_menu, 'Aggiungi Ristorante',
+              tile(Icons.restaurant_menu, _l10n.addRestaurantMenuItem,
                   const AddPlacePage(isBar: false)),
-              tile(Icons.local_cafe_outlined, 'Aggiungi Bar',
+              tile(Icons.local_cafe_outlined, _l10n.addBarMenuItem,
                   const AddPlacePage(isBar: true)),
-              tile(Icons.event, 'Aggiungi Evento', const AddEventPage()),
-              tile(Icons.route, 'Aggiungi Itinerario',
+              tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
+              tile(Icons.route, _l10n.addItinerarioMenuItem,
                   const AddItinerarioPage()),
               const SizedBox(height: 12),
             ],
@@ -166,6 +169,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
 
   @override
   Widget build(BuildContext context) {
+    _l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     final size = MediaQuery.of(context).size;
     final panelHeight = (size.height * 0.36).clamp(250.0, 360.0);
 
@@ -352,8 +357,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
         customBorder: const CircleBorder(),
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Video di presentazione in arrivo'),
+            SnackBar(
+              content: Text(_l10n.videoComingSoon),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -438,10 +443,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
               // Header con titolo e pulsanti per nascondere
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'ESPLORA GUBBIO',
-                      style: TextStyle(
+                      _l10n.exploreGubbioTitle,
+                      style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: AppColors.bluNotte,
@@ -464,14 +469,14 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _quickAction(Icons.place_outlined, 'Mappa', _openMap),
+                  _quickAction(Icons.place_outlined, _l10n.mapNav, _openMap),
                   _quickAction(
-                      Icons.auto_stories_outlined, 'Storia', _openStoria),
-                  _quickAction(Icons.local_cafe_outlined, 'Bar', _openBars),
+                      Icons.auto_stories_outlined, _l10n.storiaShortLabel, _openStoria),
+                  _quickAction(Icons.local_cafe_outlined, _l10n.barsNav, _openBars),
                   _quickAction(
-                      Icons.restaurant_menu, 'Ristoranti', _openRestaurants),
+                      Icons.restaurant_menu, _l10n.restaurantsNav, _openRestaurants),
                   _quickAction(
-                      Icons.calendar_today_outlined, 'Eventi', _openEvents),
+                      Icons.calendar_today_outlined, _l10n.events, _openEvents),
                 ],
               ),
               const SizedBox(height: 16),
@@ -479,10 +484,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
               // Itinerari
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'ITINERARI CONSIGLIATI',
-                      style: TextStyle(
+                      _l10n.itinerariTitle.toUpperCase(),
+                      style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
                         color: AppColors.bluNotte,
@@ -492,8 +497,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                   ),
                   GestureDetector(
                     onTap: _openItinerari,
-                    child: const Text(
-                      'Vedi tutti',
+                    child: Text(
+                      _l10n.seeAllLabel,
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,

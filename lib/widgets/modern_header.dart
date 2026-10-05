@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../pages/user_profile_page.dart';
 
 /// Header moderno stile Google Maps
@@ -96,6 +97,8 @@ class ModernHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _buildAvatarButton(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return PopupMenuButton<String>(
       onSelected: (String value) {
         switch (value) {
@@ -128,20 +131,20 @@ class ModernHeader extends StatelessWidget implements PreferredSizeWidget {
         PopupMenuItem<String>(
           value: 'profilo',
           child: Row(
-            children: const [
-              Icon(Icons.person_outline, size: 20, color: Colors.black87),
-              SizedBox(width: 12),
-              Text('Profilo'),
+            children: [
+              const Icon(Icons.person_outline, size: 20, color: Colors.black87),
+              const SizedBox(width: 12),
+              Text(l10n.profile),
             ],
           ),
         ),
         PopupMenuItem<String>(
           value: 'lingua',
           child: Row(
-            children: const [
-              Icon(Icons.language, size: 20, color: Colors.black87),
-              SizedBox(width: 12),
-              Text('Lingua'),
+            children: [
+              const Icon(Icons.language, size: 20, color: Colors.black87),
+              const SizedBox(width: 12),
+              Text(l10n.language),
             ],
           ),
         ),
@@ -149,10 +152,10 @@ class ModernHeader extends StatelessWidget implements PreferredSizeWidget {
         PopupMenuItem<String>(
           value: 'esci',
           child: Row(
-            children: const [
-              Icon(Icons.logout, size: 20, color: Colors.red),
-              SizedBox(width: 12),
-              Text('Esci', style: TextStyle(color: Colors.red)),
+            children: [
+              const Icon(Icons.logout, size: 20, color: Colors.red),
+              const SizedBox(width: 12),
+              Text(l10n.logout, style: const TextStyle(color: Colors.red)),
             ],
           ),
         ),
@@ -192,7 +195,7 @@ class ModernHeader extends StatelessWidget implements PreferredSizeWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Seleziona Lingua'),
+          title: Text(AppLocalizations.of(langService.currentLanguageCode).selectLanguage),
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -220,6 +223,30 @@ class ModernHeader extends StatelessWidget implements PreferredSizeWidget {
                 langService.currentLanguageCode == 'en',
                 () {
                   langService.setLanguage('en');
+                  Navigator.of(context).pop();
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildLanguageOption(
+                context,
+                '🇩🇪',
+                'Deutsch',
+                'de',
+                langService.currentLanguageCode == 'de',
+                () {
+                  langService.setLanguage('de');
+                  Navigator.of(context).pop();
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildLanguageOption(
+                context,
+                '🇫🇷',
+                'Français',
+                'fr',
+                langService.currentLanguageCode == 'fr',
+                () {
+                  langService.setLanguage('fr');
                   Navigator.of(context).pop();
                 },
               ),

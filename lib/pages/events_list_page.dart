@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/event_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'admin/admin_widgets.dart';
@@ -29,6 +31,7 @@ class _EventsListPageState extends State<EventsListPage> {
   
   String _searchQuery = '';
   EventFilter _currentFilter = EventFilter.all;
+  String? _loadedLanguageCode;
   
   int _currentPage = 0;
   static const int _eventsPerPage = 10;
@@ -40,13 +43,24 @@ class _EventsListPageState extends State<EventsListPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
+      _loadEvents();
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
   
   Future<void> _loadEvents() async {
-    final events = await ContentService.fetchEvents();
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    _loadedLanguageCode = languageCode;
+    final events = await ContentService.fetchEvents(languageCode: languageCode);
     if (!mounted) return;
     setState(() {
       _allEvents = events;
@@ -110,6 +124,8 @@ class _EventsListPageState extends State<EventsListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     final totalPages = (_filteredEvents.length / _eventsPerPage).ceil();
     final startIndex = _currentPage * _eventsPerPage;
     final endIndex = (startIndex + _eventsPerPage).clamp(0, _filteredEvents.length);
@@ -119,7 +135,7 @@ class _EventsListPageState extends State<EventsListPage> {
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          const PremiumHeader(title: 'Eventi'),
+          PremiumHeader(title: l10n.events),
 
           // Barra di ricerca
           _buildSearchBar(),
@@ -149,6 +165,8 @@ class _EventsListPageState extends State<EventsListPage> {
   
   /// Barra di ricerca
   Widget _buildSearchBar() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       decoration: BoxDecoration(
@@ -171,7 +189,7 @@ class _EventsListPageState extends State<EventsListPage> {
           _applyFilters();
         },
         decoration: InputDecoration(
-          hintText: 'Cerca eventi per nome...',
+          hintText: l10n.searchEventsHint,
           hintStyle: const TextStyle(color: AppColors.textMuted),
           prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
           suffixIcon: _searchQuery.isNotEmpty
@@ -255,6 +273,8 @@ class _EventsListPageState extends State<EventsListPage> {
   }
 
   Future<void> _deleteEvent(EventModel event) async {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     final ok = await confirmDelete(context, event.title);
     if (!ok) return;
     try {
@@ -262,16 +282,16 @@ class _EventsListPageState extends State<EventsListPage> {
       await _loadEvents();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Evento eliminato'),
-          backgroundColor: Color(0xFF4CAF50),
+        SnackBar(
+          content: Text(l10n.eventDeleted),
+          backgroundColor: const Color(0xFF4CAF50),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore: $e'),
+          content: Text('${l10n.errorPrefix}: $e'),
           backgroundColor: const Color(0xFFB71C1C),
         ),
       );
@@ -462,6 +482,8 @@ class _EventsListPageState extends State<EventsListPage> {
   
   /// Stato vuoto
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -472,18 +494,18 @@ class _EventsListPageState extends State<EventsListPage> {
             color: AppColors.tortora.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Nessun evento trovato',
-            style: TextStyle(
+          Text(
+            l10n.noEventsFound,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: AppColors.bluNotte,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Prova a modificare i filtri di ricerca',
-            style: TextStyle(
+          Text(
+            l10n.tryChangeFilters,
+            style: const TextStyle(
               fontSize: 14,
               color: AppColors.textMuted,
             ),

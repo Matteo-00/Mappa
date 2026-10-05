@@ -145,6 +145,34 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     ],
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'de',
+                  child: Row(
+                    children: [
+                      const Text('🇩🇪', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      const Text('Deutsch'),
+                      if (langService.currentLanguageCode == 'de') ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                      ],
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'fr',
+                  child: Row(
+                    children: [
+                      const Text('🇫🇷', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      const Text('Français'),
+                      if (langService.currentLanguageCode == 'fr') ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check, size: 16, color: Color(0xFFB22222)),
+                      ],
+                    ],
+                  ),
+                ),
               ],
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -152,7 +180,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      langService.currentLanguageCode == 'it' ? '🇮🇹' : '🇬🇧',
+                      AppLocalizations.flagFor(langService.currentLanguageCode),
                       style: const TextStyle(fontSize: 20),
                     ),
                     const SizedBox(width: 4),
