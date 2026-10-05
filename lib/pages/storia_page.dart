@@ -316,7 +316,6 @@ class _StoriaPageState extends State<StoriaPage> {
 
     return Container(
       key: _timelineBarKey,
-      color: AppColors.avorio,
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
       decoration: BoxDecoration(
         color: AppColors.avorio,

@@ -21,9 +21,17 @@ class TranslateStoriaMigrationPage extends StatefulWidget {
 
 class _MigrationLogEntry {
   final String label;
+  final String entityType;
+  final String entityId;
   final bool ok;
   final String? error;
-  const _MigrationLogEntry(this.label, this.ok, [this.error]);
+  const _MigrationLogEntry(
+    this.label,
+    this.entityType,
+    this.entityId,
+    this.ok, [
+    this.error,
+  ]);
 }
 
 class _TranslateStoriaMigrationPageState
@@ -32,6 +40,33 @@ class _TranslateStoriaMigrationPageState
   int _total = 0;
   int _done = 0;
   final List<_MigrationLogEntry> _log = [];
+
+  // Piccola pausa tra un contenuto e l'altro per non saturare il limite di
+  // richieste/secondo del tier gratuito di Azure Translator.
+  static const _delayBetweenItems = Duration(milliseconds: 250);
+
+  Future<void> _translateOne(
+    String label,
+    String entityType,
+    String entityId,
+  ) async {
+    final result = await TranslationService.translateEntity(
+      entityType: entityType,
+      entityId: entityId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _done++;
+      _log.add(_MigrationLogEntry(
+        label,
+        entityType,
+        entityId,
+        result.isOk,
+        result.isOk ? null : result.message,
+      ));
+    });
+    await Future.delayed(_delayBetweenItems);
+  }
 
   Future<void> _runMigration() async {
     setState(() {
@@ -48,41 +83,43 @@ class _TranslateStoriaMigrationPageState
       setState(() => _total = epoche.length + contenuti.length);
 
       for (final epoca in epoche) {
-        final result = await TranslationService.translateEntity(
-          entityType: 'storia_epoche',
-          entityId: epoca.id,
-        );
         if (!mounted) return;
-        setState(() {
-          _done++;
-          _log.add(_MigrationLogEntry(
-            'Epoca: ${epoca.nome}',
-            result.isOk,
-            result.isOk ? null : result.message,
-          ));
-        });
+        await _translateOne('Epoca: ${epoca.nome}', 'storia_epoche', epoca.id);
       }
 
       for (final c in contenuti) {
-        final result = await TranslationService.translateEntity(
-          entityType: 'storia_contenuti',
-          entityId: c.id,
-        );
         if (!mounted) return;
-        setState(() {
-          _done++;
-          _log.add(_MigrationLogEntry(
-            'Contenuto: ${c.title}',
-            result.isOk,
-            result.isOk ? null : result.message,
-          ));
-        });
+        await _translateOne('Contenuto: ${c.title}', 'storia_contenuti', c.id);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _log.add(_MigrationLogEntry('Errore generale', false, e.toString()));
+        _log.add(_MigrationLogEntry('Errore generale', '', '', false, e.toString()));
       });
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  /// Ritenta solo le voci fallite nell'ultima esecuzione, senza rifare le
+  /// traduzioni già riuscite (utile quando Azure Translator risponde con un
+  /// 429 per troppe richieste ravvicinate).
+  Future<void> _retryFailed() async {
+    final failed = _log.where((e) => !e.ok && e.entityId.isNotEmpty).toList();
+    if (failed.isEmpty) return;
+
+    setState(() {
+      _running = true;
+      _total = failed.length;
+      _done = 0;
+      _log.removeWhere((e) => !e.ok && e.entityId.isNotEmpty);
+    });
+
+    try {
+      for (final entry in failed) {
+        if (!mounted) return;
+        await _translateOne(entry.label, entry.entityType, entry.entityId);
+      }
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -118,6 +155,18 @@ class _TranslateStoriaMigrationPageState
                 foregroundColor: Colors.white,
               ),
             ),
+            if (!_running && failedCount > 0) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _retryFailed,
+                icon: const Icon(Icons.replay),
+                label: Text('Riprova i $failedCount falliti'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.rossoGubbio,
+                  side: const BorderSide(color: AppColors.rossoGubbio),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             if (_total > 0) ...[
               LinearProgressIndicator(value: _total == 0 ? 0 : _done / _total),
