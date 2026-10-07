@@ -6,35 +6,53 @@ import '../l10n/app_localizations.dart';
 /// richiamato da qui. Aggiorna solo questa costante se l'indirizzo cambia.
 const String kPrivacyPolicyUrl = 'https://visitgubbio.eu/privacy-policy.html';
 
-/// Link discreto all'informativa sulla privacy, da mostrare nelle schermate
-/// di login e registrazione come richiesto dalle policy di Google Play/App Store.
-class PrivacyPolicyLink extends StatelessWidget {
+/// URL pubblico dei termini e condizioni d'uso, mostrato nello Store e
+/// richiamato da qui. Aggiorna solo questa costante se l'indirizzo cambia.
+const String kTermsOfUseUrl = 'https://visitgubbio.eu/terms.html';
+
+Future<void> _openUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// Riga con i link discreti a Privacy Policy e Termini e Condizioni d'uso,
+/// da mostrare nelle schermate di login e registrazione come richiesto
+/// dalle policy di Google Play/App Store.
+class LegalLinksRow extends StatelessWidget {
   final AppLocalizations l10n;
 
-  const PrivacyPolicyLink({super.key, required this.l10n});
-
-  Future<void> _open() async {
-    final uri = Uri.parse(kPrivacyPolicyUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
+  const LegalLinksRow({super.key, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
+    final buttonStyle = TextButton.styleFrom(
+      foregroundColor: Colors.grey[500],
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+    const linkTextStyle =
+        TextStyle(fontSize: 12, decoration: TextDecoration.underline);
+
     return Center(
-      child: TextButton(
-        onPressed: _open,
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.grey[500],
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        child: Text(
-          l10n.privacyPolicy,
-          style: const TextStyle(fontSize: 12, decoration: TextDecoration.underline),
-        ),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => _openUrl(kPrivacyPolicyUrl),
+            style: buttonStyle,
+            child: Text(l10n.privacyPolicy, style: linkTextStyle),
+          ),
+          Text('•', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+          TextButton(
+            onPressed: () => _openUrl(kTermsOfUseUrl),
+            style: buttonStyle,
+            child: Text(l10n.termsOfUse, style: linkTextStyle),
+          ),
+        ],
       ),
     );
   }

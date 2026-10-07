@@ -729,7 +729,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
 
                       const SizedBox(height: 8),
-                      PrivacyPolicyLink(l10n: l10n),
+                      LegalLinksRow(l10n: l10n),
                       const SizedBox(height: 8),
                     ],
                   ),

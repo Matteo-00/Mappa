@@ -3,8 +3,6 @@ import '../services/consent_service.dart';
 import '../theme/app_colors.dart';
 import 'login_page.dart';
 
-/// Schermata di informativa privacy da accettare prima del login.
-/// Viene mostrata una sola volta: una volta accettata non ricompare.
 class PrivacyConsentPage extends StatefulWidget {
   const PrivacyConsentPage({super.key});
 
@@ -13,14 +11,19 @@ class PrivacyConsentPage extends StatefulWidget {
 }
 
 class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
-  bool _accepted = false;
+  bool _privacyRead = false;
+  bool _termsAccepted = false;
   bool _saving = false;
 
   Future<void> _continue() async {
-    if (!_accepted || _saving) return;
+    if (!_privacyRead || !_termsAccepted || _saving) return;
+
     setState(() => _saving = true);
+
     await ConsentService.setPrivacyAccepted();
+
     if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginPage()),
     );
@@ -37,83 +40,117 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              Icon(Icons.privacy_tip_outlined,
-                  color: AppColors.rossoGubbio, size: 40),
+
+              Icon(
+                Icons.privacy_tip_outlined,
+                color: AppColors.rossoGubbio,
+                size: 40,
+              ),
+
               const SizedBox(height: 16),
+
               const Text(
-                'Informativa sulla privacy',
+                'Privacy e condizioni d\'uso',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppColors.bluNotte,
                 ),
               ),
+
               const SizedBox(height: 16),
+
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'Per usare Visit Gubbio raccogliamo alcuni dati personali. '
-                        'Ti spieghiamo come li trattiamo:',
+                        'Prima di utilizzare Visit Gubbio, ti forniamo alcune '
+                        'informazioni essenziali sul trattamento dei dati personali '
+                        'e sulle condizioni di utilizzo dell\'App.',
                         style: TextStyle(
                           fontSize: 15,
                           height: 1.5,
                           color: AppColors.bluNotte,
                         ),
                       ),
+
                       SizedBox(height: 16),
+
                       _Bullet(
                         title: 'Dati di registrazione',
                         text:
-                            'Nome, cognome, email e password vengono salvati in modo '
-                            'sicuro per creare e gestire il tuo account.',
+                            'Per creare e gestire il tuo account trattiamo nome, '
+                            'cognome ed email. Le credenziali sono gestite dal '
+                            'sistema di autenticazione e la password non viene '
+                            'memorizzata in chiaro.',
                       ),
+
                       _Bullet(
                         title: 'Posizione',
                         text:
-                            'Se acconsenti, usiamo la posizione del dispositivo solo '
-                            'per mostrarti dove ti trovi sulla mappa e i punti di '
-                            'interesse vicini. Non la salviamo sui nostri server.',
+                            'Se autorizzi la localizzazione, la posizione viene '
+                            'utilizzata per mostrarti sulla mappa e individuare '
+                            'luoghi vicini. Visit Gubbio non memorizza la posizione '
+                            'del tuo dispositivo nel proprio database.',
                       ),
+
                       _Bullet(
-                        title: 'Foto',
+                        title: 'Luoghi, attività ed eventi',
                         text:
-                            'Gli utenti master possono caricare immagini da galleria '
-                            'per creare schede di ristoranti, bar ed eventi. Le foto '
-                            'vengono salvate sui nostri server per essere mostrate '
-                            'nell\'app.',
+                            'Gli amministratori inseriscono manualmente informazioni, '
+                            'immagini e coordinate di ristoranti, bar, eventi e altri '
+                            'punti di interesse. Le coordinate salvate riguardano '
+                            'i luoghi e non la posizione degli utenti.',
                       ),
+
                       _Bullet(
-                        title: 'Fornitori terzi',
+                        title: 'Supabase',
                         text:
-                            'I dati sono conservati sui server di Supabase (fornitore '
-                            'di database e autenticazione) che agisce come '
-                            'responsabile del trattamento per nostro conto.',
+                            'Visit Gubbio utilizza Supabase per autenticazione, '
+                            'database e archiviazione nell\'ambito '
+                            'dell\'infrastruttura tecnica.',
                       ),
+
                       _Bullet(
-                        title: 'Conservazione dei dati',
+                        title: 'Google Maps',
                         text:
-                            'I tuoi dati vengono conservati finché il tuo account è '
-                            'attivo. Puoi richiederne la cancellazione in qualsiasi '
-                            'momento dalla sezione Profilo dell\'app ("Elimina il mio '
-                            'account") oppure scrivendo a visitgubbioapp@gmail.com.',
+                            'L\'App utilizza Google Maps per mostrare mappe e '
+                            'contenuti cartografici. Google può trattare alcuni '
+                            'dati tecnici secondo le proprie condizioni e '
+                            'la propria Privacy Policy.',
                       ),
+
                       _Bullet(
-                        title: 'I tuoi diritti',
+                        title: 'Cancellazione e diritti',
                         text:
-                            'Puoi richiedere in qualsiasi momento l\'accesso, la '
-                            'modifica o la cancellazione dei tuoi dati. I permessi '
-                            'della posizione sono gestibili dalle impostazioni del '
-                            'telefono.',
+                            'Puoi cancellare il tuo account dalla sezione Profilo '
+                            '→ "Elimina il mio account" e puoi esercitare i diritti '
+                            'previsti dal GDPR scrivendo a '
+                            'visitgubbioapp@gmail.com.',
                       ),
-                      SizedBox(height: 8),
+
+                      SizedBox(height: 10),
+
                       Text(
-                        'Proseguendo dichiari di aver letto e compreso questa '
-                        'informativa ai sensi del Regolamento (UE) 2016/679 (GDPR). '
-                        'L\'informativa completa è disponibile su '
-                        'visitgubbio.eu/privacy-policy.html.',
+                        'Informativa completa:\n'
+                        'https://visitgubbio.eu/privacy-policy.html\n\n'
+                        'Termini e Condizioni:\n'
+                        'https://visitgubbio.eu/terms.html',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+
+                      SizedBox(height: 12),
+
+                      Text(
+                        'Il permesso di localizzazione è facoltativo e viene '
+                        'richiesto separatamente quando utilizzi le funzioni '
+                        'che ne hanno bisogno.',
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
@@ -124,44 +161,51 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () => setState(() => _accepted = !_accepted),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Checkbox(
-                        value: _accepted,
-                        activeColor: AppColors.rossoGubbio,
-                        onChanged: (v) =>
-                            setState(() => _accepted = v ?? false),
-                      ),
-                      const Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: Text(
-                            'Ho letto l\'informativa sulla privacy',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.bluNotte,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                activeColor: AppColors.rossoGubbio,
+                value: _privacyRead,
+                onChanged: (v) {
+                  setState(() => _privacyRead = v ?? false);
+                },
+                title: const Text(
+                  'Ho preso visione dell\'Informativa sulla Privacy',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.bluNotte,
                   ),
                 ),
+                controlAffinity: ListTileControlAffinity.leading,
               ),
-              const SizedBox(height: 12),
+
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                activeColor: AppColors.rossoGubbio,
+                value: _termsAccepted,
+                onChanged: (v) {
+                  setState(() => _termsAccepted = v ?? false);
+                },
+                title: const Text(
+                  'Accetto i Termini e Condizioni d\'Uso',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.bluNotte,
+                  ),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+
+              const SizedBox(height: 8),
+
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _accepted && !_saving ? _continue : null,
+                  onPressed:
+                      _privacyRead && _termsAccepted && !_saving
+                          ? _continue
+                          : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.rossoGubbio,
                     disabledBackgroundColor:
@@ -200,7 +244,11 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
 class _Bullet extends StatelessWidget {
   final String title;
   final String text;
-  const _Bullet({required this.title, required this.text});
+
+  const _Bullet({
+    required this.title,
+    required this.text,
+  });
 
   @override
   Widget build(BuildContext context) {

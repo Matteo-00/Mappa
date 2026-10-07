@@ -32,6 +32,7 @@ class AppLocalizations {
   String get invalidEmail => _t('invalidEmail');
   String get enterPassword => _t('enterPassword');
   String get privacyPolicy => _t('privacyPolicy');
+  String get termsOfUse => _t('termsOfUse');
 
   // ============== REGISTER PAGE ==============
   String get registration => _t('registration');
@@ -310,6 +311,7 @@ class AppLocalizations {
       'invalidEmail': 'Email non valida',
       'enterPassword': 'Inserisci password',
       'privacyPolicy': 'Informativa sulla privacy',
+      'termsOfUse': 'Termini e Condizioni d\'Uso',
       'registration': 'Registrazione',
       'createAccount': 'Crea il tuo account',
       'firstName': 'Nome',
@@ -528,6 +530,7 @@ class AppLocalizations {
       'invalidEmail': 'Invalid email',
       'enterPassword': 'Enter password',
       'privacyPolicy': 'Privacy Policy',
+      'termsOfUse': 'Terms and Conditions of Use',
       'registration': 'Registration',
       'createAccount': 'Create your account',
       'firstName': 'First Name',
@@ -745,6 +748,7 @@ class AppLocalizations {
       'invalidEmail': 'Ungültige E-Mail',
       'enterPassword': 'Passwort eingeben',
       'privacyPolicy': 'Datenschutzerklärung',
+      'termsOfUse': 'Nutzungsbedingungen',
       'registration': 'Registrierung',
       'createAccount': 'Erstelle dein Konto',
       'firstName': 'Vorname',
@@ -963,6 +967,7 @@ class AppLocalizations {
       'invalidEmail': 'E-mail invalide',
       'enterPassword': 'Entrez votre mot de passe',
       'privacyPolicy': 'Politique de confidentialité',
+      'termsOfUse': 'Conditions Générales d\'Utilisation',
       'registration': 'Inscription',
       'createAccount': 'Créez votre compte',
       'firstName': 'Prénom',

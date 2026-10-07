@@ -385,7 +385,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
 
                       const SizedBox(height: 8),
-                      PrivacyPolicyLink(l10n: l10n),
+                      LegalLinksRow(l10n: l10n),
                     ],
                   ),
                 ),
