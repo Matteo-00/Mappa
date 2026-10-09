@@ -112,27 +112,20 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
-      resizeToAvoidBottomInset: true,
+      // Nessuno scroll: il contenuto si ridimensiona per stare interamente
+      // in una sola schermata, anche con la tastiera aperta.
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Stack(
           children: [
-            // Il contenuto resta centrato come prima; quando compare la
-            // tastiera lo spazio disponibile si riduce e lo stesso layout
-            // scorre invece di "saltare".
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - 48,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                   // Logo
                   SizedBox(
                     width: 400,
@@ -389,11 +382,10 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-                      ],
-                    ),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
             ),
 
             // Selettore lingua in alto a destra

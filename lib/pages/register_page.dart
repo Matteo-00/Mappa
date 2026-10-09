@@ -209,6 +209,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -336,16 +337,16 @@ class _RegisterPageState extends State<RegisterPage> {
         ],
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+        // Nessuno scroll: il contenuto si ridimensiona per stare interamente
+        // in una sola schermata, anche con la tastiera aperta.
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
               const SizedBox(height: 8),
               // Logo identico al login
               SizedBox(
@@ -737,10 +738,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
-      ),
     );
   }
 }

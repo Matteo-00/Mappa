@@ -1,4 +1,4 @@
-package com.example.mappa
+package it.visitgubbio.app
 
 import io.flutter.embedding.android.FlutterActivity
 

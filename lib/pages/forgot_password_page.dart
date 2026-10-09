@@ -85,6 +85,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -193,13 +194,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        // Nessuno scroll: il contenuto si ridimensiona per stare interamente
+        // in una sola schermata, anche con la tastiera aperta.
+        child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   // Icona
                   Container(
                     width: 100,
@@ -370,6 +376,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     ),
                   ),
                 ],
+                ),
+                ),
               ),
             ),
           ),
