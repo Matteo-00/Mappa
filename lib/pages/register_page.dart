@@ -212,9 +212,10 @@ class _RegisterPageState extends State<RegisterPage> {
     // scala dei testi restano identici. Quando la tastiera si apre, l'area
     // visibile si accorcia e il contenuto scorre automaticamente fino al
     // campo selezionato.
-    final mq = MediaQuery.of(context);
-    final double contentHeight =
-        mq.size.height - mq.padding.top - mq.padding.bottom - kToolbarHeight;
+   final size = MediaQuery.sizeOf(context);
+final padding = MediaQuery.paddingOf(context);
+final double contentHeight =
+    size.height - padding.top - padding.bottom - kToolbarHeight;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
