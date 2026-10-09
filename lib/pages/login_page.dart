@@ -67,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // Naviga alla home
       if (!mounted) return;
-      
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeLandingPage()),
       );
@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
       final langService = context.read<LanguageService>();
       final l10n = AppLocalizations.of(langService.currentLanguageCode);
       String errorMessage = l10n.loginError;
-      
+
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('invalid') && (errorString.contains('email') || errorString.contains('password') || errorString.contains('credentials'))) {
         errorMessage = l10n.invalidCredentials;
@@ -109,280 +109,350 @@ class _LoginPageState extends State<LoginPage> {
     final langService = context.watch<LanguageService>();
     final l10n = AppLocalizations.of(langService.currentLanguageCode);
 
+    // Altezza "fissa" dell'area contenuto: NON cambia quando si apre la
+    // tastiera (size.height non include la tastiera), così il layout e la
+    // scala dei testi restano identici. Quando la tastiera si apre, l'area
+    // visibile si accorcia e il contenuto scorre automaticamente fino al
+    // campo selezionato.
+    final mq = MediaQuery.of(context);
+    final double contentHeight =
+        mq.size.height - mq.padding.top - mq.padding.bottom;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
-      // Nessuno scroll: il contenuto si ridimensiona per stare interamente
-      // in una sola schermata, anche con la tastiera aperta.
-      resizeToAvoidBottomInset: false,
+      // La tastiera restringe l'area visibile del body (comportamento standard)
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                  // Logo
-                  SizedBox(
-                    width: 400,
-                    height: 400,
-                    child: Image.asset(
-                      'assets/geo/logo.png',
-                      fit: BoxFit.contain,
+            Positioned.fill(
+              child: GestureDetector(
+                // Tocca fuori dai campi = chiude la tastiera
+                behavior: HitTestBehavior.opaque,
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: SingleChildScrollView(
+                  // Trascinando la pagina la tastiera si chiude
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: SizedBox(
+                    height: contentHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Logo
+                              SizedBox(
+                                width: 400,
+                                height: 400,
+                                child: Image.asset(
+                                  'assets/geo/logo.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Form(
+                                key: _formKey,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // Campo Email
+                                    Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      child: TextFormField(
+                                        controller: _emailController,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        cursorColor: Colors.black,
+                                        textInputAction: TextInputAction.next,
+                                        scrollPadding:
+                                            const EdgeInsets.only(bottom: 40),
+                                        decoration: InputDecoration(
+                                          labelText: l10n.email,
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFE5E1DB),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFE5E1DB),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFB71C1C),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          prefixIcon: Icon(
+                                            Icons.email_outlined,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return l10n.enterEmail;
+                                          }
+                                          if (!value.contains('@')) {
+                                            return l10n.invalidEmail;
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 16),
+
+                                    // Campo Password
+                                    Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      child: TextFormField(
+                                        controller: _passwordController,
+                                        obscureText: _obscurePassword,
+                                        cursorColor: Colors.black,
+                                        textInputAction: TextInputAction.done,
+                                        scrollPadding:
+                                            const EdgeInsets.only(bottom: 40),
+                                        onFieldSubmitted: (_) {
+                                          if (!_isLoading) _handleLogin();
+                                        },
+                                        decoration: InputDecoration(
+                                          labelText: l10n.password,
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFE5E1DB),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFE5E1DB),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFB71C1C),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          prefixIcon: Icon(
+                                            Icons.lock_outline,
+                                            color: Colors.grey[600],
+                                          ),
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              _obscurePassword
+                                                  ? Icons.visibility_outlined
+                                                  : Icons
+                                                      .visibility_off_outlined,
+                                              color: Colors.grey[600],
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _obscurePassword =
+                                                    !_obscurePassword;
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return l10n.enterPassword;
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 16),
+
+                                    // Password dimenticata
+                                    Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      alignment: Alignment.center,
+                                      child: TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const ForgotPasswordPage(),
+                                            ),
+                                          );
+                                        },
+                                        child: Text(
+                                          l10n.forgotPassword,
+                                          style: const TextStyle(
+                                            color: Color(0xFFB13B2E),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Pulsante Login
+                                    Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      width: double.infinity,
+                                      height: 56,
+                                      child: ElevatedButton(
+                                        onPressed:
+                                            _isLoading ? null : _handleLogin,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFFB13B2E),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shadowColor: const Color(0xFFB13B2E)
+                                              .withOpacity(0.3),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(Colors.white),
+                                                ),
+                                              )
+                                            : Text(
+                                                l10n.login,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 32),
+
+                                    // Divider
+                                    Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Divider(
+                                              color: const Color(0xFFE5E1DB),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                            ),
+                                            child: Text(
+                                              'o',
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Divider(
+                                              color: const Color(0xFFE5E1DB),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 32),
+
+                                    // Link registrazione
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          l10n.noAccount + ' ',
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const RegisterPage(),
+                                              ),
+                                            );
+                                          },
+                                          child: Text(
+                                            l10n.register,
+                                            style: const TextStyle(
+                                              color: Color(0xFFB13B2E),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 8),
+                                    LegalLinksRow(l10n: l10n),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-
-                      // Campo Email
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          cursorColor: Colors.black,
-                          decoration: InputDecoration(
-                            labelText: l10n.email,
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE5E1DB),
-                                width: 1,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE5E1DB),
-                                width: 1,
-                              ),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFB71C1C),
-                                width: 1,
-                              ),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.email_outlined,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.enterEmail;
-                            }
-                            if (!value.contains('@')) {
-                              return l10n.invalidEmail;
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Campo Password
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          cursorColor: Colors.black,
-                          decoration: InputDecoration(
-                            labelText: l10n.password,
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE5E1DB),
-                                width: 1,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE5E1DB),
-                                width: 1,
-                              ),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFB71C1C),
-                                width: 1,
-                              ),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.lock_outline,
-                              color: Colors.grey[600],
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: Colors.grey[600],
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.enterPassword;
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Password dimenticata
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        alignment: Alignment.center,
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordPage(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            l10n.forgotPassword,
-                            style: const TextStyle(
-                              color: Color(0xFFB13B2E),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Pulsante Login
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFB13B2E),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shadowColor: const Color(0xFFB13B2E).withOpacity(0.3),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : Text(
-                                  l10n.login,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Divider
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: Row(
-                          children: [
-                            Expanded(child: Divider(color: const Color(0xFFE5E1DB))),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'o',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ),
-                            Expanded(child: Divider(color: const Color(0xFFE5E1DB))),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Link registrazione
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            l10n.noAccount + ' ',
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 14,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterPage(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              l10n.register,
-                              style: const TextStyle(
-                                color: Color(0xFFB13B2E),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 8),
-                      LegalLinksRow(l10n: l10n),
-                    ],
-                  ),
-                ),
-                    ],
                   ),
                 ),
               ),
