@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,20 +8,35 @@ import 'services/language_service.dart';
 import 'theme/app_colors.dart';
 import 'pages/splash_intro_page.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  // runZonedGuarded + try/catch attorno all'init: se Supabase non è
+  // raggiungibile (rete assente, progetto in pausa, timeout, ecc.) l'app
+  // deve comunque avviarsi invece di terminare con schermata nera, che è
+  // quanto succedeva prima quando l'eccezione non veniva intercettata.
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://kcoglivbakjyxszoruka.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjb2dsaXZiYWtqeXhzem9ydWthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDA0NTcsImV4cCI6MjA4ODYxNjQ1N30.ICFTE2V6Y62BjT2gagazjLvyW8RZIZUji_D575hC5sY',
-    // Implicit flow: il link di recovery arriva con i token nell'hash (#access_token=...)
-    // e non richiede il code_verifier PKCE salvato sul dispositivo che ha fatto la richiesta.
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.implicit,
-    ),
-  );
+    try {
+      await Supabase.initialize(
+        url: 'https://kcoglivbakjyxszoruka.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjb2dsaXZiYWtqeXhzem9ydWthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDA0NTcsImV4cCI6MjA4ODYxNjQ1N30.ICFTE2V6Y62BjT2gagazjLvyW8RZIZUji_D575hC5sY',
+        // Implicit flow: il link di recovery arriva con i token nell'hash (#access_token=...)
+        // e non richiede il code_verifier PKCE salvato sul dispositivo che ha fatto la richiesta.
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      ).timeout(const Duration(seconds: 10));
+    } catch (e, st) {
+      // Logga l'errore ma non bloccare l'avvio: l'app resta utilizzabile
+      // (le chiamate a Supabase falliranno più avanti e verranno gestite
+      // localmente dalle singole pagine).
+      debugPrint('Supabase.initialize() fallita: $e\n$st');
+    }
 
-  runApp(const VisitGubbioApp());
+    runApp(const VisitGubbioApp());
+  }, (error, stack) {
+    debugPrint('Errore non gestito: $error\n$stack');
+  });
 }
 
 /// Applicazione VISIT GUBBIO con sistema di temi dinamico

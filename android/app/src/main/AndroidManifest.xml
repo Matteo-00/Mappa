@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     
     <application
-        android:label="mappa"
+        android:label="Visit Gubbio"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps API Key -->

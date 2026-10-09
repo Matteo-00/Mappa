@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icona vuota per lo splash screen nativo di Android 12+: evita che il
+     sistema mostri automaticamente l'icona dell'app all'avvio, cosi' si
+     vede solo lo sfondo bianco prima di entrare nell'animazione Flutter. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent" />
+</shape>
