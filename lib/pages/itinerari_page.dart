@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
@@ -21,7 +20,7 @@ class ItinerariPage extends StatefulWidget {
 }
 
 class _ItinerariPageState extends State<ItinerariPage> {
-  List<ItinerarioModel> _itinerari = itinerariConsigliati;
+  List<ItinerarioModel> _itinerari = [];
   String? _loadedLanguageCode;
 
   @override

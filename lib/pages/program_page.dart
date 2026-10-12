@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import '../widgets/event_timeline.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/custom_bottom_nav.dart';
-import '../data/events_data.dart';
+import '../models/event_model.dart';
+import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
@@ -22,11 +23,19 @@ class ProgramPage extends StatefulWidget {
 class _ProgramPageState extends State<ProgramPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<EventModel> _events = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    final events = await ContentService.fetchEvents();
+    if (!mounted) return;
+    setState(() => _events = events);
   }
 
   @override
@@ -97,7 +106,7 @@ class _ProgramPageState extends State<ProgramPage>
               children: [
                 // 15 Maggio - Ceri Grandi
                 EventTimeline(
-                  events: get15MaggioEvents(),
+                  events: _events,
                 ),
                 // 19 Maggio - Ceri Mezzani
                 _buildComingSoonTab(l10n.ceriMezzani, l10n),

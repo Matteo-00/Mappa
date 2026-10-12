@@ -11,8 +11,7 @@ import '../widgets/app_drawer.dart';
 import '../widgets/location_menu.dart';
 import '../widgets/festa_ceri_loading_screen.dart';
 import '../services/location_service.dart';
-import '../models/event_model.dart';
-import '../data/events_data.dart';
+import '../services/content_service.dart';
 import '../data/gubbio_boundary.dart';
 import 'events_list_page.dart';
 import 'restaurants_page.dart';
@@ -199,26 +198,28 @@ class _UnifiedHomePageState extends State<UnifiedHomePage> {
   }
   
   void _loadCeriRoute() {
-    // Carica il percorso dei Ceri e i marker degli eventi
-    final events = get15MaggioEvents();
-    final markers = <Marker>{};
-    
-    for (final event in events) {
-      markers.add(
-        Marker(
-          markerId: MarkerId(event.id),
-          position: event.coordinates,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(
-            title: event.title,
-            snippet: event.time,
+    // Carica il percorso dei Ceri e i marker degli eventi dal DB
+    ContentService.fetchEvents().then((events) {
+      if (!mounted) return;
+      final markers = <Marker>{};
+
+      for (final event in events) {
+        markers.add(
+          Marker(
+            markerId: MarkerId(event.id),
+            position: event.coordinates,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: InfoWindow(
+              title: event.title,
+              snippet: event.time,
+            ),
           ),
-        ),
-      );
-    }
-    
-    setState(() {
-      _markers = markers;
+        );
+      }
+
+      setState(() {
+        _markers = markers;
+      });
     });
   }
 

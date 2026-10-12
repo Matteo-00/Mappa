@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../data/itinerari_data.dart';
 import '../models/itinerario_model.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
+import '../services/content_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
@@ -40,6 +40,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
   double _dragDy = 0;
   bool _isDraggingPanel = false;
   late AppLocalizations _l10n;
+  List<ItinerarioModel> _itinerariConsigliati = [];
 
   @override
   void initState() {
@@ -48,6 +49,14 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _locationService.ensureLocationPermission(context);
     });
+    _loadItinerari();
+  }
+
+  Future<void> _loadItinerari() async {
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    final items = await ContentService.fetchItinerari(languageCode: languageCode);
+    if (!mounted) return;
+    setState(() => _itinerariConsigliati = items);
   }
 
   void _openEvents() {
@@ -578,8 +587,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
       builder: (context, constraints) {
         final cardWidth = (constraints.maxWidth - gap * 2) / 3;
         return Row(
-          children: List.generate(itinerariConsigliati.length.clamp(0, 3), (i) {
-            final it = itinerariConsigliati[i];
+          children: List.generate(_itinerariConsigliati.length.clamp(0, 3), (i) {
+            final it = _itinerariConsigliati[i];
             return Padding(
               padding: EdgeInsets.only(right: i < 2 ? gap : 0),
               child: _buildItinerarioCard(it, cardWidth),

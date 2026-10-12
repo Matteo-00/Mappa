@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../data/events_data.dart';
+import '../models/event_model.dart';
+import '../services/content_service.dart';
 import '../widgets/event_card.dart';
 import '../services/location_service.dart';
 
@@ -16,11 +17,19 @@ class TuristaEventsPage extends StatefulWidget {
 class _TuristaEventsPageState extends State<TuristaEventsPage> {
   final LocationService _locationService = LocationService();
   LatLng? _currentLocation;
+  List<EventModel> _eventsData = [];
 
   @override
   void initState() {
     super.initState();
     _loadCurrentLocation();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    final events = await ContentService.fetchEvents();
+    if (!mounted) return;
+    setState(() => _eventsData = events);
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -88,9 +97,9 @@ class _TuristaEventsPageState extends State<TuristaEventsPage> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.only(top: 16, bottom: 16),
-              itemCount: eventsData.length,
+              itemCount: _eventsData.length,
               itemBuilder: (context, index) {
-                final event = eventsData[index];
+                final event = _eventsData[index];
                 return EventCard(
                   event: event,
                   onShowOnMap: () => _showOnMap(event.coordinates),

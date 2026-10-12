@@ -2,8 +2,6 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../data/itinerari_data.dart';
-import '../data/events_data.dart';
 import '../models/bar_model.dart';
 import '../models/event_model.dart';
 import '../models/itinerario_model.dart';
@@ -130,8 +128,8 @@ class ContentService {
   }
 
   // -------------------------------------------------- Eventi
+  // Solo dati reali inseriti dai master su Supabase (niente dati di prova).
   static Future<List<EventModel>> fetchEvents({String languageCode = 'it'}) async {
-    final locals = get15MaggioEvents();
     try {
       final rows = await _db.from('eventi').select().order('data_inizio');
       final originals = (rows as List)
@@ -142,15 +140,12 @@ class ContentService {
         entityIds: originals.map((e) => e['id'].toString()).toList(),
         languageCode: languageCode,
       );
-      final remote = originals
+      return originals
           .map((e) => EventModel.fromJson(ContentTranslationService
               .applyTranslation(e, translations[e['id'].toString()])))
           .toList();
-      // Nella sezione eventi generica mostriamo solo 2 eventi di esempio: il
-      // programma completo della Festa dei Ceri resta nella sua pagina dedicata.
-      return [...locals.take(2), ...remote];
     } catch (_) {
-      return locals.take(2).toList();
+      return [];
     }
   }
 
@@ -173,10 +168,10 @@ class ContentService {
   }
 
   // -------------------------------------------------- Itinerari
+  // Solo dati reali inseriti dai master su Supabase (niente dati di prova).
   static Future<List<ItinerarioModel>> fetchItinerari({
     String languageCode = 'it',
   }) async {
-    const locals = itinerariConsigliati;
     try {
       final rows = await _db.from('itinerari').select().order('created_at');
       final originals = (rows as List)
@@ -187,13 +182,12 @@ class ContentService {
         entityIds: originals.map((e) => e['id'].toString()).toList(),
         languageCode: languageCode,
       );
-      final remote = originals
+      return originals
           .map((e) => ItinerarioModel.fromJson(ContentTranslationService
               .applyTranslation(e, translations[e['id'].toString()])))
           .toList();
-      return [...locals, ...remote];
     } catch (_) {
-      return locals;
+      return [];
     }
   }
 

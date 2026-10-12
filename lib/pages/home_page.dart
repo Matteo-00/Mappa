@@ -6,7 +6,7 @@ import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../models/user_mode.dart';
 import '../models/event_model.dart';
-import '../data/events_data.dart';
+import '../services/content_service.dart';
 import '../data/gubbio_boundary.dart';
 import '../widgets/custom_header.dart';
 import '../widgets/custom_bottom_nav.dart';
@@ -36,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   EventModel? _selectedEventForSheet; // Evento per bottom sheet
   bool _isFabMenuOpen = false; // Menu FAB espanso
   bool _isNavigationMode = false; // Modalità navigazione attiva
+  List<EventModel> _events = []; // Eventi caricati da Supabase
 
   // Centro iniziale: Gubbio, Piazza Grande
   static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
@@ -43,9 +44,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    final events = await ContentService.fetchEvents();
+    if (!mounted) return;
+    setState(() => _events = events);
     // Se c'è un evento iniziale, mostralo
-    if (widget.initialEventId != null) {
-      final events = get15MaggioEvents();
+    if (widget.initialEventId != null && events.isNotEmpty) {
       final event = events.firstWhere(
         (e) => e.id == widget.initialEventId,
         orElse: () => events.first,
@@ -66,6 +73,15 @@ class _HomePageState extends State<HomePage> {
         );
       });
     }
+  }
+
+  /// Restituisce il prossimo evento in programma tra quelli caricati
+  EventModel? _getNextEvent() {
+    final now = DateTime.now();
+    for (final event in _events) {
+      if (event.startTime.isAfter(now)) return event;
+    }
+    return null;
   }
 
   // Percorso ufficiale dei Ceri
@@ -120,7 +136,7 @@ class _HomePageState extends State<HomePage> {
     final markers = <Marker>{};
     
     // Marker per eventi principali
-    final events = get15MaggioEvents();
+    final events = _events;
     for (final event in events) {
       // Marker rosso se selezionato, blu altrimenti
       final isSelected = _selectedEventId == event.id;
@@ -281,7 +297,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildEventsSection() {
     final l10n = AppLocalizations.of(
         context.read<LanguageService>().currentLanguageCode);
-    final nextEvent = getNextEvent();
+    final nextEvent = _getNextEvent();
 
     return Container(
       color: const Color(0xFFFAFAFA),
@@ -1163,7 +1179,7 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       },
-      nextEvent: getNextEvent(),
+      nextEvent: _getNextEvent(),
     );
   }
 
