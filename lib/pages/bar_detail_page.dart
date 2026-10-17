@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bar_model.dart';
 import '../models/restaurant_model.dart';
+import 'map_page.dart' show MapKind;
 import 'restaurant_detail_page.dart';
 
 /// Dettaglio di un bar: mostra le stesse informazioni di un ristorante
@@ -14,6 +15,8 @@ class BarDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RestaurantDetailPage(
+      fallbackIcon: Icons.local_cafe_outlined,
+      mapKind: MapKind.bar,
       restaurant: RestaurantModel(
         id: bar.id,
         name: bar.name,

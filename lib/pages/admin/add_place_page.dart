@@ -4,15 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../models/bar_model.dart';
+import '../../models/hotel_model.dart';
 import '../../models/restaurant_model.dart';
 import '../../services/content_service.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
 
-/// Form per aggiungere o modificare un ristorante o un bar (stessi campi).
+/// Form per aggiungere o modificare un ristorante, un bar o un hotel
+/// (stessi campi).
 class AddPlacePage extends StatefulWidget {
-  /// Se true gestisce un bar, altrimenti un ristorante.
+  /// Se true gestisce un bar.
   final bool isBar;
+
+  /// Se true gestisce un hotel (se né [isBar] né [isHotel]: ristorante).
+  final bool isHotel;
 
   /// Ristorante esistente da modificare (null = nuovo inserimento).
   final RestaurantModel? editRestaurant;
@@ -20,11 +25,16 @@ class AddPlacePage extends StatefulWidget {
   /// Bar esistente da modificare (null = nuovo inserimento).
   final BarModel? editBar;
 
+  /// Hotel esistente da modificare (null = nuovo inserimento).
+  final HotelModel? editHotel;
+
   const AddPlacePage({
     super.key,
     required this.isBar,
+    this.isHotel = false,
     this.editRestaurant,
     this.editBar,
+    this.editHotel,
   });
 
   @override
@@ -48,12 +58,18 @@ class _AddPlacePageState extends State<AddPlacePage> {
   bool _saving = false;
   int _rating = 0;
 
-  bool get _isEditing => widget.editRestaurant != null || widget.editBar != null;
+  bool get _isEditing =>
+      widget.editRestaurant != null ||
+      widget.editBar != null ||
+      widget.editHotel != null;
 
-  String get _titleLabel {
-    if (_isEditing) return widget.isBar ? 'Modifica Bar' : 'Modifica Ristorante';
-    return widget.isBar ? 'Aggiungi Bar' : 'Aggiungi Ristorante';
-  }
+  /// Nome del tipo di luogo ("Bar", "Hotel", "Ristorante").
+  String get _kindLabel => widget.isHotel
+      ? 'Hotel'
+      : (widget.isBar ? 'Bar' : 'Ristorante');
+
+  String get _titleLabel =>
+      _isEditing ? 'Modifica $_kindLabel' : 'Aggiungi $_kindLabel';
 
   @override
   void initState() {
@@ -82,6 +98,18 @@ class _AddPlacePageState extends State<AddPlacePage> {
       _lng.text = b.coordinates.longitude.toString();
       _existingImageUrl = b.imageUrl;
       _rating = b.rating?.round() ?? 0;
+    } else if (widget.editHotel != null) {
+      final h = widget.editHotel!;
+      _name.text = h.name;
+      _description.text = h.description;
+      _address.text = h.address;
+      _phone.text = h.phoneNumber ?? '';
+      _website.text = h.website ?? '';
+      _tags.text = h.cuisineTypes.join(', ');
+      _lat.text = h.coordinates.latitude.toString();
+      _lng.text = h.coordinates.longitude.toString();
+      _existingImageUrl = h.imageUrl;
+      _rating = h.rating?.round() ?? 0;
     }
   }
 
@@ -113,7 +141,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
       if (_imageBytes != null) {
         imageUrl = await ContentService.uploadImage(
           _imageBytes!,
-          folder: widget.isBar ? 'bar' : 'ristoranti',
+          folder: widget.isHotel ? 'hotel' : (widget.isBar ? 'bar' : 'ristoranti'),
           fileName: _imageName ?? 'foto.jpg',
         );
       }
@@ -123,7 +151,25 @@ class _AddPlacePageState extends State<AddPlacePage> {
         double.tryParse(_lng.text.replaceAll(',', '.')) ?? 12.5773,
       );
 
-      if (widget.isBar) {
+      if (widget.isHotel) {
+        final hotel = HotelModel(
+          id: widget.editHotel?.id ?? '',
+          name: _name.text.trim(),
+          description: _description.text.trim(),
+          address: _address.text.trim(),
+          coordinates: coordinates,
+          imageUrl: imageUrl,
+          phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+          website: _website.text.trim().isEmpty ? null : _website.text.trim(),
+          cuisineTypes: _parseTags(),
+          rating: _rating > 0 ? _rating.toDouble() : null,
+        );
+        if (_isEditing) {
+          await ContentService.updateHotel(hotel);
+        } else {
+          await ContentService.addHotel(hotel);
+        }
+      } else if (widget.isBar) {
         final bar = BarModel(
           id: widget.editBar?.id ?? '',
           name: _name.text.trim(),
@@ -166,8 +212,12 @@ class _AddPlacePageState extends State<AddPlacePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_isEditing
-              ? (widget.isBar ? 'Bar aggiornato!' : 'Ristorante aggiornato!')
-              : (widget.isBar ? 'Bar aggiunto!' : 'Ristorante aggiunto!')),
+              ? (widget.isHotel
+                  ? 'Hotel aggiornato!'
+                  : (widget.isBar ? 'Bar aggiornato!' : 'Ristorante aggiornato!'))
+              : (widget.isHotel
+                  ? 'Hotel aggiunto!'
+                  : (widget.isBar ? 'Bar aggiunto!' : 'Ristorante aggiunto!'))),
           backgroundColor: const Color(0xFF4CAF50),
         ),
       );
@@ -224,7 +274,9 @@ class _AddPlacePageState extends State<AddPlacePage> {
             TextFormField(
               controller: _tags,
               decoration: adminInputDecoration(
-                'Tag (separati da virgola, es. Umbra, Italiana, Medievale)',
+                widget.isHotel
+                    ? 'Tag (separati da virgola, es. 4 stelle, Spa, Parcheggio)'
+                    : 'Tag (separati da virgola, es. Umbra, Italiana, Medievale)',
                 icon: Icons.label_outline,
               ),
             ),

@@ -1,3 +1,4 @@
+import '../widgets/distance_label.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -13,11 +14,21 @@ import 'map_page.dart';
 /// Pagina dettaglio ristorante
 class RestaurantDetailPage extends StatelessWidget {
   final RestaurantModel restaurant;
+  /// Icona mostrata quando manca la foto (ristorante di default).
+  final IconData fallbackIcon;
+
+  /// Tipo di punto sulla mappa ([MapKind]): ristorante, bar o hotel.
+  final String mapKind;
   
   const RestaurantDetailPage({
     super.key,
     required this.restaurant,
+    this.fallbackIcon = Icons.restaurant_menu,
+    this.mapKind = MapKind.restaurant,
   });
+
+  AppLocalizations _l10n(BuildContext context) => AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +158,7 @@ class RestaurantDetailPage extends StatelessWidget {
                     if (restaurant.website != null)
                       _buildContactRow(
                         Icons.language,
-                        'Sito web',
+                        l10n.t('websiteLabel'),
                         () => _openWebsite(restaurant.website!),
                       ),
                   ],
@@ -157,9 +168,9 @@ class RestaurantDetailPage extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Indirizzo
-                  const Text(
-                    'Indirizzo',
-                    style: TextStyle(
+                  Text(
+                    l10n.t('addressLabel'),
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: AppColors.bluNotte,
@@ -173,6 +184,12 @@ class RestaurantDetailPage extends StatelessWidget {
                       height: 1.6,
                       color: AppColors.textMuted,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  DistanceLabel(
+                    target: restaurant.coordinates,
+                    fontSize: 14,
+                    suffix: true,
                   ),
 
                   const SizedBox(height: 90),
@@ -217,12 +234,8 @@ class RestaurantDetailPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                title: const Text('Valutazione'),
-                content: const Text(
-                  'Questa valutazione è una media indicativa calcolata dai '
-                  'punteggi presenti su TripAdvisor e Google Maps, per '
-                  'aiutarti a capire che si tratta di dati reali.',
-                ),
+                title: Text(_l10n(context).t('ratingTitle')),
+                content: Text(_l10n(context).t('ratingInfo')),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
@@ -256,7 +269,7 @@ class RestaurantDetailPage extends StatelessWidget {
       ),
       child: Center(
         child: Icon(
-          Icons.restaurant_menu,
+          fallbackIcon,
           size: 92,
           color: AppColors.rossoGubbio.withOpacity(0.5),
         ),
@@ -347,11 +360,19 @@ class RestaurantDetailPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const MapPage()),
+                    MaterialPageRoute(
+                      builder: (_) => MapPage(
+                        focus: MapFocus(
+                          kind: mapKind,
+                          id: restaurant.id,
+                          position: restaurant.coordinates,
+                        ),
+                      ),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.map_outlined),
-                label: const Text('MOSTRA SULLA MAPPA'),
+                label: Text(_l10n(context).t('showOnMapBtn')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.rossoGubbio,
                   foregroundColor: Colors.white,
@@ -372,7 +393,7 @@ class RestaurantDetailPage extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _openWalkingDirections(),
                     icon: const Icon(Icons.directions_walk, size: 20),
-                    label: const Text('A piedi'),
+                    label: Text(_l10n(context).t('walkBtn')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.rossoGubbio,
                       side: const BorderSide(color: AppColors.rossoGubbio),
@@ -388,7 +409,7 @@ class RestaurantDetailPage extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _openDrivingDirections(),
                     icon: const Icon(Icons.directions_car, size: 20),
-                    label: const Text('In auto'),
+                    label: Text(_l10n(context).t('carBtn')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.rossoGubbio,
                       side: const BorderSide(color: AppColors.rossoGubbio),

@@ -32,6 +32,57 @@ class StoriaEpoca {
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'slug': slug,
+      'nome': nome,
+      'periodo': periodo,
+      'descrizione': descrizione,
+      'eventi_importanti': eventiImportanti,
+      'sort_order': sortOrder,
+    };
+  }
+}
+
+/// Testi e foto di copertina della pagina "Storia di Gubbio"
+/// (modificabili dagli admin). I valori predefiniti sono quelli storici.
+class StoriaIntro {
+  static const defaultTitolo = 'La storia di Gubbio';
+  static const defaultSottotitolo =
+      'Più di 2.000 anni da attraversare, epoca dopo epoca';
+  static const defaultTesto =
+      'Dall\'antica Iguvium al Libero Comune, dal Rinascimento dei '
+      'Montefeltro ai giorni nostri: scorri la linea del tempo oppure '
+      'filtra per epoca e tipo di luogo.';
+
+  final String titolo;
+  final String sottotitolo;
+  final String testo;
+  final String? imageUrl;
+
+  const StoriaIntro({
+    this.titolo = defaultTitolo,
+    this.sottotitolo = defaultSottotitolo,
+    this.testo = defaultTesto,
+    this.imageUrl,
+  });
+
+  /// I campi vuoti ricadono sui testi predefiniti.
+  factory StoriaIntro.fromJson(Map<String, dynamic> json) {
+    String pick(String key, String fallback) {
+      final v = (json[key] as String?)?.trim() ?? '';
+      return v.isEmpty ? fallback : v;
+    }
+
+    final img = (json['image_url'] as String?)?.trim();
+    return StoriaIntro(
+      titolo: pick('titolo', defaultTitolo),
+      sottotitolo: pick('sottotitolo', defaultSottotitolo),
+      testo: pick('testo', defaultTesto),
+      imageUrl: (img == null || img.isEmpty) ? null : img,
+    );
+  }
 }
 
 /// Un contenuto storico (monumento, chiesa, palazzo, luogo...) collegato

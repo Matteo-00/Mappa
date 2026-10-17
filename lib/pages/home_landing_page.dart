@@ -1,3 +1,4 @@
+import '../services/user_location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/itinerario_model.dart';
@@ -15,6 +16,8 @@ import 'events_list_page.dart';
 import 'event_detail_page.dart';
 import 'restaurants_page.dart';
 import 'bars_page.dart';
+import 'hotels_page.dart';
+import 'admin/scegli_vetrina_page.dart';
 import 'map_page.dart';
 import 'storia_page.dart';
 import 'itinerari_page.dart';
@@ -47,14 +50,20 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
     super.initState();
     // All'apertura chiediamo (una volta) il consenso alla posizione.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _locationService.ensureLocationPermission(context);
+      if (!mounted) return;
+      // Dopo la scelta dell'utente aggiorna la posizione condivisa (distanze).
+      _locationService
+          .ensureLocationPermission(context)
+          .then((_) => UserLocationService.instance.refresh());
     });
     _loadItinerari();
   }
 
   Future<void> _loadItinerari() async {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    final items = await ContentService.fetchItinerari(languageCode: languageCode);
+    // Vetrina: i 3 itinerari scelti dall'admin (o i primi 3 se non ne ha scelti).
+    final items =
+        await ContentService.fetchItinerariVetrina(languageCode: languageCode);
     if (!mounted) return;
     setState(() => _itinerariConsigliati = items);
   }
@@ -85,6 +94,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
         MaterialPageRoute(builder: (_) => const BarsPage()),
       );
 
+  void _openHotels() => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HotelsPage()),
+      );
+
   void _openMap() => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const MapPage()),
@@ -94,6 +108,15 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
         context,
         MaterialPageRoute(builder: (_) => const StoriaPage()),
       );
+
+  /// Solo admin: sceglie quali itinerari mostrare in vetrina.
+  Future<void> _chooseVetrina() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScegliVetrinaPage()),
+    );
+    if (changed == true) _loadItinerari();
+  }
 
   void _openItinerari() => Navigator.push(
         context,
@@ -165,6 +188,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                   const AddPlacePage(isBar: false)),
               tile(Icons.local_cafe_outlined, _l10n.addBarMenuItem,
                   const AddPlacePage(isBar: true)),
+              tile(Icons.hotel_outlined, _l10n.addHotelMenuItem,
+                  const AddPlacePage(isBar: false, isHotel: true)),
               tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
               tile(Icons.route, _l10n.addItinerarioMenuItem,
                   const AddItinerarioPage()),
@@ -484,6 +509,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                   _quickAction(Icons.local_cafe_outlined, _l10n.barsNav, _openBars),
                   _quickAction(
                       Icons.restaurant_menu, _l10n.restaurantsNav, _openRestaurants),
+                  _quickAction(Icons.hotel_outlined, _l10n.hotelsNav, _openHotels),
                   _quickAction(
                       Icons.calendar_today_outlined, _l10n.events, _openEvents),
                 ],
@@ -504,6 +530,29 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                       ),
                     ),
                   ),
+                  if (context.watch<AuthService>().isAdmin)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: _chooseVetrina,
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_outlined,
+                                size: 15, color: AppColors.bluNotte),
+                            SizedBox(width: 4),
+                            Text(
+                              'Scegli',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.bluNotte,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   GestureDetector(
                     onTap: _openItinerari,
                     child: Text(
@@ -622,6 +671,12 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                       size: 26, color: Colors.white.withOpacity(0.9)),
                 ),
               ),
+              if (it.imageUrl != null)
+                Image.network(
+                  it.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

@@ -1,3 +1,5 @@
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../widgets/distance_label.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -191,6 +193,12 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                     const SizedBox(height: 26),
                   ],
                   if (c.hasCoordinates) ...[
+                    DistanceLabel(
+                      target: LatLng(c.latitude!, c.longitude!),
+                      fontSize: 14,
+                      suffix: true,
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(

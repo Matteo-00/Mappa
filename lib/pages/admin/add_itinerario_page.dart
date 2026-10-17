@@ -38,6 +38,8 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
   final _durata = TextEditingController();
   final _difficolta = TextEditingController();
   final _tema = TextEditingController();
+  final _lat = TextEditingController();
+  final _lng = TextEditingController();
 
   final List<_TappaControllers> _tappe = [_TappaControllers()];
 
@@ -59,6 +61,8 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
       _durata.text = it.durata;
       _difficolta.text = it.difficolta;
       _tema.text = it.tema;
+      _lat.text = it.latitudine?.toString() ?? '';
+      _lng.text = it.longitudine?.toString() ?? '';
       _existingImageUrl = it.imageUrl;
       if (it.tappe.isNotEmpty) {
         _tappe.clear();
@@ -81,10 +85,23 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
     _durata.dispose();
     _difficolta.dispose();
     _tema.dispose();
+    _lat.dispose();
+    _lng.dispose();
     for (final t in _tappe) {
       t.dispose();
     }
     super.dispose();
+  }
+
+  /// Le coordinate sono facoltative, ma se ne compili una serve anche l'altra
+  /// e il valore deve essere nell'intervallo valido.
+  String? _coordinateError(String? value, String other, double limit) {
+    final v = (value ?? '').trim().replaceAll(',', '.');
+    final o = other.trim();
+    if (v.isEmpty) return o.isEmpty ? null : 'Compila anche questo campo';
+    final n = double.tryParse(v);
+    if (n == null || n < -limit || n > limit) return 'Valore non valido';
+    return null;
   }
 
   void _addTappa() => setState(() => _tappe.add(_TappaControllers()));
@@ -130,6 +147,8 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
         immagineLabel: _titolo.text.trim(),
         imageUrl: imageUrl,
         tappe: tappe,
+        latitudine: double.tryParse(_lat.text.trim().replaceAll(',', '.')),
+        longitudine: double.tryParse(_lng.text.trim().replaceAll(',', '.')),
       );
 
       if (_isEditing) {
@@ -152,7 +171,13 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore: $e'),
+          content: Text(
+            e.toString().contains('latitudine') ||
+                    e.toString().contains('longitudine')
+                ? 'Mancano le colonne della posizione: esegui lo script '
+                    'supabase_itinerari_posizione.sql nel SQL Editor di Supabase.'
+                : 'Errore: $e',
+          ),
           backgroundColor: const Color(0xFFB71C1C),
         ),
       );
@@ -220,6 +245,48 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
               controller: _tema,
               decoration:
                   adminInputDecoration('Tema', icon: Icons.palette_outlined),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Posizione sulla mappa (punto di partenza)',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.bluNotte.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _lat,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true, signed: true),
+                    decoration: adminInputDecoration('Latitudine'),
+                    validator: (v) => _coordinateError(v, _lng.text, 90),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _lng,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true, signed: true),
+                    decoration: adminInputDecoration('Longitudine'),
+                    validator: (v) => _coordinateError(v, _lat.text, 180),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Facoltativa ma consigliata: serve a mostrare l\'itinerario sulla '
+              'mappa. Su Google Maps tieni premuto sul punto di partenza e copia '
+              'le coordinate.',
+              style: TextStyle(
+                  fontSize: 12, height: 1.4, color: AppColors.textMuted),
             ),
             const SizedBox(height: 24),
             Row(

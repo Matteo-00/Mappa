@@ -1,3 +1,4 @@
+import '../widgets/distance_label.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/event_model.dart';
@@ -6,14 +7,26 @@ import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_filter_chip.dart';
 import '../widgets/premium_scaffold.dart';
+import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/add_event_page.dart';
 
-/// Pagina lista eventi con ricerca e filtri
+/// Filtri temporali della lista eventi.
+enum EventFilter {
+  upcoming, // in corso e futuri
+  today,
+  week,
+  month,
+  all,
+}
+
+/// Pagina lista eventi: ricerca, filtro temporale, filtro per categoria e
+/// luogo, eventi raggruppati per mese in schede compatte.
 class EventsListPage extends StatefulWidget {
   final Function(EventModel) onEventTap;
-  
+
   const EventsListPage({
     super.key,
     required this.onEventTap,
@@ -24,17 +37,19 @@ class EventsListPage extends StatefulWidget {
 }
 
 class _EventsListPageState extends State<EventsListPage> {
+  AppLocalizations get _l => AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
+
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<EventModel> _allEvents = [];
-  List<EventModel> _filteredEvents = [];
-  
+  bool _loading = true;
+
   String _searchQuery = '';
-  EventFilter _currentFilter = EventFilter.all;
+  EventFilter _currentFilter = EventFilter.upcoming;
+  String? _selectedCategory;
+  String? _selectedPlace;
   String? _loadedLanguageCode;
-  
-  int _currentPage = 0;
-  static const int _eventsPerPage = 10;
 
   @override
   void initState() {
@@ -56,7 +71,7 @@ class _EventsListPageState extends State<EventsListPage> {
     _searchController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadEvents() async {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode;
@@ -64,204 +79,279 @@ class _EventsListPageState extends State<EventsListPage> {
     if (!mounted) return;
     setState(() {
       _allEvents = events;
+      _loading = false;
+      if (_selectedCategory != null && !_categories.contains(_selectedCategory)) {
+        _selectedCategory = null;
+      }
+      if (_selectedPlace != null && !_places.contains(_selectedPlace)) {
+        _selectedPlace = null;
+      }
     });
-    _applyFilters();
   }
-  
-  void _applyFilters() {
-    List<EventModel> filtered = List.from(_allEvents);
-    
-    // Filtra per nome se c'è una ricerca
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((event) {
-        return event.title.toLowerCase().contains(_searchQuery.toLowerCase());
-      }).toList();
+
+  /// Valori distinti (non vuoti) di un campo degli eventi, in ordine alfabetico.
+  List<String> _distinct(String Function(EventModel) field) {
+    final set = <String>{};
+    for (final e in _allEvents) {
+      final v = field(e).trim();
+      if (v.isNotEmpty) set.add(v);
     }
-    
-    // Applica filtro temporale
+    return set.toList()..sort();
+  }
+
+  List<String> get _categories => _distinct((e) => e.category);
+  List<String> get _places => _distinct((e) => e.location);
+
+  /// Eventi filtrati: prima i prossimi (dal più vicino), poi i conclusi
+  /// (dal più recente) — questi ultimi compaiono solo con "Tutti".
+  List<EventModel> get _filteredEvents {
+    final q = _searchQuery.trim().toLowerCase();
     final now = DateTime.now();
-    
-    switch (_currentFilter) {
-      case EventFilter.day:
-        filtered = filtered.where((event) {
-          return event.startTime.day == now.day &&
-                 event.startTime.month == now.month &&
-                 event.startTime.year == now.year;
-        }).toList();
-        break;
-      case EventFilter.week:
-        final weekStart = now.subtract(Duration(days: now.weekday - 1));
-        final weekEnd = weekStart.add(const Duration(days: 7));
-        filtered = filtered.where((event) {
-          return event.startTime.isAfter(weekStart) && 
-                 event.startTime.isBefore(weekEnd);
-        }).toList();
-        break;
-      case EventFilter.month:
-        filtered = filtered.where((event) {
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(Duration(days: now.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+
+    final filtered = _allEvents.where((event) {
+      if (_selectedCategory != null && event.category.trim() != _selectedCategory) {
+        return false;
+      }
+      if (_selectedPlace != null && event.location.trim() != _selectedPlace) {
+        return false;
+      }
+      if (q.isNotEmpty &&
+          !event.title.toLowerCase().contains(q) &&
+          !event.location.toLowerCase().contains(q) &&
+          !event.description.toLowerCase().contains(q)) {
+        return false;
+      }
+      switch (_currentFilter) {
+        case EventFilter.upcoming:
+          return !event.endTime.isBefore(now);
+        case EventFilter.today:
+          return event.startTime.year == now.year &&
+              event.startTime.month == now.month &&
+              event.startTime.day == now.day;
+        case EventFilter.week:
+          return !event.startTime.isBefore(weekStart) &&
+              event.startTime.isBefore(weekEnd);
+        case EventFilter.month:
           return event.startTime.month == now.month &&
-                 event.startTime.year == now.year;
-        }).toList();
-        break;
-      case EventFilter.year:
-        filtered = filtered.where((event) {
-          return event.startTime.year == now.year;
-        }).toList();
-        break;
-      case EventFilter.all:
-        // Mostra tutti
-        break;
-    }
-    
-    // Ordina dal più vicino al più lontano
-    filtered.sort((a, b) => a.startTime.compareTo(b.startTime));
-    
+              event.startTime.year == now.year;
+        case EventFilter.all:
+          return true;
+      }
+    }).toList();
+
+    final upcoming = filtered.where((e) => !e.endTime.isBefore(now)).toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final past = filtered.where((e) => e.endTime.isBefore(now)).toList()
+      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    return [...upcoming, ...past];
+  }
+
+  bool get _hasActiveFilters =>
+      _searchQuery.isNotEmpty ||
+      _selectedCategory != null ||
+      _selectedPlace != null ||
+      _currentFilter != EventFilter.upcoming;
+
+  void _resetFilters() {
+    _searchController.clear();
     setState(() {
-      _filteredEvents = filtered;
-      _currentPage = 0;
+      _searchQuery = '';
+      _selectedCategory = null;
+      _selectedPlace = null;
+      _currentFilter = EventFilter.upcoming;
     });
+  }
+
+  /// Trasforma la lista in righe: intestazioni di gruppo + eventi.
+  List<Object> _buildRows(List<EventModel> events) {
+    final now = DateTime.now();
+    final rows = <Object>[];
+    String? lastGroup;
+    for (final e in events) {
+      final isPast = e.endTime.isBefore(now);
+      final group = isPast
+          ? _l.t('eventsPast')
+          : '${_l.list('monthsFull')[e.startTime.month - 1]} ${e.startTime.year}';
+      if (group != lastGroup) {
+        rows.add(group);
+        lastGroup = group;
+      }
+      rows.add(e);
+    }
+    return rows;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
-    final totalPages = (_filteredEvents.length / _eventsPerPage).ceil();
-    final startIndex = _currentPage * _eventsPerPage;
-    final endIndex = (startIndex + _eventsPerPage).clamp(0, _filteredEvents.length);
-    final currentPageEvents = _filteredEvents.sublist(startIndex, endIndex);
-    
+    final events = _filteredEvents;
+    final rows = _buildRows(events);
+
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
           PremiumHeader(title: l10n.events),
-
-          // Barra di ricerca
-          _buildSearchBar(),
-          
-          // Filtri temporali
-          _buildFilterChips(),
-          
-          // Lista eventi
+          AppSearchField(
+            controller: _searchController,
+            hint: l10n.searchEventsHint,
+            onChanged: (v) => setState(() => _searchQuery = v),
+            onClear: () {
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+            },
+          ),
+          _buildTimeChips(),
+          if (_categories.length > 1)
+            _chipRow(
+              values: _categories,
+              selected: _selectedCategory,
+              allLabel: _l.t('fltAllCategories'),
+              icon: Icons.category_outlined,
+              onChanged: (v) => setState(() => _selectedCategory = v),
+            ),
+          if (_places.length > 1)
+            _chipRow(
+              values: _places,
+              selected: _selectedPlace,
+              allLabel: _l.t('fltAllPlaces'),
+              icon: Icons.place_outlined,
+              onChanged: (v) => setState(() => _selectedPlace = v),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 12, 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _l.count('eventsCount', events.length),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+                if (_hasActiveFilters)
+                  TextButton(
+                    onPressed: _resetFilters,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.rossoGubbio,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: Text(_l.t('fltReset'),
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+              ],
+            ),
+          ),
           Expanded(
-            child: _filteredEvents.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: currentPageEvents.length,
-                    itemBuilder: (context, index) {
-                      return _buildEventCard(currentPageEvents[index]);
-                    },
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.rossoGubbio),
+                  )
+                : RefreshIndicator(
+                    color: AppColors.rossoGubbio,
+                    onRefresh: _loadEvents,
+                    child: events.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                            itemCount: rows.length,
+                            itemBuilder: (context, i) {
+                              final row = rows[i];
+                              if (row is String) return _buildGroupHeader(row);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _buildEventCard(row as EventModel),
+                              );
+                            },
+                          ),
                   ),
           ),
-          
-          // Paginazione
-          if (totalPages > 1) _buildPagination(totalPages),
         ],
       ),
     );
   }
-  
-  /// Barra di ricerca
-  Widget _buildSearchBar() {
-    final l10n = AppLocalizations.of(
-        context.read<LanguageService>().currentLanguageCode);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+
+  /// Chip per il filtro temporale
+  Widget _buildTimeChips() {
+    // "Tutti" subito dopo "Prossimi": così si vede senza dover scorrere.
+    final labels = {
+      EventFilter.upcoming: _l.t('fltUpcoming'),
+      EventFilter.all: _l.t('fltAll'),
+      EventFilter.today: _l.t('fltToday'),
+      EventFilter.week: _l.t('fltThisWeek'),
+      EventFilter.month: _l.t('fltThisMonth'),
+    };
+    return HintedChipRow(
+      height: 46,
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+      children: [
+          for (final entry in labels.entries) ...[
+            AppFilterChip(
+              label: entry.value,
+              selected: _currentFilter == entry.key,
+              icon: entry.key == EventFilter.upcoming ? Icons.event_available : null,
+              onTap: () => setState(() => _currentFilter = entry.key),
+            ),
+            const SizedBox(width: 8),
+          ],
+      ],
+    );
+  }
+
+  Widget _chipRow({
+    required List<String> values,
+    required String? selected,
+    required String allLabel,
+    required IconData icon,
+    required void Function(String?) onChanged,
+  }) {
+    return HintedChipRow(
+      height: 40,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      children: [
+          AppFilterChip(
+            label: allLabel,
+            selected: selected == null,
+            compact: true,
+            icon: icon,
+            onTap: () => onChanged(null),
           ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-          _applyFilters();
-        },
-        decoration: InputDecoration(
-          hintText: l10n.searchEventsHint,
-          hintStyle: const TextStyle(color: AppColors.textMuted),
-          prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: AppColors.tortora),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                    _applyFilters();
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-      ),
+          for (final v in values) ...[
+            const SizedBox(width: 8),
+            AppFilterChip(
+              label: v,
+              selected: selected == v,
+              compact: true,
+              onTap: () => onChanged(selected == v ? null : v),
+            ),
+          ],
+      ],
     );
   }
-  
-  /// Chip per i filtri temporali
-  Widget _buildFilterChips() {
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _buildFilterChip('Oggi', EventFilter.day),
-          _buildFilterChip('Settimana', EventFilter.week),
-          _buildFilterChip('Mese', EventFilter.month),
-          _buildFilterChip('Anno', EventFilter.year),
-          _buildFilterChip('Tutti', EventFilter.all),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildFilterChip(String label, EventFilter filter) {
-    final isSelected = _currentFilter == filter;
-    
+
+  Widget _buildGroupHeader(String text) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        showCheckmark: false,
-        onSelected: (selected) {
-          setState(() {
-            _currentFilter = filter;
-          });
-          _applyFilters();
-        },
-        backgroundColor: Colors.white,
-        selectedColor: AppColors.rossoGubbio,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : AppColors.bluNotte,
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        side: BorderSide(
-          color: isSelected ? AppColors.rossoGubbio : AppColors.grigioChiaro,
+      padding: const EdgeInsets.fromLTRB(2, 12, 0, 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.0,
+          color: AppColors.textMuted,
         ),
       ),
     );
   }
-  
-  /// Card singolo evento
+
   Future<void> _editEvent(EventModel event) async {
     final updated = await Navigator.push<bool>(
       context,
@@ -298,273 +388,248 @@ class _EventsListPageState extends State<EventsListPage> {
     }
   }
 
+  /// Scheda compatta: data a sinistra, testi al centro, miniatura a destra.
   Widget _buildEventCard(EventModel event) {
-    final canDelete = context.watch<AuthService>().isAdmin &&
+    final canEdit = context.watch<AuthService>().isAdmin &&
         ContentService.isRemoteId(event.id);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => widget.onEventTap(event),
-        borderRadius: BorderRadius.circular(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Immagine evento con data in overlay
-            Stack(
-              children: [
-                // Immagine
-                Container(
-                  height: 170,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(22),
-                      topRight: Radius.circular(22),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.tortora.withOpacity(0.4),
-                        AppColors.avorio,
-                      ],
-                    ),
-                  ),
-                  child: event.imageUrl != null
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(22),
-                            topRight: Radius.circular(22),
+    final status = event.getStatus();
+    final isPast = status == EventStatus.past;
+
+    return Opacity(
+      opacity: isPast ? 0.7 : 1,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.bluNotte.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => widget.onEventTap(event),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDateBlock(event.startTime, isPast),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              event.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                                color: AppColors.bluNotte,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            _metaRow(Icons.schedule, _timeRange(event)),
+                            if (event.location.trim().isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              _metaRow(Icons.place_outlined, event.location),
+                            ],
+                            const SizedBox(height: 2),
+                            DistanceLabel(target: event.coordinates, fontSize: 12),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                if (event.category.trim().isNotEmpty)
+                                  _pill(event.category, AppColors.verdeSalvia),
+                                if (status == EventStatus.current)
+                                  _pill(_l.t('eventNow'), AppColors.rossoGubbio,
+                                      strong: true),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (event.imageUrl != null) ...[
+                        const SizedBox(width: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: 70,
+                            height: 70,
+                            child: Image.network(
+                              event.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const ColoredBox(
+                                color: AppColors.grigioChiaro,
+                                child: Icon(Icons.festival_outlined,
+                                    color: AppColors.tortora),
+                              ),
+                            ),
                           ),
-                          child: Image.network(
-                            event.imageUrl!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildEventPlaceholder();
-                            },
-                          ),
-                        )
-                      : _buildEventPlaceholder(),
-                ),
-                
-                // Data in alto a destra
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.rossoGubbio,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
                         ),
                       ],
-                    ),
-                    child: Text(
-                      _formatEventDate(event.startTime),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    ],
+                  ),
+                  if (canEdit)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          EditIconButton(onPressed: () => _editEvent(event)),
+                          const SizedBox(width: 8),
+                          DeleteIconButton(onPressed: () => _deleteEvent(event)),
+                        ],
                       ),
                     ),
-                  ),
-                ),
-
-                // Pulsanti modifica/elimina (solo admin)
-                if (canDelete)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Row(
-                      children: [
-                        Material(
-                          color: Colors.white,
-                          shape: const CircleBorder(),
-                          elevation: 2,
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => _editEvent(event),
-                            child: const SizedBox(
-                              width: 36,
-                              height: 36,
-                              child: Icon(Icons.edit_outlined,
-                                  size: 18, color: AppColors.bluNotte),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Material(
-                          color: Colors.white,
-                          shape: const CircleBorder(),
-                          elevation: 2,
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => _deleteEvent(event),
-                            child: const SizedBox(
-                              width: 36,
-                              height: 36,
-                              child: Icon(Icons.delete_outline,
-                                  size: 20, color: AppColors.rossoGubbio),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            
-            // Contenuto testuale
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Titolo
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.bluNotte,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Descrizione
-                  Text(
-                    event.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textMuted,
-                      height: 1.4,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-  
-  Widget _buildEventPlaceholder() {
-    return Center(
-      child: Icon(
-        Icons.festival_outlined,
-        size: 56,
-        color: AppColors.rossoGubbio.withOpacity(0.4),
+
+  Widget _buildDateBlock(DateTime date, bool isPast) {
+    return Container(
+      width: 54,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: (isPast ? AppColors.tortora : AppColors.rossoGubbio)
+            .withOpacity(0.12),
+        borderRadius: BorderRadius.circular(14),
       ),
-    );
-  }
-  
-  /// Stato vuoto
-  Widget _buildEmptyState() {
-    final l10n = AppLocalizations.of(
-        context.read<LanguageService>().currentLanguageCode);
-    return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.event_busy,
-            size: 76,
-            color: AppColors.tortora.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
           Text(
-            l10n.noEventsFound,
+            _l.list('monthsShort')[date.month - 1],
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              color: isPast ? AppColors.textMuted : AppColors.rossoGubbio,
+            ),
+          ),
+          Text(
+            '${date.day}',
             style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+              fontSize: 23,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
               color: AppColors.bluNotte,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.tryChangeFilters,
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(String text, Color color, {bool strong = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: strong ? color : color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          color: strong ? Colors.white : AppColors.bluNotte,
+        ),
+      ),
+    );
+  }
+
+  Widget _metaRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.rossoGubbio),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
               color: AppColors.textMuted,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-  
-  /// Paginazione
-  Widget _buildPagination(int totalPages) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: _currentPage > 0
-                ? () => setState(() => _currentPage--)
-                : null,
-            icon: const Icon(Icons.arrow_back_ios),
-            color: AppColors.rossoGubbio,
+
+  String _timeRange(EventModel e) {
+    String hm(DateTime d) =>
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    return e.endTime.isAfter(e.startTime)
+        ? '${hm(e.startTime)} – ${hm(e.endTime)}'
+        : hm(e.startTime);
+  }
+
+  Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(
+        context.read<LanguageService>().currentLanguageCode);
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 50),
+        Icon(Icons.event_busy,
+            size: 70, color: AppColors.tortora.withOpacity(0.55)),
+        const SizedBox(height: 16),
+        Text(
+          l10n.noEventsFound,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
           ),
-          const SizedBox(width: 16),
-          Text(
-            'Pagina ${_currentPage + 1} di $totalPages',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.bluNotte,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.tryChangeFilters,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
+        ),
+        if (_currentFilter != EventFilter.all) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: OutlinedButton(
+              onPressed: () => setState(() {
+                _currentFilter = EventFilter.all;
+                _selectedCategory = null;
+                _selectedPlace = null;
+              }),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.rossoGubbio,
+                side: const BorderSide(color: AppColors.rossoGubbio),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              child: Text(_l.t('showAllEvents')),
             ),
           ),
-          const SizedBox(width: 16),
-          IconButton(
-            onPressed: _currentPage < totalPages - 1
-                ? () => setState(() => _currentPage++)
-                : null,
-            icon: const Icon(Icons.arrow_forward_ios),
-            color: AppColors.rossoGubbio,
-          ),
         ],
-      ),
+      ],
     );
   }
-  
-  String _formatEventDate(DateTime date) {
-    final months = [
-      'GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU',
-      'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'
-    ];
-    return '${date.day} ${months[date.month - 1]}';
-  }
-}
-
-/// Enum per i filtri temporali
-enum EventFilter {
-  day,
-  week,
-  month,
-  year,
-  all,
 }

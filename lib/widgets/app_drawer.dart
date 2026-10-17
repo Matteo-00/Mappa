@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
+import 'scroll_hints.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
@@ -8,6 +9,7 @@ import '../pages/events_list_page.dart';
 import '../pages/event_detail_page.dart';
 import '../pages/restaurants_page.dart';
 import '../pages/bars_page.dart';
+import '../pages/hotels_page.dart';
 import '../pages/map_page.dart';
 import '../pages/storia_page.dart';
 import '../pages/itinerari_page.dart';
@@ -62,7 +64,10 @@ class AppDrawer extends StatelessWidget {
 
             // Voci menu
             Expanded(
-              child: ListView(
+              child: VerticalScrollHint(
+                fadeColor: AppColors.avorio,
+                builder: (scrollController) => ListView(
+                controller: scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 children: [
                   _menuItem(
@@ -110,6 +115,18 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const BarsPage()),
+                      );
+                    },
+                  ),
+                  _menuItem(
+                    context,
+                    icon: Icons.hotel_outlined,
+                    title: l10n.hotelsNav,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HotelsPage()),
                       );
                     },
                   ),
@@ -163,6 +180,7 @@ class AppDrawer extends StatelessWidget {
                     },
                   ),
                 ],
+              ),
               ),
             ),
 

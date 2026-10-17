@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/bar_model.dart';
 import '../models/event_model.dart';
+import '../models/hotel_model.dart';
 import '../models/itinerario_model.dart';
 import '../models/restaurant_model.dart';
 import '../models/storia_model.dart';
@@ -127,6 +128,47 @@ class ContentService {
     await _db.from('bar').delete().eq('id', id);
   }
 
+  // -------------------------------------------------- Hotel
+  // Stessa struttura di bar e ristoranti. Se la tabella `hotel` non esiste
+  // ancora (script supabase_hotel_setup.sql non eseguito) la lista è vuota.
+  static Future<List<HotelModel>> fetchHotels({String languageCode = 'it'}) async {
+    try {
+      final rows = await _db.from('hotel').select().order('created_at');
+      final originals = (rows as List)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      final translations = await ContentTranslationService.fetchTranslations(
+        entityType: 'hotel',
+        entityIds: originals.map((e) => e['id'].toString()).toList(),
+        languageCode: languageCode,
+      );
+      return originals
+          .map((e) => HotelModel.fromJson(ContentTranslationService
+              .applyTranslation(e, translations[e['id'].toString()])))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> addHotel(HotelModel h) async {
+    final inserted =
+        await _db.from('hotel').insert(h.toJson()).select().single();
+    await _translateSafely(
+      entityType: 'hotel',
+      entityId: inserted['id'].toString(),
+    );
+  }
+
+  static Future<void> updateHotel(HotelModel h) async {
+    await _db.from('hotel').update(h.toJson()).eq('id', h.id);
+    await _translateSafely(entityType: 'hotel', entityId: h.id);
+  }
+
+  static Future<void> deleteHotel(String id) async {
+    await _db.from('hotel').delete().eq('id', id);
+  }
+
   // -------------------------------------------------- Eventi
   // Solo dati reali inseriti dai master su Supabase (niente dati di prova).
   static Future<List<EventModel>> fetchEvents({String languageCode = 'it'}) async {
@@ -209,6 +251,34 @@ class ContentService {
     await _db.from('itinerari').delete().eq('id', id);
   }
 
+  /// Itinerari della vetrina della home (massimo 3), scelti dall'admin.
+  /// Se non ne è stato scelto nessuno (o la colonna `vetrina_ordine` non
+  /// esiste ancora) ripiega sui primi 3 itinerari.
+  static Future<List<ItinerarioModel>> fetchItinerariVetrina({
+    String languageCode = 'it',
+  }) async {
+    final all = await fetchItinerari(languageCode: languageCode);
+    final chosen = all.where((i) => i.vetrinaOrdine != null).toList()
+      ..sort((a, b) => a.vetrinaOrdine!.compareTo(b.vetrinaOrdine!));
+    final list = chosen.isNotEmpty ? chosen : all;
+    return list.take(3).toList();
+  }
+
+  /// Imposta gli itinerari in vetrina, nell'ordine dato (1 = primo).
+  /// Passando una lista vuota la vetrina viene svuotata.
+  static Future<void> setItinerariVetrina(List<String> orderedIds) async {
+    final ids = orderedIds.take(3).toList();
+    // Prima libera tutte le posizioni (l'indice è univoco), poi assegna.
+    await _db
+        .from('itinerari')
+        .update({'vetrina_ordine': null}).not('vetrina_ordine', 'is', null);
+    for (var i = 0; i < ids.length; i++) {
+      await _db
+          .from('itinerari')
+          .update({'vetrina_ordine': i + 1}).eq('id', ids[i]);
+    }
+  }
+
   // -------------------------------------------------- Storia di Gubbio
   static Future<List<StoriaEpoca>> fetchStoriaEpoche({
     String languageCode = 'it',
@@ -254,6 +324,60 @@ class ContentService {
     } catch (_) {
       return [];
     }
+  }
+
+  static Future<void> addStoriaEpoca(StoriaEpoca e) async {
+    final inserted = await _db
+        .from('storia_epoche')
+        .insert(e.toJson())
+        .select()
+        .single();
+    await _translateSafely(
+      entityType: 'storia_epoche',
+      entityId: inserted['id'].toString(),
+    );
+  }
+
+  static Future<void> updateStoriaEpoca(StoriaEpoca e) async {
+    await _db.from('storia_epoche').update(e.toJson()).eq('id', e.id);
+    await _translateSafely(entityType: 'storia_epoche', entityId: e.id);
+  }
+
+  /// I contenuti dell'epoca eliminata restano salvati (ON DELETE SET NULL),
+  /// ma restano senza epoca finché non ne viene assegnata un'altra.
+  static Future<void> deleteStoriaEpoca(String id) async {
+    await _db.from('storia_epoche').delete().eq('id', id);
+  }
+
+  /// Testi della pagina Storia. Se la tabella `storia_pagina` non esiste
+  /// ancora (o è vuota) restituisce i testi predefiniti.
+  static Future<StoriaIntro> fetchStoriaIntro() async {
+    try {
+      final row = await _db
+          .from('storia_pagina')
+          .select()
+          .eq('id', 1)
+          .maybeSingle();
+      if (row == null) return const StoriaIntro();
+      return StoriaIntro.fromJson(Map<String, dynamic>.from(row));
+    } catch (_) {
+      return const StoriaIntro();
+    }
+  }
+
+  static Future<void> saveStoriaIntro({
+    required String titolo,
+    required String sottotitolo,
+    required String testo,
+    String? imageUrl,
+  }) async {
+    await _db.from('storia_pagina').upsert({
+      'id': 1,
+      'titolo': titolo,
+      'sottotitolo': sottotitolo,
+      'testo': testo,
+      'image_url': imageUrl,
+    });
   }
 
   static Future<void> addStoriaContenuto(StoriaContenuto c) async {

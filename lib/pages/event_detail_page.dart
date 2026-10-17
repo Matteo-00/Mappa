@@ -1,3 +1,4 @@
+import '../widgets/distance_label.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/event_model.dart';
@@ -360,6 +361,15 @@ class EventDetailPage extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: DistanceLabel(
+                  target: event.coordinates,
+                  fontSize: 14,
+                  suffix: true,
+                ),
+              ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -367,7 +377,13 @@ class EventDetailPage extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const MapPage(),
+                        builder: (_) => MapPage(
+                          focus: MapFocus(
+                            kind: MapKind.event,
+                            id: event.id,
+                            position: event.coordinates,
+                          ),
+                        ),
                       ),
                     );
                   },

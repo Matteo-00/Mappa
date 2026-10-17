@@ -1,4 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../utils/geo.dart';
 
 /// Modello per un ristorante
 class RestaurantModel {
@@ -63,34 +64,11 @@ class RestaurantModel {
     };
   }
 
-  /// Calcola la distanza da una posizione (in metri)
-  double calculateDistance(LatLng currentPosition) {
-    // Calcolo approssimativo usando formula di Haversine
-    const double earthRadius = 6371000; // metri
-    
-    double lat1 = currentPosition.latitude * 3.14159265359 / 180.0;
-    double lat2 = coordinates.latitude * 3.14159265359 / 180.0;
-    double lon1 = currentPosition.longitude * 3.14159265359 / 180.0;
-    double lon2 = coordinates.longitude * 3.14159265359 / 180.0;
-    
-    double dLat = lat2 - lat1;
-    double dLon = lon2 - lon1;
-    
-    double a = (dLat / 2.0) * (dLat / 2.0) +
-        (dLon / 2.0) * (dLon / 2.0) * (lat1) * (lat2);
-    double c = 2 * (a.isNegative ? -1 : 1) * (1 - a).abs();
-    
-    return earthRadius * c;
-  }
-  
-  /// Formatta la distanza per visualizzazione
-  String formatDistance(LatLng currentPosition) {
-    final distance = calculateDistance(currentPosition);
-    
-    if (distance < 1000) {
-      return '${distance.round()} m';
-    } else {
-      return '${(distance / 1000).toStringAsFixed(1)} km';
-    }
-  }
+  /// Distanza in metri, in linea d'aria, da una posizione (Haversine).
+  double calculateDistance(LatLng currentPosition) =>
+      distanceMeters(currentPosition, coordinates);
+
+  /// Distanza formattata per la visualizzazione ("350 m", "1,4 km").
+  String formatDistance(LatLng currentPosition) =>
+      formatDistanceMeters(calculateDistance(currentPosition));
 }

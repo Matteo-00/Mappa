@@ -48,6 +48,11 @@ const ENTITY_CONFIG: Record<
     fields: ["descrizione"],
   },
 
+  hotel: {
+    table: "hotel",
+    fields: ["descrizione"],
+  },
+
   eventi: {
     table: "eventi",
     fields: ["titolo", "descrizione"],

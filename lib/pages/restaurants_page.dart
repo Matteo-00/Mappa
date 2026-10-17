@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../models/restaurant_model.dart';
 import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
-import '../services/location_service.dart';
+import '../services/user_location_service.dart';
+import '../widgets/distance_label.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
@@ -13,6 +14,7 @@ import 'admin/admin_widgets.dart';
 import 'admin/add_place_page.dart';
 import 'restaurant_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
+import '../widgets/place_filters.dart';
 
 /// Pagina ristoranti con mappa integrata e lista
 class RestaurantsPage extends StatefulWidget {
@@ -25,7 +27,6 @@ class RestaurantsPage extends StatefulWidget {
 class _RestaurantsPageState extends State<RestaurantsPage> {
   GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
-  final LocationService _locationService = LocationService();
   
   List<RestaurantModel> _allRestaurants = [];
   List<RestaurantModel> _filteredRestaurants = [];
@@ -55,6 +56,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
   @override
   void dispose() {
+    UserLocationService.instance.removeListener(_onLocationChanged);
     _searchController.dispose();
     super.dispose();
   }
@@ -71,51 +73,46 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     _applyFilters();
   }
   
+  /// Usa la posizione condivisa dell'app. Il controllo è silenzioso: l'invito
+  /// ad abilitare la posizione compare sulle singole schede.
   Future<void> _getCurrentLocation() async {
-    final location = await _locationService.getCurrentLocation();
-    if (location != null) {
-      setState(() {
-        _currentLocation = location;
-      });
-      _sortByDistance();
-    }
+    final service = UserLocationService.instance;
+    service.addListener(_onLocationChanged);
+    await service.refresh();
+    _onLocationChanged();
+  }
+
+  void _onLocationChanged() {
+    if (!mounted) return;
+    final location = UserLocationService.instance.position;
+    setState(() {
+      _currentLocation = location;
+    });
+    _applyFilters();
   }
   
+  /// Filtri e ordinamento (vicino a me, stelle, tag...).
+  final PlaceFilterState _filters = PlaceFilterState();
+
   void _applyFilters() {
-    List<RestaurantModel> filtered = List.from(_allRestaurants);
-    
-    // Filtra per nome
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((restaurant) {
-        return restaurant.name.toLowerCase().contains(_searchQuery.toLowerCase());
-      }).toList();
-    }
-    
+    final result = PlaceFilters.apply<RestaurantModel>(
+      _allRestaurants,
+      state: _filters,
+      query: _searchQuery,
+      name: (p) => p.name,
+      description: (p) => p.description,
+      tags: (p) => p.cuisineTypes,
+      rating: (p) => p.rating,
+      distance: (p) => _currentLocation == null
+          ? null
+          : p.calculateDistance(_currentLocation!),
+    );
     setState(() {
-      _filteredRestaurants = filtered;
+      _filteredRestaurants = result;
     });
-    
-    _sortByDistance();
     _createMarkers();
   }
-  
-  void _sortByDistance() {
-    if (_currentLocation != null) {
-      _filteredRestaurants.sort((a, b) {
-        final distA = a.calculateDistance(_currentLocation!);
-        final distB = b.calculateDistance(_currentLocation!);
-        return distA.compareTo(distB);
-      });
-    } else {
-      // Senza posizione, ordina dal più stellato al meno stellato.
-      _filteredRestaurants.sort((a, b) {
-        final ratingA = a.rating ?? 0;
-        final ratingB = b.rating ?? 0;
-        return ratingB.compareTo(ratingA);
-      });
-    }
-  }
-  
+
   void _createMarkers() {
     final markers = <Marker>{};
     
@@ -182,7 +179,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(22),
               child: SizedBox(
-                height: 240,
+                height: 205,
                 child: GoogleMap(
                   initialCameraPosition: const CameraPosition(
                     target: _centerGubbio,
@@ -212,6 +209,14 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
           ),
           // Barra di ricerca
           _buildSearchBar(),
+          PlaceFilterBar(
+            state: _filters,
+            availableTags: PlaceFilters.tagsByFrequency(
+                _allRestaurants.map((p) => p.cuisineTypes)),
+            locationAvailable: _currentLocation != null,
+            resultCount: _filteredRestaurants.length,
+            onChanged: _applyFilters,
+          ),
           // Lista ristoranti
           Expanded(
             child: _filteredRestaurants.isEmpty
@@ -412,23 +417,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                     if (restaurant.rating != null)
                       _buildMiniRating(restaurant.rating!),
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        if (_currentLocation != null) ...[
-                          const Icon(Icons.place_outlined,
-                              size: 14, color: AppColors.rossoGubbio),
-                          const SizedBox(width: 4),
-                          Text(
-                            restaurant.formatDistance(_currentLocation!),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.rossoGubbio,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    DistanceLabel(target: restaurant.coordinates),
                   ],
                 ),
               ),

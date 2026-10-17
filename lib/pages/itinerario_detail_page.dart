@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../services/language_service.dart';
+import 'map_page.dart';
 import '../models/itinerario_model.dart';
 import '../theme/app_colors.dart';
 import 'itinerari_page.dart' show itinerarioImagePlaceholder;
@@ -11,6 +16,8 @@ class ItinerarioDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: CustomScrollView(
@@ -41,10 +48,20 @@ class ItinerarioDetailPage extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  itinerarioImagePlaceholder(
-                    itinerario.immagineLabel,
-                    icon: itinerario.icona,
-                  ),
+                  if (itinerario.imageUrl != null)
+                    Image.network(
+                      itinerario.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => itinerarioImagePlaceholder(
+                        itinerario.immagineLabel,
+                        icon: itinerario.icona,
+                      ),
+                    )
+                  else
+                    itinerarioImagePlaceholder(
+                      itinerario.immagineLabel,
+                      icon: itinerario.icona,
+                    ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -104,14 +121,54 @@ class ItinerarioDetailPage extends StatelessWidget {
                   // Info rapide
                   Row(
                     children: [
-                      _infoBox(Icons.schedule, 'Durata', itinerario.durata),
+                      _infoBox(Icons.schedule, l10n.t('itDuration'), itinerario.durata),
                       const SizedBox(width: 12),
-                      _infoBox(Icons.terrain_outlined, 'Difficoltà',
+                      _infoBox(Icons.terrain_outlined, l10n.t('itDifficulty'),
                           itinerario.difficolta),
                       const SizedBox(width: 12),
-                      _infoBox(Icons.place_outlined, 'Tappe',
+                      _infoBox(Icons.place_outlined, l10n.t('itStopsLabel'),
                           '${itinerario.tappe.length}'),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (!itinerario.hasCoordinates) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.t('itNoPosition')),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MapPage(
+                              focus: MapFocus(
+                                kind: MapKind.itinerary,
+                                id: itinerario.id,
+                                position: LatLng(
+                                    itinerario.latitudine!, itinerario.longitudine!),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map_outlined),
+                      label: Text(l10n.t('showOnMapBtn')),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.rossoGubbio,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -123,9 +180,9 @@ class ItinerarioDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  const Text(
-                    'Le tappe del percorso',
-                    style: TextStyle(
+                  Text(
+                    l10n.t('itDetailStops'),
+                    style: const TextStyle(
                       fontFamily: 'serif',
                       fontSize: 22,
                       fontWeight: FontWeight.w700,

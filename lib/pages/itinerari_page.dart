@@ -6,12 +6,17 @@ import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_filter_chip.dart';
 import '../widgets/premium_scaffold.dart';
+import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/add_itinerario_page.dart';
 import 'itinerario_detail_page.dart';
 
-/// Elenco degli itinerari consigliati per visitare Gubbio.
+enum _ItinerarioSort { predefinito, titolo, tappe }
+
+/// Elenco degli itinerari consigliati per visitare Gubbio: ricerca, filtri
+/// per tema, difficoltà e durata, ordinamento e schede compatte.
 class ItinerariPage extends StatefulWidget {
   const ItinerariPage({super.key});
 
@@ -20,8 +25,20 @@ class ItinerariPage extends StatefulWidget {
 }
 
 class _ItinerariPageState extends State<ItinerariPage> {
+  AppLocalizations get _l => AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
+
+  final _searchController = TextEditingController();
+
   List<ItinerarioModel> _itinerari = [];
+  bool _loading = true;
   String? _loadedLanguageCode;
+
+  String _query = '';
+  String? _selectedTema;
+  String? _selectedDifficolta;
+  String? _selectedDurata;
+  _ItinerarioSort _sort = _ItinerarioSort.predefinito;
 
   @override
   void initState() {
@@ -38,12 +55,87 @@ class _ItinerariPageState extends State<ItinerariPage> {
     }
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode;
     final items = await ContentService.fetchItinerari(languageCode: languageCode);
     if (!mounted) return;
-    setState(() => _itinerari = items);
+    setState(() {
+      _itinerari = items;
+      _loading = false;
+      // Un filtro che non esiste più (es. cambio lingua) viene azzerato.
+      if (!_distinct((i) => i.tema).contains(_selectedTema)) _selectedTema = null;
+      if (!_distinct((i) => i.difficolta).contains(_selectedDifficolta)) {
+        _selectedDifficolta = null;
+      }
+      if (!_distinct((i) => i.durata).contains(_selectedDurata)) {
+        _selectedDurata = null;
+      }
+    });
+  }
+
+  /// Valori distinti (non vuoti) di un campo, in ordine di comparsa.
+  List<String> _distinct(String Function(ItinerarioModel) field) {
+    final seen = <String>{};
+    for (final i in _itinerari) {
+      final v = field(i).trim();
+      if (v.isNotEmpty) seen.add(v);
+    }
+    return seen.toList();
+  }
+
+  List<ItinerarioModel> get _visible {
+    final q = _query.trim().toLowerCase();
+    final result = _itinerari.where((it) {
+      if (_selectedTema != null && it.tema.trim() != _selectedTema) return false;
+      if (_selectedDifficolta != null &&
+          it.difficolta.trim() != _selectedDifficolta) {
+        return false;
+      }
+      if (_selectedDurata != null && it.durata.trim() != _selectedDurata) {
+        return false;
+      }
+      if (q.isEmpty) return true;
+      return it.titolo.toLowerCase().contains(q) ||
+          it.sottotitolo.toLowerCase().contains(q) ||
+          it.descrizione.toLowerCase().contains(q) ||
+          it.tappe.any((t) => t.nome.toLowerCase().contains(q));
+    }).toList();
+
+    switch (_sort) {
+      case _ItinerarioSort.predefinito:
+        break;
+      case _ItinerarioSort.titolo:
+        result.sort(
+            (a, b) => a.titolo.toLowerCase().compareTo(b.titolo.toLowerCase()));
+        break;
+      case _ItinerarioSort.tappe:
+        result.sort((a, b) => b.tappe.length.compareTo(a.tappe.length));
+        break;
+    }
+    return result;
+  }
+
+  bool get _hasActiveFilters =>
+      _query.isNotEmpty ||
+      _selectedTema != null ||
+      _selectedDifficolta != null ||
+      _selectedDurata != null;
+
+  void _resetFilters() {
+    _searchController.clear();
+    setState(() {
+      _query = '';
+      _selectedTema = null;
+      _selectedDifficolta = null;
+      _selectedDurata = null;
+    });
   }
 
   void _openItinerario(BuildContext context, ItinerarioModel itinerario) {
@@ -96,219 +188,354 @@ class _ItinerariPageState extends State<ItinerariPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
+    final items = _visible;
+    final temi = _distinct((i) => i.tema);
+    final difficolta = _distinct((i) => i.difficolta);
+    final durate = _distinct((i) => i.durata);
+
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
           PremiumHeader(title: l10n.itinerariTitle),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          AppSearchField(
+            controller: _searchController,
+            hint: _l.t('itSearchHint'),
+            onChanged: (v) => setState(() => _query = v),
+            onClear: () {
+              _searchController.clear();
+              setState(() => _query = '');
+            },
+          ),
+          if (temi.length > 1)
+            _chipRow(
+              values: temi,
+              selected: _selectedTema,
+              allLabel: _l.t('itAllThemes'),
+              icon: Icons.palette_outlined,
+              onChanged: (v) => setState(() => _selectedTema = v),
+            ),
+          if (difficolta.length > 1)
+            _chipRow(
+              values: difficolta,
+              selected: _selectedDifficolta,
+              allLabel: _l.t('itAnyDifficulty'),
+              icon: Icons.terrain_outlined,
+              onChanged: (v) => setState(() => _selectedDifficolta = v),
+            ),
+          if (durate.length > 1)
+            _chipRow(
+              values: durate,
+              selected: _selectedDurata,
+              allLabel: _l.t('itAnyDuration'),
+              icon: Icons.schedule,
+              onChanged: (v) => setState(() => _selectedDurata = v),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 4, 0),
+            child: Row(
               children: [
-                Text(
-                  l10n.itinerariDescription,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.55,
-                    color: AppColors.textMuted,
+                Expanded(
+                  child: Text(
+                    _l.count('itCount', items.length),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 18),
-                ..._itinerari.map(
-                  (it) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _buildItinerarioCard(context, it),
+                if (_hasActiveFilters)
+                  TextButton(
+                    onPressed: _resetFilters,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.rossoGubbio,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: Text(_l.t('fltReset'),
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
+                PopupMenuButton<_ItinerarioSort>(
+                  tooltip: _l.t('sortLabel'),
+                  initialValue: _sort,
+                  onSelected: (v) => setState(() => _sort = v),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  icon: const Icon(Icons.swap_vert_rounded,
+                      color: AppColors.bluNotte),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: _ItinerarioSort.predefinito,
+                      child: Text(_l.t('itSortDefault')),
+                    ),
+                    PopupMenuItem(
+                      value: _ItinerarioSort.titolo,
+                      child: Text(_l.t('itSortTitle')),
+                    ),
+                    PopupMenuItem(
+                      value: _ItinerarioSort.tappe,
+                      child: Text(_l.t('itSortStops')),
+                    ),
+                  ],
                 ),
               ],
             ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.rossoGubbio),
+                  )
+                : RefreshIndicator(
+                    color: AppColors.rossoGubbio,
+                    onRefresh: _load,
+                    child: items.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                            itemCount: items.length,
+                            itemBuilder: (context, i) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildItinerarioCard(context, items[i]),
+                            ),
+                          ),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildItinerarioCard(BuildContext context, ItinerarioModel it) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => _openItinerario(context, it),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.bluNotte.withOpacity(0.06),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+  Widget _chipRow({
+    required List<String> values,
+    required String? selected,
+    required String allLabel,
+    required IconData icon,
+    required void Function(String?) onChanged,
+  }) {
+    return HintedChipRow(
+      height: 42,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      children: [
+          AppFilterChip(
+            label: allLabel,
+            selected: selected == null,
+            compact: true,
+            icon: icon,
+            onTap: () => onChanged(null),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(22),
-                      topRight: Radius.circular(22),
-                    ),
-                    child: SizedBox(
-                      height: 160,
-                      width: double.infinity,
-                      child: it.imageUrl != null
-                          ? Image.network(
-                              it.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  itinerarioImagePlaceholder(
+          for (final v in values) ...[
+            const SizedBox(width: 8),
+            AppFilterChip(
+              label: v,
+              selected: selected == v,
+              compact: true,
+              onTap: () => onChanged(selected == v ? null : v),
+            ),
+          ],
+      ],
+    );
+  }
+
+  /// Scheda compatta: miniatura a sinistra, testi e dati a destra.
+  Widget _buildItinerarioCard(BuildContext context, ItinerarioModel it) {
+    final isAdmin = context.watch<AuthService>().isAdmin &&
+        ContentService.isRemoteId(it.id);
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _openItinerario(context, it),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: SizedBox(
+                        width: 96,
+                        height: 112,
+                        child: it.imageUrl != null
+                            ? Image.network(
+                                it.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    itinerarioImagePlaceholder(
+                                  it.immagineLabel,
+                                  icon: it.icona,
+                                ),
+                              )
+                            : itinerarioImagePlaceholder(
                                 it.immagineLabel,
                                 icon: it.icona,
                               ),
-                            )
-                          : itinerarioImagePlaceholder(
-                              it.immagineLabel,
-                              icon: it.icona,
-                            ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.rossoGubbio,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        it.tema,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
                     ),
-                  ),
-                  if (context.watch<AuthService>().isAdmin &&
-                      ContentService.isRemoteId(it.id))
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Row(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Material(
-                            color: Colors.white,
-                            shape: const CircleBorder(),
-                            elevation: 2,
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () => _editItinerario(it),
-                              child: const SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: Icon(Icons.edit_outlined,
-                                    size: 18, color: AppColors.bluNotte),
+                          if (it.tema.trim().isNotEmpty)
+                            Text(
+                              it.tema.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: AppColors.rossoGubbio,
                               ),
+                            ),
+                          const SizedBox(height: 2),
+                          Text(
+                            it.titolo,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'serif',
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: AppColors.bluNotte,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Material(
-                            color: Colors.white,
-                            shape: const CircleBorder(),
-                            elevation: 2,
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () => _deleteItinerario(it),
-                              child: const SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: Icon(Icons.delete_outline,
-                                    size: 20, color: AppColors.rossoGubbio),
+                          if (it.sottotitolo.trim().isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              it.sottotitolo,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.3,
+                                color: AppColors.textMuted,
                               ),
                             ),
+                          ],
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 4,
+                            children: [
+                              if (it.durata.trim().isNotEmpty)
+                                _meta(Icons.schedule, it.durata),
+                              if (it.difficolta.trim().isNotEmpty)
+                                _meta(Icons.terrain_outlined, it.difficolta),
+                              _meta(
+                                Icons.place_outlined,
+                                _l.count('itStop', it.tappe.length),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      it.titolo,
-                      style: const TextStyle(
-                        fontFamily: 'serif',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.bluNotte,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      it.sottotitolo,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.rossoGubbio,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _metaChip(Icons.schedule, it.durata),
-                        const SizedBox(width: 8),
-                        _metaChip(Icons.terrain_outlined, it.difficolta),
-                        const SizedBox(width: 8),
-                        _metaChip(Icons.place_outlined, '${it.tappe.length} tappe'),
-                      ],
-                    ),
                   ],
                 ),
-              ),
-            ],
+                if (isAdmin)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        EditIconButton(onPressed: () => _editItinerario(it)),
+                        const SizedBox(width: 8),
+                        DeleteIconButton(onPressed: () => _deleteItinerario(it)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _metaChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.avorio,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: AppColors.grigioChiaro),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.tortora),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.bluNotte,
+  Widget _meta(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.tortora),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.bluNotte,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 50),
+        Icon(Icons.route_outlined,
+            size: 64, color: AppColors.tortora.withOpacity(0.6)),
+        const SizedBox(height: 14),
+        Text(
+          _itinerari.isEmpty ? _l.t('itNoneYet') : _l.t('itNoneFound'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.bluNotte,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _itinerari.isEmpty
+              ? _l.t('itSoon')
+              : _l.t('tryChangeSearch'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
+        ),
+        if (_hasActiveFilters) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: OutlinedButton(
+              onPressed: _resetFilters,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.rossoGubbio,
+                side: const BorderSide(color: AppColors.rossoGubbio),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              child: Text(_l.t('fltResetAll')),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 }
 
-/// Placeholder elegante per un'immagine di itinerario ancora da inserire.
+/// Placeholder elegante per un itinerario senza foto: sfondo istituzionale
+/// con l'icona del percorso (nessun testo tecnico mostrato all'utente).
 Widget itinerarioImagePlaceholder(String label,
     {IconData icon = Icons.image_outlined}) {
   return DecoratedBox(
@@ -316,32 +543,12 @@ Widget itinerarioImagePlaceholder(String label,
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          AppColors.grigioChiaro,
-          AppColors.tortora,
-        ],
+        colors: [AppColors.bluNotte, Color(0xFF3A5266), AppColors.rossoGubbio],
+        stops: [0.0, 0.55, 1.0],
       ),
     ),
     child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 38, color: Colors.white.withOpacity(0.85)),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Immagine: $label',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.95),
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: Icon(icon, size: 40, color: Colors.white.withOpacity(0.55)),
     ),
   );
 }

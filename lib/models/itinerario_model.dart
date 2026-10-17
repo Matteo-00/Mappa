@@ -43,6 +43,16 @@ class ItinerarioModel {
   final String? imageUrl;
   final List<ItinerarioTappa> tappe;
 
+  /// Punto di partenza sulla mappa (opzionale: colonne `latitudine` /
+  /// `longitudine`, vedi supabase_itinerari_posizione.sql).
+  final double? latitudine;
+  final double? longitudine;
+
+  bool get hasCoordinates => latitudine != null && longitudine != null;
+
+  /// Posizione (1-3) nella vetrina della home; null = non in vetrina.
+  final int? vetrinaOrdine;
+
   const ItinerarioModel({
     required this.id,
     required this.titolo,
@@ -55,6 +65,9 @@ class ItinerarioModel {
     this.immagineLabel = '',
     this.imageUrl,
     required this.tappe,
+    this.latitudine,
+    this.longitudine,
+    this.vetrinaOrdine,
   });
 
   /// Crea un itinerario dai dati di Supabase
@@ -70,6 +83,9 @@ class ItinerarioModel {
       tema: (json['tema'] ?? '') as String,
       immagineLabel: (json['titolo'] ?? '') as String,
       imageUrl: json['image_url'] as String?,
+      latitudine: (json['latitudine'] as num?)?.toDouble(),
+      longitudine: (json['longitudine'] as num?)?.toDouble(),
+      vetrinaOrdine: (json['vetrina_ordine'] as num?)?.toInt(),
       tappe: rawTappe
           .map((e) => ItinerarioTappa.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
@@ -87,6 +103,10 @@ class ItinerarioModel {
       'tema': tema,
       'image_url': imageUrl,
       'tappe': tappe.map((t) => t.toJson()).toList(),
+      // Inviate solo se impostate: così il salvataggio funziona anche prima
+      // di aver aggiunto le colonne al database.
+      if (hasCoordinates) 'latitudine': latitudine,
+      if (hasCoordinates) 'longitudine': longitudine,
     };
   }
 }
