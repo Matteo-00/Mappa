@@ -9,6 +9,7 @@ import '../services/content_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/home_video_background.dart';
 import 'admin/add_place_page.dart';
 import 'admin/add_event_page.dart';
 import 'admin/add_itinerario_page.dart';
@@ -44,6 +45,15 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
   bool _isDraggingPanel = false;
   late AppLocalizations _l10n;
   List<ItinerarioModel> _itinerariConsigliati = [];
+
+  /// Audio del video di sfondo: parte muto, il pulsante lo attiva.
+  final ValueNotifier<bool> _videoMuted = ValueNotifier<bool>(true);
+
+  @override
+  void dispose() {
+    _videoMuted.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -247,10 +257,13 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
             ),
           ),
 
-          // Pulsante centrale "play" del video
-          Align(
-            alignment: const Alignment(0, -0.15),
-            child: _buildPlayButton(),
+          // Pulsante audio del video (sopra il pannello, a sinistra)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeInOutCubic,
+            left: 20,
+            bottom: _showPanel ? panelHeight + 14 : 28,
+            child: _buildSoundButton(),
           ),
 
           // Linguetta per riaprire il pannello (visibile quando è nascosto)
@@ -320,11 +333,15 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(
-          'assets/geo/hero.jpg',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const DecoratedBox(
-            decoration: BoxDecoration(gradient: AppColors.heroFallback),
+        // Video a tutto schermo; finché non è pronto (o se manca) lo sfondo di riserva.
+        HomeVideoBackground(
+          muted: _videoMuted,
+          fallback: Image.asset(
+            'assets/geo/hero.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const DecoratedBox(
+              decoration: BoxDecoration(gradient: AppColors.heroFallback),
+            ),
           ),
         ),
         // Leggera vignettatura per leggibilità, senza coprire il video
@@ -381,27 +398,13 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
     );
   }
 
-  Widget _buildPlayButton() {
-    return Material(
-      color: Colors.white.withOpacity(0.16),
-      shape: CircleBorder(
-        side: BorderSide(color: Colors.white.withOpacity(0.9), width: 2),
-      ),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_l10n.videoComingSoon),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-        child: const SizedBox(
-          width: 68,
-          height: 68,
-          child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 38),
-        ),
+  /// Attiva / disattiva l'audio del video di sfondo.
+  Widget _buildSoundButton() {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _videoMuted,
+      builder: (context, muted, _) => _glassIconButton(
+        icon: muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+        onTap: () => _videoMuted.value = !muted,
       ),
     );
   }

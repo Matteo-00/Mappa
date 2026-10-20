@@ -1,3 +1,4 @@
+import 'utils/route_observer.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -53,6 +54,7 @@ class VisitGubbioApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Visit Gubbio',
         debugShowCheckedModeBanner: false,
+        navigatorObservers: [appRouteObserver],
         theme: ThemeData(
           useMaterial3: true,
           scaffoldBackgroundColor: AppColors.avorio,
