@@ -8,6 +8,7 @@ import '../../models/hotel_model.dart';
 import '../../models/restaurant_model.dart';
 import '../../services/content_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/rating_icons.dart';
 import 'admin_widgets.dart';
 
 /// Form per aggiungere o modificare un ristorante, un bar o un hotel
@@ -56,7 +57,8 @@ class _AddPlacePageState extends State<AddPlacePage> {
   String? _imageName;
   String? _existingImageUrl;
   bool _saving = false;
-  int _rating = 0;
+  /// Valutazione da 0 a 5 scritta a mano, decimali ammessi (es. 4.3).
+  final _rating = TextEditingController();
 
   bool get _isEditing =>
       widget.editRestaurant != null ||
@@ -85,7 +87,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
       _lat.text = r.coordinates.latitude.toString();
       _lng.text = r.coordinates.longitude.toString();
       _existingImageUrl = r.imageUrl;
-      _rating = r.rating?.round() ?? 0;
+      _rating.text = _formatRating(r.rating);
     } else if (widget.editBar != null) {
       final b = widget.editBar!;
       _name.text = b.name;
@@ -97,7 +99,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
       _lat.text = b.coordinates.latitude.toString();
       _lng.text = b.coordinates.longitude.toString();
       _existingImageUrl = b.imageUrl;
-      _rating = b.rating?.round() ?? 0;
+      _rating.text = _formatRating(b.rating);
     } else if (widget.editHotel != null) {
       final h = widget.editHotel!;
       _name.text = h.name;
@@ -109,7 +111,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
       _lat.text = h.coordinates.latitude.toString();
       _lng.text = h.coordinates.longitude.toString();
       _existingImageUrl = h.imageUrl;
-      _rating = h.rating?.round() ?? 0;
+      _rating.text = _formatRating(h.rating);
     }
   }
 
@@ -123,6 +125,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
     _tags.dispose();
     _lat.dispose();
     _lng.dispose();
+    _rating.dispose();
     super.dispose();
   }
 
@@ -131,6 +134,22 @@ class _AddPlacePageState extends State<AddPlacePage> {
       .map((e) => e.trim())
       .where((e) => e.isNotEmpty)
       .toList();
+
+  /// "4" per 4.0, "4.3" per 4.3, vuoto se manca.
+  static String _formatRating(double? rating) {
+    if (rating == null) return '';
+    return rating == rating.roundToDouble()
+        ? rating.toStringAsFixed(0)
+        : rating.toStringAsFixed(1);
+  }
+
+  /// Valutazione scritta nel campo (accetta anche la virgola), arrotondata a
+  /// un decimale. Null se il campo è vuoto o non valido.
+  double? _parseRating() {
+    final value = double.tryParse(_rating.text.trim().replaceAll(',', '.'));
+    if (value == null || value <= 0 || value > 5) return null;
+    return (value * 10).round() / 10;
+  }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -162,7 +181,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
           phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           website: _website.text.trim().isEmpty ? null : _website.text.trim(),
           cuisineTypes: _parseTags(),
-          rating: _rating > 0 ? _rating.toDouble() : null,
+          rating: _parseRating(),
         );
         if (_isEditing) {
           await ContentService.updateHotel(hotel);
@@ -180,7 +199,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
           phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           website: _website.text.trim().isEmpty ? null : _website.text.trim(),
           cuisineTypes: _parseTags(),
-          rating: _rating > 0 ? _rating.toDouble() : null,
+          rating: _parseRating(),
         );
         if (_isEditing) {
           await ContentService.updateBar(bar);
@@ -198,7 +217,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
           phoneNumber: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           website: _website.text.trim().isEmpty ? null : _website.text.trim(),
           cuisineTypes: _parseTags(),
-          rating: _rating > 0 ? _rating.toDouble() : null,
+          rating: _parseRating(),
         );
         if (_isEditing) {
           await ContentService.updateRestaurant(restaurant);
@@ -295,8 +314,10 @@ class _AddPlacePageState extends State<AddPlacePage> {
                   icon: Icons.language_outlined),
             ),
             const SizedBox(height: 14),
+            // Valutazione in "cresce" su 5, con i decimali (es. 4.5 = quattro
+            // cresce e mezza).
             Text(
-              'Valutazione (media TripAdvisor / Google Maps)',
+              'Valutazione in cresce (media TripAdvisor / Google Maps)',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -305,22 +326,51 @@ class _AddPlacePageState extends State<AddPlacePage> {
             ),
             const SizedBox(height: 6),
             Row(
-              children: List.generate(5, (index) {
-                final starValue = index + 1;
-                return IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: () => setState(() {
-                    // Tocca di nuovo la stessa stella per azzerare la valutazione.
-                    _rating = _rating == starValue ? 0 : starValue;
-                  }),
-                  icon: Icon(
-                    starValue <= _rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: const Color(0xFFF2A93B),
-                    size: 32,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    controller: _rating,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: adminInputDecoration('Voto su 5')
+                        .copyWith(hintText: 'es. 4.3'),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return null;
+                      return _parseRating() == null
+                          ? 'Da 0.1 a 5'
+                          : null;
+                    },
                   ),
-                );
-              }),
+                ),
+                const SizedBox(width: 14),
+                // Anteprima di come lo vedranno gli utenti.
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _rating,
+                      builder: (context, value, child) {
+                        final value = _parseRating();
+                        return FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RatingIcons(rating: value ?? 0, size: 24),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Scrivi un voto da 0 a 5, anche con i decimali. Lascia vuoto per nessuna valutazione.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.bluNotte.withOpacity(0.55),
+              ),
             ),
             const SizedBox(height: 14),
             Row(

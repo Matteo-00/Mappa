@@ -8,6 +8,9 @@ class AppFilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
+
+  /// Immagine da mostrare al posto di [icon] (es. la crescia).
+  final Widget? leading;
   final bool compact;
 
   const AppFilterChip({
@@ -16,6 +19,7 @@ class AppFilterChip extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.icon,
+    this.leading,
     this.compact = false,
   });
 
@@ -43,7 +47,10 @@ class AppFilterChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: 5),
+              ] else if (icon != null) ...[
                 Icon(
                   icon,
                   size: 16,

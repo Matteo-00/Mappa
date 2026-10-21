@@ -6,10 +6,11 @@ import '../utils/route_observer.dart';
 
 /// Video di sfondo della home a tutto schermo.
 ///
-/// - **Si adatta allo schermo senza deformarsi**: il video riempie sempre
-///   tutta l'area (`BoxFit.cover`) e a seconda delle proporzioni del telefono
-///   vengono tagliati solo i bordi. Viene riprodotto alla risoluzione
-///   originale (nessun ridimensionamento forzato).
+/// - **Riempie tutto lo schermo senza deformarsi** (`BoxFit.cover`): a
+///   seconda delle proporzioni del telefono vengono tagliati solo i bordi.
+///   Se nel file l'immagine ha bande nere ai lati ([contentAspect]) si
+///   mostra solo la parte con l'immagine, così le bande non si vedono.
+///   Viene riprodotto alla risoluzione originale.
 /// - Parte da solo, in loop. Il volume segue [muted] (di default muto).
 /// - Finché non è pronto (o se non si riesce a riprodurlo) mostra [fallback].
 /// - Si mette in pausa quando l'app va in background o quando sopra la home
@@ -17,7 +18,14 @@ import '../utils/route_observer.dart';
 class HomeVideoBackground extends StatefulWidget {
   /// Percorso del video negli asset. Per cambiare video basta sostituire il
   /// file (e, se cambia nome, questa riga).
-  static const String asset = 'assets/videohome/VIDEO-2026-10-18-10-07-38.mp4';
+  static const String asset = 'assets/videohome/clip_visit_gubbio.mp4';
+
+  /// Proporzioni (larghezza / altezza) dell'immagine vera dentro al file,
+  /// centrata. La clip attuale è un video verticale 9:16 salvato in un file
+  /// 1920×1080 con bande nere ai lati: si usa solo la fascia centrale.
+  /// Per un video senza bande basta metterci le proporzioni del file (es.
+  /// 16 / 9): si usa tutto il fotogramma.
+  static const double contentAspect = 9 / 16;
 
   final ValueListenable<bool> muted;
   final Widget fallback;
@@ -144,15 +152,40 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
               child: FittedBox(
                 // cover = riempie tutto lo schermo senza deformare il video.
                 fit: BoxFit.cover,
-                child: SizedBox(
-                  width: size.width,
-                  height: size.height,
-                  child: VideoPlayer(controller),
-                ),
+                child: _visibleArea(controller, size),
               ),
             ),
           ),
       ],
+    );
+  }
+
+  /// Il video alla sua dimensione originale, ritagliato alla sola parte con
+  /// l'immagine ([HomeVideoBackground.contentAspect]): le bande nere ai lati
+  /// restano fuori.
+  Widget _visibleArea(VideoPlayerController controller, Size size) {
+    final video = SizedBox(
+      width: size.width,
+      height: size.height,
+      child: VideoPlayer(controller),
+    );
+    final aspect = HomeVideoBackground.contentAspect;
+    if (aspect >= size.width / size.height) return video;
+
+    // Mezzo pixel in meno per lato, per non lasciare filetti scuri ai bordi.
+    final contentWidth = size.height * aspect - 1;
+    return SizedBox(
+      width: contentWidth,
+      height: size.height,
+      child: ClipRect(
+        child: OverflowBox(
+          minWidth: size.width,
+          maxWidth: size.width,
+          minHeight: size.height,
+          maxHeight: size.height,
+          child: video,
+        ),
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../services/language_service.dart';
 import '../services/user_location_service.dart';
 import '../theme/app_colors.dart';
 import 'app_filter_chip.dart';
+import 'rating_icons.dart';
 import 'scroll_hints.dart';
 
 /// Ordinamenti disponibili per ristoranti, bar e hotel.
@@ -183,7 +184,7 @@ class PlaceFilterBar extends StatelessWidget {
             const SizedBox(width: 8),
             AppFilterChip(
               label: '4+',
-              icon: Icons.star_rounded,
+              leading: const CresciaIcon(size: 14),
               selected: state.topRatedOnly,
               onTap: () {
                 state.topRatedOnly = !state.topRatedOnly;

@@ -15,6 +15,8 @@ import 'admin/add_place_page.dart';
 import 'restaurant_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
+import '../widgets/full_photo.dart';
+import '../widgets/rating_icons.dart';
 
 /// Pagina ristoranti con mappa integrata e lista
 class RestaurantsPage extends StatefulWidget {
@@ -349,11 +351,9 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                   ),
                 ),
                 child: restaurant.imageUrl != null
-                    ? Image.network(
-                        restaurant.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
+                    ? FullPhoto(
+                        url: restaurant.imageUrl!,
+                        fallback: const Icon(
                           Icons.restaurant_menu,
                           size: 38,
                           color: AppColors.rossoGubbio,
@@ -428,30 +428,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     );
   }
   
-  Widget _buildMiniRating(double rating) {
-    final fullStars = rating.floor();
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ...List.generate(5, (index) {
-          return Icon(
-            index < fullStars ? Icons.star_rounded : Icons.star_outline_rounded,
-            color: const Color(0xFFF2A93B),
-            size: 15,
-          );
-        }),
-        const SizedBox(width: 4),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: AppColors.bluNotte,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildMiniRating(double rating) => RatingSummary(rating: rating);
 
   /// Stato vuoto
   Widget _buildEmptyState() {

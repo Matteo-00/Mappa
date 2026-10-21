@@ -9,6 +9,7 @@ import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
+import '../widgets/rating_icons.dart';
 import 'map_page.dart';
 
 /// Pagina dettaglio ristorante
@@ -206,53 +207,7 @@ class RestaurantDetailPage extends StatelessWidget {
   }
 
   Widget _buildRatingRow(BuildContext context, double rating) {
-    final fullStars = rating.floor();
-    return Row(
-      children: [
-        ...List.generate(5, (index) {
-          return Icon(
-            index < fullStars ? Icons.star_rounded : Icons.star_outline_rounded,
-            color: const Color(0xFFF2A93B),
-            size: 22,
-          );
-        }),
-        const SizedBox(width: 8),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppColors.bluNotte,
-          ),
-        ),
-        const SizedBox(width: 4),
-        GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: Text(_l10n(context).t('ratingTitle')),
-                content: Text(_l10n(context).t('ratingInfo')),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            );
-          },
-          child: Icon(
-            Icons.info_outline_rounded,
-            size: 18,
-            color: AppColors.textMuted.withOpacity(0.8),
-          ),
-        ),
-      ],
-    );
+    return RatingSummary(rating: rating, iconSize: 22, fontSize: 15);
   }
   
   Widget _buildImagePlaceholder() {

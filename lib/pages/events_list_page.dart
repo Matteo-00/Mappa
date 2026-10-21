@@ -8,6 +8,7 @@ import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_filter_chip.dart';
+import '../widgets/full_photo.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
@@ -469,10 +470,9 @@ class _EventsListPageState extends State<EventsListPage> {
                           child: SizedBox(
                             width: 70,
                             height: 70,
-                            child: Image.network(
-                              event.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const ColoredBox(
+                            child: FullPhoto(
+                              url: event.imageUrl!,
+                              fallback: const ColoredBox(
                                 color: AppColors.grigioChiaro,
                                 child: Icon(Icons.festival_outlined,
                                     color: AppColors.tortora),

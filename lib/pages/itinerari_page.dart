@@ -7,6 +7,7 @@ import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_filter_chip.dart';
+import '../widgets/full_photo.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
@@ -373,11 +374,9 @@ class _ItinerariPageState extends State<ItinerariPage> {
                         width: 96,
                         height: 112,
                         child: it.imageUrl != null
-                            ? Image.network(
-                                it.imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    itinerarioImagePlaceholder(
+                            ? FullPhoto(
+                                url: it.imageUrl!,
+                                fallback: itinerarioImagePlaceholder(
                                   it.immagineLabel,
                                   icon: it.icona,
                                 ),
