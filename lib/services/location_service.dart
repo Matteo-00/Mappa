@@ -3,7 +3,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:provider/provider.dart';
+
+import '../l10n/app_localizations.dart';
 import 'consent_service.dart';
+import 'language_service.dart';
 
 /// Servizio per la gestione della geolocalizzazione
 class LocationService {
@@ -24,13 +28,12 @@ class LocationService {
 
     if (status.isPermanentlyDenied) {
       if (!context.mounted) return false;
+      final l10n = _l10n(context);
       final open = await _showDialog(
         context,
-        title: 'Posizione disattivata',
-        message:
-            'Hai negato il permesso di posizione. Per vedere dove ti trovi sulla '
-            'mappa, attivalo dalle impostazioni del telefono.',
-        confirmLabel: 'Apri impostazioni',
+        title: l10n.t('locDisabledTitle'),
+        message: l10n.t('locDisabledMsg'),
+        confirmLabel: l10n.t('locOpenSettings'),
       );
       if (open == true) {
         await openAppSettings();
@@ -42,13 +45,12 @@ class LocationService {
     final alreadyShown = await ConsentService.hasShownLocationRationale();
     if (!alreadyShown) {
       if (!context.mounted) return false;
+      final l10n = _l10n(context);
       final proceed = await _showDialog(
         context,
-        title: 'Attivare la posizione?',
-        message:
-            'Visit Gubbio usa la tua posizione solo per mostrarti dove ti trovi '
-            'sulla mappa e i luoghi vicini. Non la salviamo sui nostri server.',
-        confirmLabel: 'Consenti',
+        title: l10n.t('locAskTitle'),
+        message: l10n.t('locAskMsg'),
+        confirmLabel: l10n.t('locAllow'),
       );
       await ConsentService.setLocationRationaleShown();
       if (proceed != true) return false;
@@ -57,6 +59,10 @@ class LocationService {
     status = await Permission.location.request();
     return status.isGranted;
   }
+
+  /// Testi nella lingua scelta dall'utente nell'app.
+  AppLocalizations _l10n(BuildContext context) => AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
 
   Future<bool?> _showDialog(
     BuildContext context, {
@@ -72,7 +78,7 @@ class LocationService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Non ora'),
+            child: Text(_l10n(context).t('locNotNow')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),

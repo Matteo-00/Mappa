@@ -15,7 +15,7 @@ import 'admin/add_place_page.dart';
 import 'hotel_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
-import '../widgets/crescia_loader.dart';
+import '../widgets/loading_screen.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
 
@@ -42,6 +42,9 @@ class _HotelsPageState extends State<HotelsPage> {
   String? _loadedLanguageCode;
   
   static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
+
+  AppLocalizations get _l10n => AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
 
   @override
   void initState() {
@@ -73,7 +76,7 @@ class _HotelsPageState extends State<HotelsPage> {
     final hotels =
         await ContentService.fetchHotels(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
+    if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _allHotels = hotels;
@@ -133,7 +136,7 @@ class _HotelsPageState extends State<HotelsPage> {
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
           infoWindow: InfoWindow(
             title: hotel.name,
-            snippet: 'Hotel',
+            snippet: _l10n.t('kindHotel'),
             onTap: () => _openHotelDetail(hotel),
           ),
           onTap: () => _onMarkerTap(hotel),
@@ -175,6 +178,8 @@ class _HotelsPageState extends State<HotelsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Finché i dati non arrivano: schermata di caricamento a pagina intera.
+    if (_loading) return LoadingScreen(onRetry: _loadHotels);
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
@@ -219,6 +224,7 @@ class _HotelsPageState extends State<HotelsPage> {
           // Barra di ricerca
           _buildSearchBar(),
           PlaceFilterBar(
+            ratingKind: RatingKind.palazzo,
             state: _filters,
             availableTags: PlaceFilters.tagsByFrequency(
                 _allHotels.map((p) => p.cuisineTypes)),
@@ -228,9 +234,7 @@ class _HotelsPageState extends State<HotelsPage> {
           ),
           // Lista hotel
           Expanded(
-            child: _loading
-                ? CresciaLoader(onRetry: _loadHotels)
-                : _filteredHotels.isEmpty
+            child: _filteredHotels.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 24),
@@ -269,7 +273,7 @@ class _HotelsPageState extends State<HotelsPage> {
           _applyFilters();
         },
         decoration: InputDecoration(
-          hintText: 'Cerca hotel per nome...',
+          hintText: _l10n.t('searchHotelHint'),
           hintStyle: const TextStyle(color: AppColors.textMuted),
           prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
           suffixIcon: _searchQuery.isNotEmpty
@@ -437,7 +441,7 @@ class _HotelsPageState extends State<HotelsPage> {
     );
   }
   
-  Widget _buildMiniRating(double rating) => RatingSummary(rating: rating);
+  Widget _buildMiniRating(double rating) => RatingSummary(rating: rating, kind: RatingKind.palazzo);
 
   /// Stato vuoto
   Widget _buildEmptyState() {
@@ -451,8 +455,8 @@ class _HotelsPageState extends State<HotelsPage> {
             color: AppColors.tortora.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Nessun hotel trovato',
+          Text(
+            _l10n.t('emptyHotel'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -460,8 +464,8 @@ class _HotelsPageState extends State<HotelsPage> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Prova a modificare la ricerca',
+          Text(
+            _l10n.t('tryChangeSearchShort'),
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textMuted,

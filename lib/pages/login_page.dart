@@ -31,6 +31,18 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _syncLanguageMetadata(SupabaseClient supabase) async {
+    try {
+      await supabase.auth.updateUser(
+        UserAttributes(
+          data: {'lang': context.read<LanguageService>().currentLanguageCode},
+        ),
+      );
+    } catch (_) {
+      // Non essenziale: se fallisce l'accesso prosegue comunque.
+    }
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -64,6 +76,10 @@ class _LoginPageState extends State<LoginPage> {
       // Aggiorna AuthService con i dati utente
       final authService = context.read<AuthService>();
       authService.loginWithSupabase(userData);
+
+      // Tiene aggiornata la lingua dell'utente su Supabase: serve a mandargli le
+      // email (conferma, recupero password) nella lingua scelta.
+      _syncLanguageMetadata(supabase);
 
       // Naviga alla home
       if (!mounted) return;

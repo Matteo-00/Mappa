@@ -79,8 +79,27 @@ class _TranslateStoriaMigrationPageState
     try {
       final epoche = await ContentService.fetchStoriaEpoche();
       final contenuti = await ContentService.fetchStoriaContenuti();
+      // Anche gli itinerari: le loro tappe (titolo, descrizione, approfondimento...)
+      // vengono tradotte insieme.
+      final itinerari = await ContentService.fetchItinerari();
+      // E tutto il resto dell'app: ristoranti, bar, hotel, chiese, musei,
+      // negozi, parcheggi ed eventi (anche per i campi tradotti più di recente,
+      // come i tag).
+      final ristoranti = await ContentService.fetchRestaurants();
+      final bar = await ContentService.fetchBars();
+      final hotel = await ContentService.fetchHotels();
+      final luoghi = await ContentService.fetchLuoghi();
+      final eventi = await ContentService.fetchEvents();
 
-      setState(() => _total = epoche.length + contenuti.length);
+      setState(() => _total = epoche.length +
+          contenuti.length +
+          itinerari.length +
+          ristoranti.length +
+          bar.length +
+          hotel.length +
+          luoghi.length +
+          eventi.length +
+          1);
 
       for (final epoca in epoche) {
         if (!mounted) return;
@@ -90,6 +109,37 @@ class _TranslateStoriaMigrationPageState
       for (final c in contenuti) {
         if (!mounted) return;
         await _translateOne('Contenuto: ${c.title}', 'storia_contenuti', c.id);
+      }
+
+      for (final it in itinerari) {
+        if (!mounted) return;
+        await _translateOne('Itinerario: ${it.titolo}', 'itinerari', it.id);
+      }
+
+      // Testi della pagina Storia (titolo, sottotitolo, introduzione).
+      if (!mounted) return;
+      await _translateOne('Testi pagina Storia', 'storia_pagina',
+          ContentService.storiaPaginaTranslationId);
+
+      for (final r in ristoranti) {
+        if (!mounted) return;
+        await _translateOne('Ristorante: ${r.name}', 'ristoranti', r.id);
+      }
+      for (final b in bar) {
+        if (!mounted) return;
+        await _translateOne('Bar: ${b.name}', 'bar', b.id);
+      }
+      for (final h in hotel) {
+        if (!mounted) return;
+        await _translateOne('Hotel: ${h.name}', 'hotel', h.id);
+      }
+      for (final l in luoghi) {
+        if (!mounted) return;
+        await _translateOne('${l.tipo.name}: ${l.name}', 'luoghi', l.id);
+      }
+      for (final e in eventi) {
+        if (!mounted) return;
+        await _translateOne('Evento: ${e.title}', 'eventi', e.id);
       }
     } catch (e) {
       if (!mounted) return;
@@ -140,8 +190,9 @@ class _TranslateStoriaMigrationPageState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Traduce in inglese, francese e tedesco tutti i record già '
-              'presenti nelle tabelle storia_epoche e storia_contenuti, '
+              'Traduce in inglese, francese e tedesco tutti i contenuti già '
+              'presenti: storia, itinerari (comprese le tappe), ristoranti, bar, '
+              'hotel, chiese, musei, negozi, parcheggi ed eventi, '
               'tramite la Edge Function "translate-content". Può essere '
               'rilanciata in sicurezza anche in futuro.',
             ),

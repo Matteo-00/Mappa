@@ -125,6 +125,12 @@ AppLocalizations _l10n(BuildContext context) => AppLocalizations.of(
 /// Barra dei filtri: ordinamento, "più vicini a me", "4+ stelle" e tag.
 /// Modifica direttamente [state] e poi chiama [onChanged].
 class PlaceFilterBar extends StatelessWidget {
+  /// Icona usata per le valutazioni di questo tipo di luogo (crescia, amaro, palazzo).
+  final RatingKind ratingKind;
+
+  /// false per i luoghi senza valutazione (chiese, musei, parcheggi): niente
+  /// ordinamento per stelle né chip "4+".
+  final bool showRating;
   final PlaceFilterState state;
   final List<String> availableTags;
   final bool locationAvailable;
@@ -133,6 +139,8 @@ class PlaceFilterBar extends StatelessWidget {
 
   const PlaceFilterBar({
     super.key,
+    this.ratingKind = RatingKind.crescia,
+    this.showRating = true,
     required this.state,
     required this.availableTags,
     required this.locationAvailable,
@@ -158,7 +166,7 @@ class PlaceFilterBar extends StatelessWidget {
       }
     }
     state.sort = state.sort == PlaceSort.nearest
-        ? PlaceSort.ratingDesc
+        ? (showRating ? PlaceSort.ratingDesc : PlaceSort.name)
         : PlaceSort.nearest;
     onChanged();
   }
@@ -182,15 +190,16 @@ class PlaceFilterBar extends StatelessWidget {
               onTap: () => _toggleNearest(context),
             ),
             const SizedBox(width: 8),
-            AppFilterChip(
-              label: '4+',
-              leading: const CresciaIcon(size: 14),
-              selected: state.topRatedOnly,
-              onTap: () {
-                state.topRatedOnly = !state.topRatedOnly;
-                onChanged();
-              },
-            ),
+            if (showRating)
+              AppFilterChip(
+                label: '4+',
+                leading: RatingIcon(kind: ratingKind, size: 14),
+                selected: state.topRatedOnly,
+                onTap: () {
+                  state.topRatedOnly = !state.topRatedOnly;
+                  onChanged();
+                },
+              ),
             for (final tag in availableTags) ...[
               const SizedBox(width: 8),
               AppFilterChip(
@@ -256,14 +265,16 @@ class PlaceFilterBar extends StatelessWidget {
               ? _l10n(context).t('nearestToMe')
               : _l10n(context).t('sortMenuNearestNoLoc')),
         ),
-        PopupMenuItem(
-          value: PlaceSort.ratingDesc,
-          child: Text(_l10n(context).t('sortMenuRatingDesc')),
-        ),
-        PopupMenuItem(
-          value: PlaceSort.ratingAsc,
-          child: Text(_l10n(context).t('sortMenuRatingAsc')),
-        ),
+        if (showRating)
+          PopupMenuItem(
+            value: PlaceSort.ratingDesc,
+            child: Text(_l10n(context).t('sortMenuRatingDesc')),
+          ),
+        if (showRating)
+          PopupMenuItem(
+            value: PlaceSort.ratingAsc,
+            child: Text(_l10n(context).t('sortMenuRatingAsc')),
+          ),
         PopupMenuItem(
           value: PlaceSort.name,
           child: Text(_l10n(context).t('sortMenuName')),

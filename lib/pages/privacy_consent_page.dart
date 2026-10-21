@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../l10n/app_localizations.dart';
 import '../services/consent_service.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 import 'login_page.dart';
 
+/// Prima schermata per un nuovo utente: informativa privacy e condizioni d'uso.
+/// Tutti i testi sono tradotti (it / en / de / fr) e la lingua si può cambiare
+/// già da qui, prima di accettare.
 class PrivacyConsentPage extends StatefulWidget {
   const PrivacyConsentPage({super.key});
 
@@ -31,27 +38,34 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
+
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-
-              Icon(
-                Icons.privacy_tip_outlined,
-                color: AppColors.rossoGubbio,
-                size: 40,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.privacy_tip_outlined,
+                    color: AppColors.rossoGubbio,
+                    size: 40,
+                  ),
+                  const Spacer(),
+                  const _LanguagePicker(),
+                ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              const Text(
-                'Privacy e condizioni d\'uso',
-                style: TextStyle(
+              Text(
+                l10n.t('csTitle'),
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppColors.bluNotte,
@@ -64,94 +78,67 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'Prima di utilizzare Visit Gubbio, ti forniamo alcune '
-                        'informazioni essenziali sul trattamento dei dati personali '
-                        'e sulle condizioni di utilizzo dell\'App.',
-                        style: TextStyle(
+                        l10n.t('csIntro'),
+                        style: const TextStyle(
                           fontSize: 15,
                           height: 1.5,
                           color: AppColors.bluNotte,
                         ),
                       ),
 
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
                       _Bullet(
-                        title: 'Dati di registrazione',
-                        text:
-                            'Per creare e gestire il tuo account trattiamo nome, '
-                            'cognome ed email. Le credenziali sono gestite dal '
-                            'sistema di autenticazione e la password non viene '
-                            'memorizzata in chiaro.',
+                        title: l10n.t('csRegTitle'),
+                        text: l10n.t('csRegText'),
                       ),
 
                       _Bullet(
-                        title: 'Posizione',
-                        text:
-                            'Se autorizzi la localizzazione, la posizione viene '
-                            'utilizzata per mostrarti sulla mappa e individuare '
-                            'luoghi vicini. Visit Gubbio non memorizza la posizione '
-                            'del tuo dispositivo nel proprio database.',
+                        title: l10n.t('csPosTitle'),
+                        text: l10n.t('csPosText'),
                       ),
 
                       _Bullet(
-                        title: 'Luoghi, attività ed eventi',
-                        text:
-                            'Gli amministratori inseriscono manualmente informazioni, '
-                            'immagini e coordinate di ristoranti, bar, eventi e altri '
-                            'punti di interesse. Le coordinate salvate riguardano '
-                            'i luoghi e non la posizione degli utenti.',
+                        title: l10n.t('csPlacesTitle'),
+                        text: l10n.t('csPlacesText'),
                       ),
 
                       _Bullet(
                         title: 'Supabase',
-                        text:
-                            'Visit Gubbio utilizza Supabase per autenticazione, '
-                            'database e archiviazione nell\'ambito '
-                            'dell\'infrastruttura tecnica.',
+                        text: l10n.t('csSupabaseText'),
                       ),
 
                       _Bullet(
                         title: 'Google Maps',
-                        text:
-                            'L\'App utilizza Google Maps per mostrare mappe e '
-                            'contenuti cartografici. Google può trattare alcuni '
-                            'dati tecnici secondo le proprie condizioni e '
-                            'la propria Privacy Policy.',
+                        text: l10n.t('csMapsText'),
                       ),
 
                       _Bullet(
-                        title: 'Cancellazione e diritti',
-                        text:
-                            'Puoi cancellare il tuo account dalla sezione Profilo '
-                            '→ "Elimina il mio account" e puoi esercitare i diritti '
-                            'previsti dal GDPR scrivendo a '
-                            'visitgubbioapp@gmail.com.',
+                        title: l10n.t('csRightsTitle'),
+                        text: l10n.t('csRightsText'),
                       ),
 
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
 
                       Text(
-                        'Informativa completa:\n'
+                        '${l10n.t('csPolicyLabel')}\n'
                         'https://visitgubbio.eu/privacy-policy.html\n\n'
-                        'Termini e Condizioni:\n'
+                        '${l10n.t('csTermsLabel')}\n'
                         'https://visitgubbio.eu/terms.html',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           height: 1.5,
                           color: AppColors.textMuted,
                         ),
                       ),
 
-                      SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
                       Text(
-                        'Il permesso di localizzazione è facoltativo e viene '
-                        'richiesto separatamente quando utilizzi le funzioni '
-                        'che ne hanno bisogno.',
-                        style: TextStyle(
+                        l10n.t('csLocationOptional'),
+                        style: const TextStyle(
                           fontSize: 13,
                           height: 1.5,
                           color: AppColors.textMuted,
@@ -169,9 +156,9 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                 onChanged: (v) {
                   setState(() => _privacyRead = v ?? false);
                 },
-                title: const Text(
-                  'Ho preso visione dell\'Informativa sulla Privacy',
-                  style: TextStyle(
+                title: Text(
+                  l10n.t('csCheckPrivacy'),
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.bluNotte,
                   ),
@@ -186,9 +173,9 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                 onChanged: (v) {
                   setState(() => _termsAccepted = v ?? false);
                 },
-                title: const Text(
-                  'Accetto i Termini e Condizioni d\'Uso',
-                  style: TextStyle(
+                title: Text(
+                  l10n.t('csCheckTerms'),
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.bluNotte,
                   ),
@@ -224,9 +211,9 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Continua',
-                          style: TextStyle(
+                      : Text(
+                          l10n.t('csContinue'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -235,6 +222,68 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Selettore della lingua (bandiera + menu) per cambiare lingua prima di
+/// accettare l'informativa.
+class _LanguagePicker extends StatelessWidget {
+  const _LanguagePicker();
+
+  static const _languages = [
+    ('it', '🇮🇹', 'Italiano'),
+    ('en', '🇬🇧', 'English'),
+    ('de', '🇩🇪', 'Deutsch'),
+    ('fr', '🇫🇷', 'Français'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final service = context.watch<LanguageService>();
+    final current = _languages.firstWhere(
+      (l) => l.$1 == service.currentLanguageCode,
+      orElse: () => _languages.first,
+    );
+
+    return PopupMenuButton<String>(
+      tooltip: 'Language',
+      onSelected: service.setLanguage,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      itemBuilder: (_) => [
+        for (final lang in _languages)
+          PopupMenuItem<String>(
+            value: lang.$1,
+            child: Row(
+              children: [
+                Text(lang.$2, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 10),
+                Text(lang.$3),
+                if (lang.$1 == service.currentLanguageCode) ...[
+                  const Spacer(),
+                  const Icon(Icons.check_rounded,
+                      size: 18, color: AppColors.rossoGubbio),
+                ],
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.grigioChiaro),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(current.$2, style: const TextStyle(fontSize: 20)),
+            const Icon(Icons.arrow_drop_down_rounded,
+                color: AppColors.bluNotte),
+          ],
         ),
       ),
     );

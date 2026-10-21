@@ -10,11 +10,21 @@ import '../pages/event_detail_page.dart';
 import '../pages/restaurants_page.dart';
 import '../pages/bars_page.dart';
 import '../pages/hotels_page.dart';
+import '../pages/luoghi_page.dart';
+import '../models/luogo_model.dart';
 import '../pages/map_page.dart';
 import '../pages/storia_page.dart';
 import '../pages/itinerari_page.dart';
 import '../pages/user_profile_page.dart';
 import '../pages/login_page.dart';
+
+/// Sottovoce di un gruppo del menu (icona, titolo, pagina da aprire).
+class _SubItem {
+  final IconData icon;
+  final String title;
+  final Widget Function() page;
+  const _SubItem(this.icon, this.title, this.page);
+}
 
 /// Menu laterale di Visit Gubbio.
 /// Sfondo avorio, logo centrato, voci minimali con divider.
@@ -93,42 +103,34 @@ class AppDrawer extends StatelessWidget {
                       );
                     },
                   ),
-                  _menuItem(
+                  // Un'unica voce che si apre con le 3 sottovoci: risparmia spazio nel menu.
+                  _menuGroup(
                     context,
                     icon: Icons.restaurant_menu,
-                    title: l10n.restaurantsNav,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const RestaurantsPage()),
-                      );
-                    },
+                    title: l10n.t('menuEatDrinkStay'),
+                    items: [
+                      _SubItem(Icons.restaurant_menu, l10n.restaurantsNav,
+                          () => const RestaurantsPage()),
+                      _SubItem(Icons.local_cafe_outlined, l10n.barsNav,
+                          () => const BarsPage()),
+                      _SubItem(Icons.hotel_outlined, l10n.hotelsNav,
+                          () => const HotelsPage()),
+                    ],
                   ),
-                  _menuItem(
+                  // Chiese, musei e negozi.
+                  _menuGroup(
                     context,
-                    icon: Icons.local_cafe_outlined,
-                    title: l10n.barsNav,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const BarsPage()),
-                      );
-                    },
-                  ),
-                  _menuItem(
-                    context,
-                    icon: Icons.hotel_outlined,
-                    title: l10n.hotelsNav,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HotelsPage()),
-                      );
-                    },
+                    icon: Icons.museum_outlined,
+                    title: l10n.t('menuCultureShops'),
+                    items: [
+                      for (final t in const [
+                        LuogoTipo.chiesa,
+                        LuogoTipo.museo,
+                        LuogoTipo.negozio,
+                      ])
+                        _SubItem(t.icon, l10n.t(t.navKey),
+                            () => LuoghiPage(tipo: t)),
+                    ],
                   ),
                   _menuItem(
                     context,
@@ -165,6 +167,19 @@ class AppDrawer extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const ItinerariPage()),
                       );
                     },
+                  ),
+                  // Informazioni utili (per ora solo i parcheggi).
+                  _menuGroup(
+                    context,
+                    icon: Icons.info_outline_rounded,
+                    title: l10n.t('menuUsefulInfo'),
+                    items: [
+                      _SubItem(
+                        LuogoTipo.parcheggio.icon,
+                        l10n.t(LuogoTipo.parcheggio.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.parcheggio),
+                      ),
+                    ],
                   ),
                   _menuItem(
                     context,
@@ -214,7 +229,7 @@ class AppDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                l10n.appVersionLabel('1.0.0'),
+                l10n.appVersionLabel('1.2.0'),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textMuted.withOpacity(0.8),
@@ -264,6 +279,71 @@ class AppDrawer extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(icon, color: AppColors.rossoGubbio, size: 26),
       splashRadius: 24,
+    );
+  }
+
+  /// Voce del menu che si espande mostrando delle sottovoci.
+  Widget _menuGroup(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required List<_SubItem> items,
+  }) {
+    return Column(
+      children: [
+        Theme(
+          // Toglie le linee che ExpansionTile disegna di default.
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            leading: Icon(icon, color: AppColors.rossoGubbio, size: 24),
+            title: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.bluNotte,
+              ),
+            ),
+            iconColor: AppColors.rossoGubbio,
+            collapsedIconColor: AppColors.tortora,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            childrenPadding: const EdgeInsets.only(left: 22, bottom: 6),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            children: [
+              for (final item in items)
+                ListTile(
+                  dense: true,
+                  leading: Icon(item.icon, color: AppColors.tortora, size: 22),
+                  title: Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.bluNotte,
+                    ),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => item.page()),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Divider(color: AppColors.grigioChiaro, height: 1),
+        ),
+      ],
     );
   }
 

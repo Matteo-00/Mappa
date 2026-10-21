@@ -9,10 +9,10 @@ import '../theme/app_colors.dart';
 import '../widgets/app_filter_chip.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/premium_scaffold.dart';
-import '../widgets/crescia_loader.dart';
+import '../widgets/loading_screen.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
-import 'admin/add_itinerario_page.dart';
+import 'admin/edit_itinerario_flow.dart';
 import 'itinerario_detail_page.dart';
 
 enum _ItinerarioSort { predefinito, titolo, tappe }
@@ -69,7 +69,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
     _loadedLanguageCode = languageCode;
     final items = await ContentService.fetchItinerari(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
+    if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _itinerari = items;
@@ -152,13 +152,9 @@ class _ItinerariPageState extends State<ItinerariPage> {
   }
 
   Future<void> _editItinerario(ItinerarioModel it) async {
-    final updated = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddItinerarioPage(editItinerario: it),
-      ),
-    );
-    if (updated == true) {
+    // Si modifica sempre l'originale italiano (vedi edit_itinerario_flow.dart).
+    final updated = await editItinerarioFlow(context, it);
+    if (updated != null) {
       await _load();
     }
   }
@@ -191,6 +187,8 @@ class _ItinerariPageState extends State<ItinerariPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Finché i dati non arrivano: schermata di caricamento a pagina intera.
+    if (_loading) return LoadingScreen(onRetry: _load);
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
     final items = _visible;
@@ -287,9 +285,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? CresciaLoader(onRetry: _load)
-                : RefreshIndicator(
+            child: RefreshIndicator(
                     color: AppColors.rossoGubbio,
                     onRefresh: _load,
                     child: items.isEmpty

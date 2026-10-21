@@ -14,7 +14,7 @@ import 'admin/admin_widgets.dart';
 import 'admin/add_place_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
-import '../widgets/crescia_loader.dart';
+import '../widgets/loading_screen.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
 import 'bar_detail_page.dart';
@@ -42,6 +42,9 @@ class _BarsPageState extends State<BarsPage> {
   String? _loadedLanguageCode;
 
   static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
+
+  AppLocalizations get _l10n => AppLocalizations.of(
+      context.read<LanguageService>().currentLanguageCode);
 
   @override
   void initState() {
@@ -72,7 +75,7 @@ class _BarsPageState extends State<BarsPage> {
     _loadedLanguageCode = languageCode;
     final bars = await ContentService.fetchBars(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
+    if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _allBars = bars;
@@ -133,7 +136,7 @@ class _BarsPageState extends State<BarsPage> {
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
           infoWindow: InfoWindow(
             title: bar.name,
-            snippet: 'Bar',
+            snippet: _l10n.t('kindBar'),
             onTap: () => _openBarDetail(bar),
           ),
           onTap: () => _onMarkerTap(bar),
@@ -173,6 +176,8 @@ class _BarsPageState extends State<BarsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Finché i dati non arrivano: schermata di caricamento a pagina intera.
+    if (_loading) return LoadingScreen(onRetry: _loadBars);
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
     return Scaffold(
@@ -217,6 +222,7 @@ class _BarsPageState extends State<BarsPage> {
           // Barra di ricerca
           _buildSearchBar(),
           PlaceFilterBar(
+            ratingKind: RatingKind.amaro,
             state: _filters,
             availableTags: PlaceFilters.tagsByFrequency(
                 _allBars.map((p) => p.cuisineTypes)),
@@ -226,9 +232,7 @@ class _BarsPageState extends State<BarsPage> {
           ),
           // Lista bar
           Expanded(
-            child: _loading
-                ? CresciaLoader(onRetry: _loadBars)
-                : _filteredBars.isEmpty
+            child: _filteredBars.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 24),
@@ -267,7 +271,7 @@ class _BarsPageState extends State<BarsPage> {
           _applyFilters();
         },
         decoration: InputDecoration(
-          hintText: 'Cerca bar per nome...',
+          hintText: _l10n.t('searchBarHint'),
           hintStyle: const TextStyle(color: AppColors.textMuted),
           prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
           suffixIcon: _searchQuery.isNotEmpty
@@ -446,8 +450,8 @@ class _BarsPageState extends State<BarsPage> {
             color: AppColors.tortora.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Nessun bar trovato',
+          Text(
+            _l10n.t('emptyBar'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -455,8 +459,8 @@ class _BarsPageState extends State<BarsPage> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Prova a modificare la ricerca',
+          Text(
+            _l10n.t('tryChangeSearchShort'),
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textMuted,
@@ -467,5 +471,5 @@ class _BarsPageState extends State<BarsPage> {
     );
   }
 
-  Widget _buildMiniRating(double rating) => RatingSummary(rating: rating);
+  Widget _buildMiniRating(double rating) => RatingSummary(rating: rating, kind: RatingKind.amaro);
 }

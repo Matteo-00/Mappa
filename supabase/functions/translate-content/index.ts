@@ -8,7 +8,8 @@
 // ruolo 'admin' nella tabella `utenti`.
 //
 // Body atteso:
-//   { "entity_type": "eventi" | "ristoranti" | "bar" | "itinerari" |
+//   { "entity_type": "eventi" | "ristoranti" | "bar" | "hotel" | "luoghi" |
+//                     "itinerari" |
 //                     "storia_epoche" | "storia_contenuti",
 //     "entity_id": "<uuid>" }
 //
@@ -36,26 +37,47 @@ const ENTITY_CONFIG: Record<
   {
     table: string;
     fields: string[];
+    // Elenchi di oggetti (es. le tappe di un itinerario): per ogni elemento si
+    // traducono solo le chiavi indicate; le altre (coordinate, id...) restano.
+    objectArrays?: Record<string, string[]>;
+    // Campi tradotti solo per certi tipi (colonna `tipo`): es. il nome di una
+    // chiesa o di un parcheggio si traduce, quello di un negozio no.
+    fieldsByTipo?: Record<string, string[]>;
+    // Tabelle con una sola riga (es. i testi della pagina Storia): l'id della
+    // riga nella tabella e l'UUID con cui la traduzione viene salvata (la
+    // colonna entity_id di `content_translations` è di tipo UUID).
+    singleton?: { rowId: number; translationId: string };
   }
 > = {
   ristoranti: {
     table: "ristoranti",
-    fields: ["descrizione"],
+    fields: ["descrizione", "tags"],
   },
 
   bar: {
     table: "bar",
-    fields: ["descrizione"],
+    fields: ["descrizione", "tags"],
   },
 
   hotel: {
     table: "hotel",
-    fields: ["descrizione"],
+    fields: ["descrizione", "tags"],
+  },
+
+  // Chiese, musei, negozi e parcheggi (un'unica tabella con colonna `tipo`)
+  luoghi: {
+    table: "luoghi",
+    fields: ["descrizione", "tags"],
+    fieldsByTipo: {
+      chiesa: ["nome"],
+      museo: ["nome"],
+      parcheggio: ["nome"],
+    },
   },
 
   eventi: {
     table: "eventi",
-    fields: ["titolo", "descrizione"],
+    fields: ["titolo", "descrizione", "categoria", "luogo"],
   },
 
   itinerari: {
@@ -68,6 +90,15 @@ const ENTITY_CONFIG: Record<
       "difficolta",
       "tema",
     ],
+    objectArrays: {
+      tappe: [
+        "nome",
+        "descrizione",
+        "durata",
+        "approfondimento",
+        "curiosita",
+      ],
+    },
   },
 
   storia_epoche: {
@@ -89,7 +120,18 @@ const ENTITY_CONFIG: Record<
       "full_description",
       "local_story",
       "curiosity",
+      "tags",
     ],
+  },
+
+  // Testi della pagina "Storia di Gubbio" (titolo, sottotitolo, introduzione)
+  storia_pagina: {
+    table: "storia_pagina",
+    fields: ["titolo", "sottotitolo", "testo"],
+    singleton: {
+      rowId: 1,
+      translationId: "00000000-0000-0000-0000-000000000001",
+    },
   },
 };
 
@@ -97,6 +139,8 @@ type TranslationItem = {
   field: string;
   text: string;
   index?: number;
+  // Solo per gli elenchi di oggetti: la chiave dentro l'elemento (es. "nome").
+  key?: string;
 };
 
 function jsonResponse(data: unknown, status = 200) {
@@ -245,7 +289,7 @@ Deno.serve(async (req) => {
     } = await supabaseAdmin
       .from(config.table)
       .select("*")
-      .eq("id", entityId)
+      .eq("id", config.singleton?.rowId ?? entityId)
       .single();
 
     if (sourceError || !sourceData) {
@@ -269,7 +313,13 @@ Deno.serve(async (req) => {
 
     const items: TranslationItem[] = [];
 
-    for (const field of config.fields) {
+    // Campi da tradurre: quelli comuni + quelli specifici del tipo di luogo.
+    const fieldsToTranslate = [
+      ...config.fields,
+      ...(config.fieldsByTipo?.[String(sourceData.tipo)] ?? []),
+    ];
+
+    for (const field of fieldsToTranslate) {
       const value = sourceData[field];
 
       if (
@@ -296,6 +346,37 @@ Deno.serve(async (req) => {
           }
         });
       }
+    }
+
+    // Elenchi di oggetti (tappe degli itinerari)
+    for (
+      const [arrayField, keys] of Object.entries(
+        config.objectArrays ?? {},
+      )
+    ) {
+      const list = sourceData[arrayField];
+
+      if (!Array.isArray(list)) continue;
+
+      list.forEach((element, index) => {
+        if (!element || typeof element !== "object") return;
+
+        for (const key of keys) {
+          const value = (element as Record<string, unknown>)[key];
+
+          if (
+            typeof value === "string" &&
+            value.trim() !== ""
+          ) {
+            items.push({
+              field: arrayField,
+              text: value,
+              index,
+              key,
+            });
+          }
+        }
+      });
     }
 
     if (items.length === 0) {
@@ -434,11 +515,20 @@ Deno.serve(async (req) => {
     };
 
     // Prepara eventuali campi ARRAY
-    for (const field of config.fields) {
+    for (const field of fieldsToTranslate) {
       if (Array.isArray(sourceData[field])) {
         for (const language of TARGET_LANGUAGES) {
           translatedContent[language][field] =
             [];
+        }
+      }
+    }
+
+    // ... e gli elenchi di oggetti
+    for (const arrayField of Object.keys(config.objectArrays ?? {})) {
+      if (Array.isArray(sourceData[arrayField])) {
+        for (const language of TARGET_LANGUAGES) {
+          translatedContent[language][arrayField] = [];
         }
       }
     }
@@ -465,7 +555,17 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        if (item.index !== undefined) {
+        if (item.key !== undefined && item.index !== undefined) {
+          // Elemento di un elenco di oggetti: { nome: "...", descrizione: "..." }
+          const list = translatedContent[language][
+            item.field
+          ] as Array<Record<string, string>>;
+
+          list[item.index] = {
+            ...(list[item.index] ?? {}),
+            [item.key]: translated.text,
+          };
+        } else if (item.index !== undefined) {
           const array =
             translatedContent[language][
               item.field
@@ -499,7 +599,7 @@ Deno.serve(async (req) => {
           {
             entity_type: entityType,
 
-            entity_id: entityId,
+            entity_id: config.singleton?.translationId ?? entityId,
 
             language_code: language,
 

@@ -8,7 +8,7 @@ import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
-import '../widgets/crescia_loader.dart';
+import '../widgets/loading_screen.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/add_storia_content_page.dart';
 import 'admin/add_storia_epoca_page.dart';
@@ -83,11 +83,11 @@ class _StoriaPageState extends State<StoriaPage> {
     final loadingStart = DateTime.now();
     final epoche = await ContentService.fetchStoriaEpoche(languageCode: languageCode);
     final contenuti = await ContentService.fetchStoriaContenuti(languageCode: languageCode);
-    final intro = await ContentService.fetchStoriaIntro();
+    final intro = await ContentService.fetchStoriaIntro(languageCode: languageCode);
     debugPrint('Storia ($languageCode): ${epoche.length} epoche, '
         '${contenuti.length} contenuti');
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
+    if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _epoche = epoche;
@@ -299,6 +299,8 @@ class _StoriaPageState extends State<StoriaPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Finché i dati non arrivano: schermata di caricamento a pagina intera.
+    if (_loading) return LoadingScreen(onRetry: _load);
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
     final isAdmin = context.watch<AuthService>().isAdmin;
@@ -347,9 +349,7 @@ class _StoriaPageState extends State<StoriaPage> {
                 : null,
           ),
           Expanded(
-            child: _loading
-                ? CresciaLoader(onRetry: _load)
-                : RefreshIndicator(
+            child: RefreshIndicator(
                     color: AppColors.rossoGubbio,
                     onRefresh: _load,
                     child: CustomScrollView(

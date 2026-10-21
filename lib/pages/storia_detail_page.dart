@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/storia_model.dart';
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import '../services/content_service.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 import 'admin/add_storia_content_page.dart';
 import 'admin/admin_widgets.dart';
@@ -78,6 +80,8 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
   @override
   Widget build(BuildContext context) {
     final isAdmin = context.watch<AuthService>().isAdmin;
+    final l10n = AppLocalizations.of(
+        context.watch<LanguageService>().currentLanguageCode);
     final c = _contenuto;
 
     return Scaffold(
@@ -205,7 +209,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                           child: OutlinedButton.icon(
                             onPressed: () => _openDirections('walking'),
                             icon: const Icon(Icons.directions_walk, size: 20),
-                            label: const Text('A piedi'),
+                            label: Text(l10n.t('walkBtn')),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.rossoGubbio,
                               side: const BorderSide(color: AppColors.rossoGubbio),
@@ -221,7 +225,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                           child: OutlinedButton.icon(
                             onPressed: () => _openDirections('driving'),
                             icon: const Icon(Icons.directions_car, size: 20),
-                            label: const Text('In auto'),
+                            label: Text(l10n.t('carBtn')),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.rossoGubbio,
                               side: const BorderSide(color: AppColors.rossoGubbio),
@@ -239,7 +243,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                   if (c.fullDescription.isNotEmpty)
                     _buildSection(
                       icon: Icons.history_edu_outlined,
-                      title: 'Storia',
+                      title: l10n.t('sdHistory'),
                       child: Text(
                         c.fullDescription,
                         style: const TextStyle(fontSize: 15.5, height: 1.65, color: AppColors.bluNotte),
@@ -248,7 +252,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                   if (c.curiosity != null && c.curiosity!.trim().isNotEmpty)
                     _buildSection(
                       icon: Icons.lightbulb_outline,
-                      title: 'Curiosità',
+                      title: l10n.t('tpCuriosita'),
                       child: Text(
                         c.curiosity!,
                         style: const TextStyle(fontSize: 15, height: 1.6, color: AppColors.bluNotte),
@@ -257,7 +261,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                   if (c.localStory != null && c.localStory!.trim().isNotEmpty)
                     _buildSection(
                       icon: Icons.record_voice_over_outlined,
-                      title: 'Racconto da local',
+                      title: l10n.t('sdLocalStory'),
                       child: Text(
                         c.localStory!,
                         style: const TextStyle(fontSize: 15, height: 1.65, color: AppColors.bluNotte),
@@ -266,7 +270,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                   if (c.gallery.isNotEmpty)
                     _buildSection(
                       icon: Icons.photo_library_outlined,
-                      title: 'Galleria',
+                      title: l10n.t('sdGallery'),
                       child: SizedBox(
                         height: 110,
                         child: ListView.separated(

@@ -10,7 +10,7 @@ import '../theme/app_colors.dart';
 import '../widgets/app_filter_chip.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/premium_scaffold.dart';
-import '../widgets/crescia_loader.dart';
+import '../widgets/loading_screen.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/add_event_page.dart';
@@ -80,7 +80,7 @@ class _EventsListPageState extends State<EventsListPage> {
     _loadedLanguageCode = languageCode;
     final events = await ContentService.fetchEvents(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
+    if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _allEvents = events;
@@ -191,6 +191,8 @@ class _EventsListPageState extends State<EventsListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Finché i dati non arrivano: schermata di caricamento a pagina intera.
+    if (_loading) return LoadingScreen(onRetry: _loadEvents);
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
     final events = _filteredEvents;
@@ -255,9 +257,7 @@ class _EventsListPageState extends State<EventsListPage> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? CresciaLoader(onRetry: _loadEvents)
-                : RefreshIndicator(
+            child: RefreshIndicator(
                     color: AppColors.rossoGubbio,
                     onRefresh: _loadEvents,
                     child: events.isEmpty

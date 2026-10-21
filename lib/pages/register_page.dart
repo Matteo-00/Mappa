@@ -67,7 +67,13 @@ class _RegisterPageState extends State<RegisterPage> {
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'nome': nome, 'cognome': cognome},
+        // `lang`: lingua scelta nell'app, usata per l'email di conferma e
+        // per quelle successive (vedi modello email in supabase_email_templates.md).
+        data: {
+          'nome': nome,
+          'cognome': cognome,
+          'lang': langService.currentLanguageCode,
+        },
         emailRedirectTo: 'https://visitgubbio.eu/confirm-email.html',
       );
 
@@ -116,14 +122,14 @@ class _RegisterPageState extends State<RegisterPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.email_outlined, color: Color(0xFFB13B2E)),
-              SizedBox(width: 10),
+              const Icon(Icons.email_outlined, color: Color(0xFFB13B2E)),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Conferma la tua email',
-                  style: TextStyle(
+                  l10n.t('confirmEmailTitle'),
+                  style: const TextStyle(
                     color: Color(0xFF162B3D),
                     fontWeight: FontWeight.w700,
                   ),
@@ -132,12 +138,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
           content: Text(
-            'Ti abbiamo inviato un\'email a $email.\n\n'
-            'Apri la tua casella di posta e clicca sul pulsante '
-            '"Conferma email" per attivare il tuo account Visit Gubbio.\n\n'
-            'Se non trovi l\'email, controlla anche la cartella '
-            'Spam o Posta indesiderata.\n\n'
-            'Dopo aver confermato l\'indirizzo, torna nell\'app ed effettua il login.',
+            l10n.confirmEmailMessage(email),
             style: const TextStyle(
               color: Color(0xFF8C857D),
               fontSize: 14,
@@ -153,9 +154,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   MaterialPageRoute(builder: (_) => const LoginPage()),
                 );
               },
-              child: const Text(
-                'OK, vai al login',
-                style: TextStyle(
+              child: Text(
+                l10n.goToLoginOk,
+                style: const TextStyle(
                   color: Color(0xFFB13B2E),
                   fontWeight: FontWeight.w600,
                 ),

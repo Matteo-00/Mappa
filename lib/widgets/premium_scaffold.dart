@@ -28,6 +28,33 @@ class HomeButton extends StatelessWidget {
   }
 }
 
+/// Pulsante "Indietro" (freccia): torna alla schermata precedente, per esempio
+/// dalla mappa alla tappa o al luogo da cui si era partiti. Accanto a [HomeButton].
+class BackCircleButton extends StatelessWidget {
+  final bool light;
+  const BackCircleButton({super.key, this.light = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: light ? Colors.white.withOpacity(0.92) : Colors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      shadowColor: Colors.black.withOpacity(0.25),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => Navigator.of(context).maybePop(),
+        child: const SizedBox(
+          width: 48,
+          height: 48,
+          child: Icon(Icons.arrow_back_rounded,
+              color: AppColors.rossoGubbio, size: 25),
+        ),
+      ),
+    );
+  }
+}
+
 /// Header premium riutilizzabile con pulsante Home a sinistra,
 /// titolo centrato e azione opzionale a destra.
 /// Va inserito come primo figlio del body (gestisce già la SafeArea).

@@ -6,6 +6,7 @@ import '../models/bar_model.dart';
 import '../models/event_model.dart';
 import '../models/hotel_model.dart';
 import '../models/itinerario_model.dart';
+import '../models/luogo_model.dart';
 import '../models/restaurant_model.dart';
 import '../models/storia_model.dart';
 import 'content_translation_service.dart';
@@ -169,6 +170,56 @@ class ContentService {
     await _db.from('hotel').delete().eq('id', id);
   }
 
+  // -------------------------------------------------- Chiese, musei, negozi, parcheggi
+  // Un'unica tabella `luoghi` con la colonna `tipo`. Se la tabella non esiste
+  // ancora (script supabase_luoghi_setup.sql non eseguito) la lista è vuota.
+  /// [tipo] null = tutti i tipi (usato dalla mappa).
+  static Future<List<LuogoModel>> fetchLuoghi({
+    LuogoTipo? tipo,
+    String languageCode = 'it',
+  }) async {
+    try {
+      var query = _db.from('luoghi').select();
+      if (tipo != null) query = query.eq('tipo', tipo.db);
+      final rows = await query.order('created_at');
+      final originals = (rows as List)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      final translations = await ContentTranslationService.fetchTranslations(
+        entityType: 'luoghi',
+        entityIds: originals.map((e) => e['id'].toString()).toList(),
+        languageCode: languageCode,
+      );
+      return _parseRows(
+        originals,
+        translations,
+        LuogoModel.fromJson,
+        'luoghi',
+      );
+    } catch (e) {
+      debugPrint('fetchLuoghi: errore $e');
+      return [];
+    }
+  }
+
+  static Future<void> addLuogo(LuogoModel l) async {
+    final inserted =
+        await _db.from('luoghi').insert(l.toJson()).select().single();
+    await _translateSafely(
+      entityType: 'luoghi',
+      entityId: inserted['id'].toString(),
+    );
+  }
+
+  static Future<void> updateLuogo(LuogoModel l) async {
+    await _db.from('luoghi').update(l.toJson()).eq('id', l.id);
+    await _translateSafely(entityType: 'luoghi', entityId: l.id);
+  }
+
+  static Future<void> deleteLuogo(String id) async {
+    await _db.from('luoghi').delete().eq('id', id);
+  }
+
   // -------------------------------------------------- Eventi
   // Solo dati reali inseriti dai master su Supabase (niente dati di prova).
   static Future<List<EventModel>> fetchEvents({String languageCode = 'it'}) async {
@@ -231,6 +282,19 @@ class ContentService {
     } catch (_) {
       return [];
     }
+  }
+
+  /// Un itinerario per id (null se non esiste più). Con `languageCode` 'it' si
+  /// ottiene il testo originale, con le altre lingue quello tradotto.
+  static Future<ItinerarioModel?> fetchItinerarioById(
+    String id, {
+    String languageCode = 'it',
+  }) async {
+    final all = await fetchItinerari(languageCode: languageCode);
+    for (final it in all) {
+      if (it.id == id) return it;
+    }
+    return null;
   }
 
   static Future<void> addItinerario(ItinerarioModel it) async {
@@ -361,6 +425,22 @@ class ContentService {
     }
   }
 
+  /// Contenuti di "Storia di Gubbio" a partire dagli id (es. i collegamenti di una
+  /// tappa di itinerario), nell'ordine dato. Gli id di contenuti nel frattempo
+  /// eliminati vengono ignorati.
+  static Future<List<StoriaContenuto>> fetchStoriaByIds(
+    List<String> ids, {
+    String languageCode = 'it',
+  }) async {
+    if (ids.isEmpty) return [];
+    final all = await fetchStoriaContenuti(languageCode: languageCode);
+    final byId = {for (final c in all) c.id: c};
+    return [
+      for (final id in ids)
+        if (byId[id] != null) byId[id]!,
+    ];
+  }
+
   static Future<void> addStoriaEpoca(StoriaEpoca e) async {
     final inserted = await _db
         .from('storia_epoche')
@@ -386,7 +466,14 @@ class ContentService {
 
   /// Testi della pagina Storia. Se la tabella `storia_pagina` non esiste
   /// ancora (o è vuota) restituisce i testi predefiniti.
-  static Future<StoriaIntro> fetchStoriaIntro() async {
+  /// UUID con cui si salva la traduzione dei testi della pagina Storia
+  /// (la riga è una sola, con id 1; `content_translations` vuole un UUID).
+  static const String storiaPaginaTranslationId =
+      '00000000-0000-0000-0000-000000000001';
+
+  static Future<StoriaIntro> fetchStoriaIntro({
+    String languageCode = 'it',
+  }) async {
     try {
       final row = await _db
           .from('storia_pagina')
@@ -394,7 +481,15 @@ class ContentService {
           .eq('id', 1)
           .maybeSingle();
       if (row == null) return const StoriaIntro();
-      return StoriaIntro.fromJson(Map<String, dynamic>.from(row));
+      final translations = await ContentTranslationService.fetchTranslations(
+        entityType: 'storia_pagina',
+        entityIds: [storiaPaginaTranslationId],
+        languageCode: languageCode,
+      );
+      return StoriaIntro.fromJson(ContentTranslationService.applyTranslation(
+        Map<String, dynamic>.from(row),
+        translations[storiaPaginaTranslationId],
+      ));
     } catch (_) {
       return const StoriaIntro();
     }
@@ -413,6 +508,10 @@ class ContentService {
       'testo': testo,
       'image_url': imageUrl,
     });
+    await _translateSafely(
+      entityType: 'storia_pagina',
+      entityId: storiaPaginaTranslationId,
+    );
   }
 
   static Future<void> addStoriaContenuto(StoriaContenuto c) async {

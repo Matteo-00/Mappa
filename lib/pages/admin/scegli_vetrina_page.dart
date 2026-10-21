@@ -6,7 +6,7 @@ import '../../services/content_service.dart';
 import '../../services/language_service.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
-import '../../widgets/crescia_loader.dart';
+import '../../widgets/loading_screen.dart';
 
 /// Schermata admin: sceglie quali itinerari (massimo 3) compaiono nella
 /// vetrina "Itinerari consigliati" della home. L'ordine in cui li selezioni
@@ -38,7 +38,7 @@ class _ScegliVetrinaPageState extends State<ScegliVetrinaPage> {
     final all = await ContentService.fetchItinerari(languageCode: lang);
     final current = await ContentService.fetchItinerariVetrina(languageCode: lang);
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
+    if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _all = all;
@@ -101,7 +101,7 @@ class _ScegliVetrinaPageState extends State<ScegliVetrinaPage> {
       backgroundColor: AppColors.avorio,
       appBar: AppBar(title: const Text('Itinerari in vetrina')),
       body: _loading
-          ? CresciaLoader(onRetry: _load)
+          ? LoadingScreen(fullPage: false, onRetry: _load)
           : Column(
               children: [
                 Padding(

@@ -30,7 +30,11 @@ class LanguageService extends ChangeNotifier {
   Future<void> _loadSavedLanguage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedLang = prefs.getString('language') ?? 'it';
+      // Prima apertura: usa la lingua del telefono se è tra quelle supportate
+      // (it, en, de, fr), altrimenti l'italiano.
+      final deviceLang = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      final savedLang = prefs.getString('language') ??
+          (kSupportedLanguageCodes.contains(deviceLang) ? deviceLang : 'it');
       _currentLocale = Locale(
         kSupportedLanguageCodes.contains(savedLang) ? savedLang : 'it',
       );

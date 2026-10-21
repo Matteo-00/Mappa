@@ -18,14 +18,19 @@ class RestaurantDetailPage extends StatelessWidget {
   /// Icona mostrata quando manca la foto (ristorante di default).
   final IconData fallbackIcon;
 
-  /// Tipo di punto sulla mappa ([MapKind]): ristorante, bar o hotel.
+  /// Tipo di punto sulla mappa ([MapKind]): ristorante, bar, hotel, chiesa...
   final String mapKind;
-  
+
+  /// Sezione in più dopo la descrizione (es. i collegamenti alla Storia di
+  /// Gubbio di chiese e musei). Si occupa da sola dei propri margini.
+  final Widget? extraSection;
+
   const RestaurantDetailPage({
     super.key,
     required this.restaurant,
     this.fallbackIcon = Icons.restaurant_menu,
     this.mapKind = MapKind.restaurant,
+    this.extraSection,
   });
 
   AppLocalizations _l10n(BuildContext context) => AppLocalizations.of(
@@ -45,9 +50,16 @@ class RestaurantDetailPage extends StatelessWidget {
             pinned: true,
             automaticallyImplyLeading: false,
             backgroundColor: AppColors.avorio,
+            leadingWidth: 116,
             leading: const Padding(
               padding: EdgeInsets.only(left: 8, top: 4),
-              child: HomeButton(light: true),
+              child: Row(
+                children: [
+                  BackCircleButton(light: true),
+                  SizedBox(width: 8),
+                  HomeButton(light: true),
+                ],
+              ),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: restaurant.imageUrl != null
@@ -134,6 +146,8 @@ class RestaurantDetailPage extends StatelessWidget {
                     ),
                   ),
 
+                  if (extraSection != null) extraSection!,
+
                   if (restaurant.phoneNumber != null ||
                       restaurant.website != null) ...[
                     const SizedBox(height: 20),
@@ -207,7 +221,15 @@ class RestaurantDetailPage extends StatelessWidget {
   }
 
   Widget _buildRatingRow(BuildContext context, double rating) {
-    return RatingSummary(rating: rating, iconSize: 22, fontSize: 15);
+    // Ogni tipo di luogo ha la sua icona: crescia, Amaro Matto, Palazzo dei Consoli.
+    final kind = mapKind == MapKind.bar
+        ? RatingKind.amaro
+        : mapKind == MapKind.hotel
+            ? RatingKind.palazzo
+            : mapKind == MapKind.negozio
+                ? RatingKind.stelle
+                : RatingKind.crescia;
+    return RatingSummary(rating: rating, kind: kind, iconSize: 22, fontSize: 15);
   }
   
   Widget _buildImagePlaceholder() {

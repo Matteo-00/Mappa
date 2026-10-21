@@ -356,7 +356,15 @@ class _AddPlacePageState extends State<AddPlacePage> {
                         return FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: RatingIcons(rating: value ?? 0, size: 24),
+                          child: RatingIcons(
+                            rating: value ?? 0,
+                            size: 24,
+                            kind: widget.isHotel
+                                ? RatingKind.palazzo
+                                : widget.isBar
+                                    ? RatingKind.amaro
+                                    : RatingKind.crescia,
+                          ),
                         );
                       },
                     ),

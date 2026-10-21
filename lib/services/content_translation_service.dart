@@ -60,10 +60,41 @@ class ContentTranslationService {
       final value = entry.value;
       final isEmptyText = value is String && value.trim().isEmpty;
       final isEmptyList = value is List && value.isEmpty;
-      if (value != null && !isEmptyText && !isEmptyList) {
-        merged[entry.key] = value;
+      if (value == null || isEmptyText || isEmptyList) continue;
+
+      // Elenco di oggetti (es. le tappe di un itinerario): si uniscono i campi
+      // tradotti a quelli originali tappa per tappa, così coordinate, collegamenti
+      // e altri dati non testuali restano quelli originali.
+      final originalValue = original[entry.key];
+      if (value is List && originalValue is List && _isObjectList(value)) {
+        merged[entry.key] = _mergeObjectLists(originalValue, value);
+        continue;
       }
+
+      merged[entry.key] = value;
     }
     return merged;
+  }
+
+  static bool _isObjectList(List<dynamic> list) =>
+      list.any((e) => e is Map);
+
+  /// Unisce due elenchi di oggetti elemento per elemento: per ogni posizione i
+  /// campi tradotti (non vuoti) sostituiscono quelli originali.
+  static List<dynamic> _mergeObjectLists(
+    List<dynamic> original,
+    List<dynamic> translated,
+  ) {
+    return List<dynamic>.generate(original.length, (i) {
+      final orig = original[i];
+      final tr = i < translated.length ? translated[i] : null;
+      if (orig is! Map || tr is! Map) return orig;
+      final result = Map<String, dynamic>.from(orig);
+      tr.forEach((k, v) {
+        final empty = v == null || (v is String && v.trim().isEmpty);
+        if (!empty) result[k.toString()] = v;
+      });
+      return result;
+    });
   }
 }

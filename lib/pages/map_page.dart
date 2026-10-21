@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -7,10 +9,11 @@ import '../l10n/app_localizations.dart';
 import '../widgets/distance_label.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/scroll_hints.dart';
-import '../widgets/crescia_loader.dart';
+import '../widgets/loading_screen.dart';
 import '../models/restaurant_model.dart';
 import '../models/bar_model.dart';
 import '../models/hotel_model.dart';
+import '../models/luogo_model.dart';
 import '../models/event_model.dart';
 import '../models/itinerario_model.dart';
 import '../data/gubbio_boundary.dart';
@@ -20,8 +23,11 @@ import '../services/language_service.dart';
 import 'restaurant_detail_page.dart';
 import 'bar_detail_page.dart';
 import 'hotel_detail_page.dart';
+import 'luogo_detail_page.dart';
 import 'event_detail_page.dart';
 import 'itinerario_detail_page.dart';
+import 'tappa_detail_page.dart';
+import '../utils/route_links.dart';
 
 /// Tipi di punto mostrati sulla mappa.
 class MapKind {
@@ -31,6 +37,15 @@ class MapKind {
   static const hotel = 'hotel';
   static const event = 'event';
   static const itinerary = 'itinerary';
+
+  // Chiese, musei, negozi, parcheggi (stessi valori di `LuogoTipo.db`).
+  static const chiesa = 'chiesa';
+  static const museo = 'museo';
+  static const negozio = 'negozio';
+  static const parcheggio = 'parcheggio';
+
+  /// Tappa di un itinerario (compare solo quando si apre un itinerario).
+  static const stop = 'stop';
 
   /// Prefisso usato negli identificativi dei marker.
   static String prefix(String kind) {
@@ -43,6 +58,13 @@ class MapKind {
         return 'hotel';
       case event:
         return 'event';
+      case stop:
+        return 'stop';
+      case chiesa:
+      case museo:
+      case negozio:
+      case parcheggio:
+        return kind;
       default:
         return 'itin';
     }
@@ -56,7 +78,16 @@ class MapFocus {
   final String id;
   final LatLng position;
 
-  const MapFocus({required this.kind, required this.id, required this.position});
+  /// Solo per gli itinerari: indice della tappa da mostrare già selezionata.
+  /// Se è null si vede tutto il percorso.
+  final int? stopIndex;
+
+  const MapFocus({
+    required this.kind,
+    required this.id,
+    required this.position,
+    this.stopIndex,
+  });
 
   String get key => '${MapKind.prefix(kind)}_$id';
 }
@@ -74,6 +105,12 @@ class _MapPlace {
   final String address;
   final VoidCallback Function(BuildContext) detailOpener;
 
+  /// Testo del pulsante di dettaglio (null = "Dettagli").
+  final String? detailsLabel;
+
+  /// Per le tappe: posizione nell'elenco delle tappe dell'itinerario.
+  final int? stopIndex;
+
   const _MapPlace({
     required this.key,
     required this.kind,
@@ -85,6 +122,8 @@ class _MapPlace {
     required this.position,
     required this.address,
     required this.detailOpener,
+    this.detailsLabel,
+    this.stopIndex,
   });
 }
 
@@ -117,6 +156,11 @@ class _MapPageState extends State<MapPage> {
   bool _showEvents = true;
   bool _showItinerari = true;
 
+  /// Chiese, musei, negozi, parcheggi: quali tipi sono visibili.
+  final Map<LuogoTipo, bool> _showLuoghi = {
+    for (final t in LuogoTipo.values) t: true,
+  };
+
   /// Punto attualmente selezionato (mostra la scheda con le indicazioni).
   _MapPlace? _selected;
 
@@ -129,6 +173,7 @@ class _MapPageState extends State<MapPage> {
   List<RestaurantModel> _restaurants = [];
   List<BarModel> _bars = [];
   List<HotelModel> _hotels = [];
+  List<LuogoModel> _luoghi = [];
   List<EventModel> _events = [];
   List<ItinerarioModel> _itinerari = [];
   Set<Marker> _markers = {};
@@ -137,6 +182,15 @@ class _MapPageState extends State<MapPage> {
 
   bool _dataLoaded = false;
   bool _focusApplied = false;
+
+  /// Itinerario aperto con "Mostra sulla mappa": se ha tappe con posizione la
+  /// mappa mostra il percorso (tappe numerate collegate da una linea).
+  ItinerarioModel? _routeItinerary;
+  final Map<int, BitmapDescriptor> _stopIcons = {};
+  Set<Polyline> _polylines = {};
+
+  /// True quando in basso c'è una scheda (punto selezionato o percorso).
+  bool get _hasBottomCard => _selected != null || _routeItinerary != null;
 
   static const LatLng _gubbioCenter = LatLng(43.3504, 12.5755);
 
@@ -166,23 +220,91 @@ class _MapPageState extends State<MapPage> {
         await ContentService.fetchRestaurants(languageCode: languageCode);
     final bars = await ContentService.fetchBars(languageCode: languageCode);
     final hotels = await ContentService.fetchHotels(languageCode: languageCode);
+    final luoghi = await ContentService.fetchLuoghi(languageCode: languageCode);
     final events = await ContentService.fetchEvents(languageCode: languageCode);
     final itinerari =
         await ContentService.fetchItinerari(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
-    if (!_dataLoaded) await CresciaLoader.waitMinimum(loadingStart);
+    if (!_dataLoaded) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _restaurants = restaurants;
       _bars = bars;
       _hotels = hotels;
+      _luoghi = luoghi;
       _events = events;
       _itinerari = itinerari;
       _selected = null;
       _dataLoaded = true;
     });
+    _routeItinerary = _findRouteItinerary();
+    await _prepareStopIcons();
+    if (!mounted) return;
     _rebuildMarkers();
     _applyFocus();
+  }
+
+  /// L'itinerario da mostrare come percorso (solo se aperto da "Mostra sulla
+  /// mappa" e con almeno una tappa con posizione).
+  ItinerarioModel? _findRouteItinerary() {
+    final focus = widget.focus;
+    if (focus == null || focus.kind != MapKind.itinerary) return null;
+    for (final it in _itinerari) {
+      if (it.id == focus.id && it.tappeConPosizione.isNotEmpty) return it;
+    }
+    return null;
+  }
+
+  /// Tappe con posizione dell'itinerario aperto: (indice nell'elenco, tappa).
+  List<MapEntry<int, ItinerarioTappa>> get _routeStops {
+    final it = _routeItinerary;
+    if (it == null) return const [];
+    return [
+      for (var i = 0; i < it.tappe.length; i++)
+        if (it.tappe[i].hasCoordinates) MapEntry(i, it.tappe[i]),
+    ];
+  }
+
+  /// Crea le icone con il numero della tappa (come nell'elenco delle tappe).
+  Future<void> _prepareStopIcons() async {
+    for (final entry in _routeStops) {
+      if (_stopIcons.containsKey(entry.key)) continue;
+      try {
+        _stopIcons[entry.key] = await _buildNumberedIcon(entry.key + 1);
+      } catch (_) {
+        // Se non si riesce a disegnarla resta il segnaposto standard.
+      }
+    }
+  }
+
+  Future<BitmapDescriptor> _buildNumberedIcon(int number) async {
+    const double px = 120; // pixel reali: nitido anche su schermi ad alta densità
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const center = Offset(px / 2, px / 2);
+    canvas.drawCircle(center, px / 2, Paint()..color = Colors.white);
+    canvas.drawCircle(
+        center, px / 2 - 9, Paint()..color = AppColors.rossoGubbio);
+    final painter = TextPainter(
+      text: TextSpan(
+        text: '$number',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: number > 9 ? 46 : 58,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+    final image =
+        await recorder.endRecording().toImage(px.toInt(), px.toInt());
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(
+      data!.buffer.asUint8List(),
+      width: 42,
+      height: 42,
+    );
   }
 
   @override
@@ -257,6 +379,24 @@ class _MapPageState extends State<MapPage> {
       ));
     }
 
+    for (final l in _luoghi) {
+      places.add(_MapPlace(
+        key: '${MapKind.prefix(l.tipo.db)}_${l.id}',
+        kind: l.tipo.db,
+        name: l.name,
+        kindLabel: _l.t(l.tipo.kindKey),
+        icon: l.tipo.icon,
+        color: l.tipo.color,
+        hue: l.tipo.hue,
+        position: l.coordinates,
+        address: l.address,
+        detailOpener: (ctx) => () => Navigator.push(
+              ctx,
+              MaterialPageRoute(builder: (_) => LuogoDetailPage(luogo: l)),
+            ),
+      ));
+    }
+
     for (final e in _events) {
       final key = 'event_${e.id}';
       // Sulla mappa solo gli eventi di OGGI (più quello eventualmente aperto
@@ -284,7 +424,10 @@ class _MapPageState extends State<MapPage> {
     }
 
     for (final it in _itinerari) {
-      if (!it.hasCoordinates) continue; // senza posizione non si può mostrare
+      final itPos = it.mapPosition;
+      if (itPos == null) continue; // senza posizione non si può mostrare
+      // In modalità percorso si vedono le tappe, non il punto dell'itinerario.
+      if (_routeItinerary?.id == it.id) continue;
       places.add(_MapPlace(
         key: 'itin_${it.id}',
         kind: MapKind.itinerary,
@@ -293,7 +436,7 @@ class _MapPageState extends State<MapPage> {
         icon: Icons.route,
         color: _itineraryColor,
         hue: BitmapDescriptor.hueYellow,
-        position: LatLng(it.latitudine!, it.longitudine!),
+        position: itPos,
         address: _l.t('startPoint'),
         detailOpener: (ctx) => () => Navigator.push(
               ctx,
@@ -301,6 +444,34 @@ class _MapPageState extends State<MapPage> {
                   builder: (_) => ItinerarioDetailPage(itinerario: it)),
             ),
       ));
+    }
+
+    // Tappe dell'itinerario aperto (solo in modalità percorso).
+    final route = _routeItinerary;
+    if (route != null) {
+      for (final entry in _routeStops) {
+        final i = entry.key;
+        final t = entry.value;
+        places.add(_MapPlace(
+          key: 'stop_${route.id}_$i',
+          kind: MapKind.stop,
+          name: t.nome,
+          kindLabel: _l.fmt('tpStopNumber', {'n': '${i + 1}'}),
+          icon: Icons.place,
+          color: AppColors.rossoGubbio,
+          hue: BitmapDescriptor.hueRed,
+          position: t.position!,
+          address: route.titolo,
+          detailsLabel: _l.t('tpApprofondisci'),
+          stopIndex: i,
+          detailOpener: (ctx) => () => Navigator.push(
+                ctx,
+                MaterialPageRoute(
+                  builder: (_) => TappaDetailPage(itinerario: route, index: i),
+                ),
+              ),
+        ));
+      }
     }
 
     return places;
@@ -316,6 +487,13 @@ class _MapPageState extends State<MapPage> {
         return _showHotels;
       case MapKind.event:
         return _showEvents;
+      case MapKind.stop:
+        return true; // le tappe si vedono sempre quando si apre un itinerario
+      case MapKind.chiesa:
+      case MapKind.museo:
+      case MapKind.negozio:
+      case MapKind.parcheggio:
+        return _showLuoghi[LuogoTipoInfo.parse(kind)] ?? true;
       default:
         return _showItinerari;
     }
@@ -335,6 +513,13 @@ class _MapPageState extends State<MapPage> {
       case MapKind.event:
         _showEvents = value;
         break;
+      case MapKind.chiesa:
+      case MapKind.museo:
+      case MapKind.negozio:
+      case MapKind.parcheggio:
+        final tipo = LuogoTipoInfo.parse(kind);
+        if (tipo != null) _showLuoghi[tipo] = value;
+        break;
       default:
         _showItinerari = value;
     }
@@ -353,7 +538,9 @@ class _MapPageState extends State<MapPage> {
         Marker(
           markerId: MarkerId(p.key),
           position: p.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(p.hue),
+          icon: (p.kind == MapKind.stop && _stopIcons[p.stopIndex] != null)
+              ? _stopIcons[p.stopIndex]!
+              : BitmapDescriptor.defaultMarkerWithHue(p.hue),
           zIndex: _selected?.key == p.key ? 2 : 1,
           infoWindow: InfoWindow(title: p.name, snippet: p.kindLabel),
           onTap: () => _selectPlace(p),
@@ -373,8 +560,24 @@ class _MapPageState extends State<MapPage> {
       );
     }
 
+    final routePoints = [for (final e in _routeStops) e.value.position!];
+
     setState(() {
       _markers = markers;
+      _polylines = routePoints.length < 2
+          ? <Polyline>{}
+          : {
+              Polyline(
+                polylineId: const PolylineId('itinerary_route'),
+                points: routePoints,
+                color: AppColors.rossoGubbio.withOpacity(0.85),
+                width: 5,
+                patterns: [PatternItem.dash(18), PatternItem.gap(10)],
+                jointType: JointType.round,
+                startCap: Cap.roundCap,
+                endCap: Cap.roundCap,
+              ),
+            };
       // Se il punto selezionato è stato nascosto da un filtro, chiude la scheda.
       if (_selected != null && !places.any((p) => p.key == _selected!.key)) {
         _selected = null;
@@ -414,6 +617,26 @@ class _MapPageState extends State<MapPage> {
     if (!_dataLoaded || _mapController == null) return;
     _focusApplied = true;
 
+    // Itinerario con tappe: mostra il percorso intero (o la tappa richiesta).
+    final route = _routeItinerary;
+    if (route != null) {
+      _rebuildMarkers();
+      // Lascia che la mappa disegni i marker prima di muovere la camera.
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      final stopIndex = focus.stopIndex;
+      if (stopIndex != null) {
+        for (final p in _allPlaces()) {
+          if (p.key == 'stop_${route.id}_$stopIndex') {
+            await _selectPlace(p, zoom: 17);
+            return;
+          }
+        }
+      }
+      await _fitRoute([for (final e in _routeStops) e.value.position!]);
+      return;
+    }
+
     _MapPlace? target;
     for (final p in _allPlaces()) {
       if (p.key == focus.key) {
@@ -439,6 +662,120 @@ class _MapPageState extends State<MapPage> {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     if (!mounted) return;
     await _selectPlace(target, zoom: 17);
+  }
+
+  /// Inquadra tutte le tappe del percorso.
+  Future<void> _fitRoute(List<LatLng> points) async {
+    final controller = _mapController;
+    if (controller == null || points.isEmpty) return;
+    if (points.length == 1) {
+      await controller.animateCamera(CameraUpdate.newLatLngZoom(points.first, 17));
+      return;
+    }
+    var minLat = points.first.latitude, maxLat = points.first.latitude;
+    var minLng = points.first.longitude, maxLng = points.first.longitude;
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(minLat, minLng),
+            northeast: LatLng(maxLat, maxLng),
+          ),
+          90,
+        ),
+      );
+    } catch (_) {
+      // Se i limiti non si possono applicare, centra sulla prima tappa.
+      await controller.animateCamera(CameraUpdate.newLatLngZoom(points.first, 16));
+    }
+  }
+
+  /// Scheda in basso quando si vede un percorso e nessuna tappa è selezionata.
+  Widget _routeCard(ItinerarioModel it) {
+    final stops = it.tappeConPosizione;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: _itineraryColor.withOpacity(0.18),
+                child: const Icon(Icons.route, color: _itineraryColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      it.titolo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.bluNotte,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _l.count('itStop', stops.length),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (stops.length >= 2) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => openRouteThrough([for (final t in stops) t.position!]),
+                icon: const Icon(Icons.directions_walk, size: 20),
+                label: Text(_l.t('tpFullRouteWalk')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.rossoGubbio,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  textStyle: const TextStyle(
+                      fontSize: 14.5, fontWeight: FontWeight.w700),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _openDirections(_MapPlace place, String travelMode) async {
@@ -565,7 +902,7 @@ class _MapPageState extends State<MapPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                 ),
-                child: Text(_l.t('detailsBtn'),
+                child: Text(place.detailsLabel ?? _l.t('detailsBtn'),
                     style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
@@ -578,6 +915,10 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Finché i punti non arrivano si vede solo la schermata di caricamento:
+    // la mappa compare dopo, a dati pronti.
+    if (!_dataLoaded) return LoadingScreen(onRetry: _loadData);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -608,6 +949,7 @@ class _MapPageState extends State<MapPage> {
             onTap: (_) {
               if (_selected != null) setState(() => _selected = null);
             },
+            polylines: _polylines,
             polygons: {
               Polygon(
                 polygonId: const PolygonId('gubbio_municipal_boundary'),
@@ -620,54 +962,52 @@ class _MapPageState extends State<MapPage> {
             },
           ),
 
-          // Caricamento dei punti dal database
-          if (!_dataLoaded)
-            Positioned.fill(child: CresciaLoader(onRetry: _loadData)),
-
-          // Home button
-          Positioned(
-            top: 0,
-            left: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: const HomeButton(),
-              ),
-            ),
-          ),
-
-          // Titolo pillola
+          // Barra in alto: indietro + home a sinistra, titolo a destra
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.12),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                  children: [
+                    // Indietro: torna alla tappa / al luogo da cui si è partiti.
+                    const BackCircleButton(),
+                    const SizedBox(width: 8),
+                    const HomeButton(),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            _l.t('mapOfGubbio'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.bluNotte,
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      _l.t('mapOfGubbio'),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.bluNotte,
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -693,6 +1033,10 @@ class _MapPageState extends State<MapPage> {
                       const SizedBox(width: 10),
                       _kindChip(MapKind.hotel, _l.hotelsNav, Icons.hotel_outlined),
                       const SizedBox(width: 10),
+                      for (final t in LuogoTipo.values) ...[
+                        _kindChip(t.db, _l.t(t.navKey), t.icon),
+                        const SizedBox(width: 10),
+                      ],
                       _kindChip(MapKind.event, _l.t('mapEventsToday'), Icons.event),
                       const SizedBox(width: 10),
                       _kindChip(MapKind.itinerary, _l.t('mapItinerari'), Icons.route),
@@ -714,10 +1058,23 @@ class _MapPageState extends State<MapPage> {
                   child: _selectedCard(_selected!),
                 ),
               ),
+            )
+          else if (_routeItinerary != null)
+            // Percorso di un itinerario: riepilogo + percorso completo a piedi.
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _routeCard(_routeItinerary!),
+                ),
+              ),
             ),
 
           // Legenda
-          if (_selected == null)
+          if (!_hasBottomCard)
             Positioned(
               left: 16,
               bottom: 170,
@@ -726,7 +1083,7 @@ class _MapPageState extends State<MapPage> {
 
           // Map type
           Positioned(
-            bottom: _selected != null ? 190 : 100,
+            bottom: _hasBottomCard ? 190 : 100,
             left: 16,
             child: _circleButton(
               icon: Icons.layers_outlined,
@@ -737,7 +1094,7 @@ class _MapPageState extends State<MapPage> {
 
           // GPS
           Positioned(
-            bottom: _selected != null ? 190 : 100,
+            bottom: _hasBottomCard ? 190 : 100,
             right: 16,
             child: _circleButton(
               icon: _isTrackingLocation ? Icons.explore : Icons.navigation,
@@ -827,6 +1184,10 @@ class _MapPageState extends State<MapPage> {
           const SizedBox(height: 6),
           _legendRow(_hotelColor, _l.hotelsNav),
           const SizedBox(height: 6),
+          for (final t in LuogoTipo.values) ...[
+            _legendRow(t.color, _l.t(t.navKey)),
+            const SizedBox(height: 6),
+          ],
           _legendRow(_eventColor, _l.t('mapEventsToday')),
           const SizedBox(height: 6),
           _legendRow(_itineraryColor, _l.t('mapItinerari')),

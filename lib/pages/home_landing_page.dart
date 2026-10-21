@@ -12,6 +12,8 @@ import '../widgets/app_drawer.dart';
 import '../widgets/home_video_background.dart';
 import 'admin/add_place_page.dart';
 import 'admin/add_event_page.dart';
+import 'admin/add_luogo_page.dart';
+import '../models/luogo_model.dart';
 import 'admin/add_itinerario_page.dart';
 import 'events_list_page.dart';
 import 'event_detail_page.dart';
@@ -167,8 +169,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
           );
         }
 
+        // Con tanti elementi il menu scorre invece di uscire dallo schermo.
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
@@ -200,11 +204,15 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                   const AddPlacePage(isBar: true)),
               tile(Icons.hotel_outlined, _l10n.addHotelMenuItem,
                   const AddPlacePage(isBar: false, isHotel: true)),
+              for (final t in LuogoTipo.values)
+                tile(t.icon, _l10n.t('add_${t.name}'),
+                    AddLuogoPage(tipo: t)),
               tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
               tile(Icons.route, _l10n.addItinerarioMenuItem,
                   const AddItinerarioPage()),
               const SizedBox(height: 12),
             ],
+          ),
           ),
         );
       },
