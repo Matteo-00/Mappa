@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/distance_label.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/scroll_hints.dart';
+import '../widgets/crescia_loader.dart';
 import '../models/restaurant_model.dart';
 import '../models/bar_model.dart';
 import '../models/hotel_model.dart';
@@ -158,6 +159,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _loadData() async {
+    final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode;
     final restaurants =
@@ -167,6 +169,8 @@ class _MapPageState extends State<MapPage> {
     final events = await ContentService.fetchEvents(languageCode: languageCode);
     final itinerari =
         await ContentService.fetchItinerari(languageCode: languageCode);
+    // La crescia resta almeno un secondo, così non "lampeggia".
+    if (!_dataLoaded) await CresciaLoader.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _restaurants = restaurants;
@@ -615,6 +619,10 @@ class _MapPageState extends State<MapPage> {
               ),
             },
           ),
+
+          // Caricamento dei punti dal database
+          if (!_dataLoaded)
+            Positioned.fill(child: CresciaLoader(onRetry: _loadData)),
 
           // Home button
           Positioned(

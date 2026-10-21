@@ -8,6 +8,7 @@ import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
+import '../widgets/crescia_loader.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/add_storia_content_page.dart';
 import 'admin/add_storia_epoca_page.dart';
@@ -79,9 +80,14 @@ class _StoriaPageState extends State<StoriaPage> {
     final firstLoad = _loadedLanguageCode == null;
     _loadedLanguageCode = languageCode;
     if (firstLoad) setState(() => _loading = true);
+    final loadingStart = DateTime.now();
     final epoche = await ContentService.fetchStoriaEpoche(languageCode: languageCode);
     final contenuti = await ContentService.fetchStoriaContenuti(languageCode: languageCode);
     final intro = await ContentService.fetchStoriaIntro();
+    debugPrint('Storia ($languageCode): ${epoche.length} epoche, '
+        '${contenuti.length} contenuti');
+    // La crescia resta almeno un secondo, così non "lampeggia".
+    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _epoche = epoche;
@@ -342,9 +348,7 @@ class _StoriaPageState extends State<StoriaPage> {
           ),
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.rossoGubbio),
-                  )
+                ? CresciaLoader(onRetry: _load)
                 : RefreshIndicator(
                     color: AppColors.rossoGubbio,
                     onRefresh: _load,
@@ -1118,7 +1122,11 @@ class _EraHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // L'intestazione deve occupare esattamente maxExtent: se fosse più bassa
+    // (si adatterebbe al contenuto) il layout della timeline va in errore e
+    // la pagina resta vuota.
     return Container(
+      height: maxExtent,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: AppColors.avorio,

@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -280,6 +280,35 @@ class ContentService {
   }
 
   // -------------------------------------------------- Storia di Gubbio
+
+  /// Applica le traduzioni e crea i modelli riga per riga: una riga con dati
+  /// non validi viene saltata (e segnalata nel log) invece di svuotare tutta
+  /// la lista. Se la traduzione di una riga non è valida si riprova con
+  /// l'originale italiano.
+  static List<T> _parseRows<T>(
+    List<Map<String, dynamic>> originals,
+    Map<String, Map<String, dynamic>> translations,
+    T Function(Map<String, dynamic>) fromJson,
+    String table,
+  ) {
+    final result = <T>[];
+    for (final row in originals) {
+      final id = row['id'].toString();
+      try {
+        result.add(fromJson(
+            ContentTranslationService.applyTranslation(row, translations[id])));
+      } catch (e) {
+        debugPrint('$table: traduzione non valida per id=$id ($e)');
+        try {
+          result.add(fromJson(row));
+        } catch (e) {
+          debugPrint('$table: riga non valida id=$id ($e)');
+        }
+      }
+    }
+    return result;
+  }
+
   static Future<List<StoriaEpoca>> fetchStoriaEpoche({
     String languageCode = 'it',
   }) async {
@@ -294,11 +323,14 @@ class ContentService {
         entityIds: originals.map((e) => e['id'].toString()).toList(),
         languageCode: languageCode,
       );
-      return originals
-          .map((e) => StoriaEpoca.fromJson(ContentTranslationService
-              .applyTranslation(e, translations[e['id'].toString()])))
-          .toList();
-    } catch (_) {
+      return _parseRows(
+        originals,
+        translations,
+        StoriaEpoca.fromJson,
+        'storia_epoche',
+      );
+    } catch (e, st) {
+      debugPrint('fetchStoriaEpoche: errore $e\n$st');
       return [];
     }
   }
@@ -317,11 +349,14 @@ class ContentService {
         entityIds: originals.map((e) => e['id'].toString()).toList(),
         languageCode: languageCode,
       );
-      return originals
-          .map((e) => StoriaContenuto.fromJson(ContentTranslationService
-              .applyTranslation(e, translations[e['id'].toString()])))
-          .toList();
-    } catch (_) {
+      return _parseRows(
+        originals,
+        translations,
+        StoriaContenuto.fromJson,
+        'storia_contenuti',
+      );
+    } catch (e, st) {
+      debugPrint('fetchStoriaContenuti: errore $e\n$st');
       return [];
     }
   }

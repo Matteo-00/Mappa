@@ -15,6 +15,7 @@ import 'admin/add_place_page.dart';
 import 'hotel_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
+import '../widgets/crescia_loader.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
 
@@ -30,6 +31,8 @@ class _HotelsPageState extends State<HotelsPage> {
   GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
   
+  /// True finché i dati non sono arrivati dal database.
+  bool _loading = true;
   List<HotelModel> _allHotels = [];
   List<HotelModel> _filteredHotels = [];
   Set<Marker> _markers = {};
@@ -64,13 +67,17 @@ class _HotelsPageState extends State<HotelsPage> {
   }
   
   Future<void> _loadHotels() async {
+    final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode;
     final hotels =
         await ContentService.fetchHotels(languageCode: languageCode);
+    // La crescia resta almeno un secondo, così non "lampeggia".
+    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _allHotels = hotels;
+      _loading = false;
     });
     _applyFilters();
   }
@@ -221,7 +228,9 @@ class _HotelsPageState extends State<HotelsPage> {
           ),
           // Lista hotel
           Expanded(
-            child: _filteredHotels.isEmpty
+            child: _loading
+                ? CresciaLoader(onRetry: _loadHotels)
+                : _filteredHotels.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 24),

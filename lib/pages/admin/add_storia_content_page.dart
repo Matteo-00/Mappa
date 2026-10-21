@@ -6,6 +6,7 @@ import '../../models/storia_model.dart';
 import '../../services/content_service.dart';
 import '../../theme/app_colors.dart';
 import 'admin_widgets.dart';
+import '../../widgets/crescia_loader.dart';
 
 const List<String> _storiaCategorie = [
   'chiesa',
@@ -86,7 +87,10 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
   }
 
   Future<void> _loadEpoche() async {
+    final loadingStart = DateTime.now();
     final epoche = await ContentService.fetchStoriaEpoche();
+    // La crescia resta almeno un secondo, così non "lampeggia".
+    if (_loadingEpoche) await CresciaLoader.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _epoche = epoche;
@@ -218,7 +222,7 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
         title: Text(_isEditing ? 'Modifica contenuto storico' : 'Nuovo contenuto storico'),
       ),
       body: _loadingEpoche
-          ? const Center(child: CircularProgressIndicator())
+          ? CresciaLoader(onRetry: _loadEpoche)
           : Form(
               key: _formKey,
               child: ListView(

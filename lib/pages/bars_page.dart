@@ -14,6 +14,7 @@ import 'admin/admin_widgets.dart';
 import 'admin/add_place_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
+import '../widgets/crescia_loader.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
 import 'bar_detail_page.dart';
@@ -30,6 +31,8 @@ class _BarsPageState extends State<BarsPage> {
   GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
 
+  /// True finché i dati non sono arrivati dal database.
+  bool _loading = true;
   List<BarModel> _allBars = [];
   List<BarModel> _filteredBars = [];
   Set<Marker> _markers = {};
@@ -64,12 +67,16 @@ class _BarsPageState extends State<BarsPage> {
   }
 
   Future<void> _loadBars() async {
+    final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode;
     final bars = await ContentService.fetchBars(languageCode: languageCode);
+    // La crescia resta almeno un secondo, così non "lampeggia".
+    if (_loading) await CresciaLoader.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _allBars = bars;
+      _loading = false;
     });
     _applyFilters();
   }
@@ -219,7 +226,9 @@ class _BarsPageState extends State<BarsPage> {
           ),
           // Lista bar
           Expanded(
-            child: _filteredBars.isEmpty
+            child: _loading
+                ? CresciaLoader(onRetry: _loadBars)
+                : _filteredBars.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 24),
