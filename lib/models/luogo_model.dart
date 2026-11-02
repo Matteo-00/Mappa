@@ -4,7 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../utils/geo.dart';
 
 /// I tipi di luogo contenuti nella tabella `luoghi`.
-enum LuogoTipo { chiesa, museo, negozio, parcheggio }
+enum LuogoTipo { chiesa, museo, negozio, parcheggio, agriturismo }
 
 extension LuogoTipoInfo on LuogoTipo {
   /// Valore salvato nella colonna `tipo` (e identificativo del punto sulla
@@ -28,6 +28,8 @@ extension LuogoTipoInfo on LuogoTipo {
         return Icons.storefront_outlined;
       case LuogoTipo.parcheggio:
         return Icons.local_parking_rounded;
+      case LuogoTipo.agriturismo:
+        return Icons.cottage_outlined;
     }
   }
 
@@ -42,6 +44,8 @@ extension LuogoTipoInfo on LuogoTipo {
         return const Color(0xFFC2185B);
       case LuogoTipo.parcheggio:
         return const Color(0xFF546E7A);
+      case LuogoTipo.agriturismo:
+        return const Color(0xFF7CA82B);
     }
   }
 
@@ -56,11 +60,14 @@ extension LuogoTipoInfo on LuogoTipo {
         return BitmapDescriptor.hueMagenta;
       case LuogoTipo.parcheggio:
         return BitmapDescriptor.hueAzure;
+      case LuogoTipo.agriturismo:
+        return 90; // verde-lime, tra giallo e verde
     }
   }
 
-  /// Solo i negozi hanno la valutazione in stelle.
-  bool get hasRating => this == LuogoTipo.negozio;
+  /// Negozi e agriturismi hanno la valutazione in stelle.
+  bool get hasRating =>
+      this == LuogoTipo.negozio || this == LuogoTipo.agriturismo;
 
   /// Chiese e musei si collegano ai contenuti di "Storia di Gubbio".
   bool get hasStoria =>

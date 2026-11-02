@@ -15,7 +15,7 @@ import '../models/luogo_model.dart';
 import '../pages/map_page.dart';
 import '../pages/storia_page.dart';
 import '../pages/itinerari_page.dart';
-import '../pages/user_profile_page.dart';
+import '../pages/contact_page.dart';
 import '../pages/login_page.dart';
 
 /// Sottovoce di un gruppo del menu (icona, titolo, pagina da aprire).
@@ -80,6 +80,7 @@ class AppDrawer extends StatelessWidget {
                 controller: scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 children: [
+                  // Eventi: voce singola.
                   _menuItem(
                     context,
                     icon: Icons.calendar_today_outlined,
@@ -103,77 +104,69 @@ class AppDrawer extends StatelessWidget {
                       );
                     },
                   ),
-                  // Un'unica voce che si apre con le 3 sottovoci: risparmia spazio nel menu.
+                  // Da visitare: chiese, musei, storia e itinerari.
+                  _menuGroup(
+                    context,
+                    icon: Icons.account_balance_outlined,
+                    title: l10n.t('menuToVisit'),
+                    items: [
+                      _SubItem(
+                        LuogoTipo.chiesa.icon,
+                        l10n.t(LuogoTipo.chiesa.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.chiesa),
+                      ),
+                      _SubItem(
+                        LuogoTipo.museo.icon,
+                        l10n.t(LuogoTipo.museo.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.museo),
+                      ),
+                      _SubItem(Icons.auto_stories_outlined,
+                          l10n.storiaDiGubbioNav, () => const StoriaPage()),
+                      _SubItem(Icons.map_outlined,
+                          l10n.suggestedItinerariesNav,
+                          () => const ItinerariPage()),
+                    ],
+                  ),
+                  // Dove mangiare.
                   _menuGroup(
                     context,
                     icon: Icons.restaurant_menu,
-                    title: l10n.t('menuEatDrinkStay'),
+                    title: l10n.t('menuWhereEat'),
                     items: [
                       _SubItem(Icons.restaurant_menu, l10n.restaurantsNav,
                           () => const RestaurantsPage()),
                       _SubItem(Icons.local_cafe_outlined, l10n.barsNav,
                           () => const BarsPage()),
+                    ],
+                  ),
+                  // Dove dormire.
+                  _menuGroup(
+                    context,
+                    icon: Icons.hotel_outlined,
+                    title: l10n.t('menuWhereSleep'),
+                    items: [
                       _SubItem(Icons.hotel_outlined, l10n.hotelsNav,
                           () => const HotelsPage()),
+                      _SubItem(
+                        LuogoTipo.agriturismo.icon,
+                        l10n.t(LuogoTipo.agriturismo.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.agriturismo),
+                      ),
                     ],
                   ),
-                  // Chiese, musei e negozi.
+                  // Esplora: negozi, mappa e parcheggi.
                   _menuGroup(
                     context,
-                    icon: Icons.museum_outlined,
-                    title: l10n.t('menuCultureShops'),
+                    icon: Icons.explore_outlined,
+                    title: l10n.t('menuExplore'),
                     items: [
-                      for (final t in const [
-                        LuogoTipo.chiesa,
-                        LuogoTipo.museo,
-                        LuogoTipo.negozio,
-                      ])
-                        _SubItem(t.icon, l10n.t(t.navKey),
-                            () => LuoghiPage(tipo: t)),
-                    ],
-                  ),
-                  _menuItem(
-                    context,
-                    icon: Icons.place_outlined,
-                    title: l10n.mapNav,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MapPage()),
-                      );
-                    },
-                  ),
-                  _menuItem(
-                    context,
-                    icon: Icons.auto_stories_outlined,
-                    title: l10n.storiaDiGubbioNav,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const StoriaPage()),
-                      );
-                    },
-                  ),
-                  _menuItem(
-                    context,
-                    icon: Icons.map_outlined,
-                    title: l10n.suggestedItinerariesNav,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ItinerariPage()),
-                      );
-                    },
-                  ),
-                  // Informazioni utili (per ora solo i parcheggi).
-                  _menuGroup(
-                    context,
-                    icon: Icons.info_outline_rounded,
-                    title: l10n.t('menuUsefulInfo'),
-                    items: [
+                      _SubItem(
+                        LuogoTipo.negozio.icon,
+                        l10n.t(LuogoTipo.negozio.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.negozio),
+                      ),
+                      _SubItem(Icons.place_outlined, l10n.mapNav,
+                          () => const MapPage()),
                       _SubItem(
                         LuogoTipo.parcheggio.icon,
                         l10n.t(LuogoTipo.parcheggio.navKey),
@@ -181,16 +174,16 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Contatti.
                   _menuItem(
                     context,
-                    icon: Icons.person_outline_rounded,
-                    title: l10n.userNav,
+                    icon: Icons.mail_outline_rounded,
+                    title: l10n.t('menuContacts'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const UserProfilePage()),
+                        MaterialPageRoute(builder: (_) => const ContactPage()),
                       );
                     },
                   ),
@@ -229,7 +222,7 @@ class AppDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                l10n.appVersionLabel('1.2.0'),
+                l10n.appVersionLabel('1.2.1'),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textMuted.withOpacity(0.8),

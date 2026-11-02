@@ -23,6 +23,7 @@ import 'hotels_page.dart';
 import 'admin/scegli_vetrina_page.dart';
 import 'map_page.dart';
 import 'storia_page.dart';
+import 'user_profile_page.dart';
 import 'itinerari_page.dart';
 import 'itinerario_detail_page.dart';
 
@@ -51,9 +52,16 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
   /// Audio del video di sfondo: parte muto, il pulsante lo attiva.
   final ValueNotifier<bool> _videoMuted = ValueNotifier<bool>(true);
 
+  /// Il video va una volta sola: a fine corsa [_videoFinished] diventa true e
+  /// compare il pulsante "play"; premendolo [_videoReplay] fa ripartire il video.
+  final ValueNotifier<bool> _videoFinished = ValueNotifier<bool>(false);
+  final ValueNotifier<int> _videoReplay = ValueNotifier<int>(0);
+
   @override
   void dispose() {
     _videoMuted.dispose();
+    _videoFinished.dispose();
+    _videoReplay.dispose();
     super.dispose();
   }
 
@@ -251,11 +259,29 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                         icon: Icons.menu,
                         onTap: () => _scaffoldKey.currentState?.openDrawer(),
                       ),
-                      if (context.watch<AuthService>().isAdmin)
-                        _glassIconButton(
-                          icon: Icons.add,
-                          onTap: _showAdminMenu,
-                        ),
+                      // In alto a destra: il profilo (icona utente) per tutti e,
+                      // alla sua sinistra, il "+" per aggiungere contenuti
+                      // (solo amministratori).
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (context.watch<AuthService>().isAdmin) ...[
+                            _glassIconButton(
+                              icon: Icons.add,
+                              onTap: _showAdminMenu,
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          _glassIconButton(
+                            icon: Icons.person_outline_rounded,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const UserProfilePage()),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -344,6 +370,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
         // Video a tutto schermo; finché non è pronto (o se manca) lo sfondo di riserva.
         HomeVideoBackground(
           muted: _videoMuted,
+          finished: _videoFinished,
+          replay: _videoReplay,
           fallback: Image.asset(
             'assets/geo/hero.jpg',
             fit: BoxFit.cover,
@@ -408,12 +436,30 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
 
   /// Attiva / disattiva l'audio del video di sfondo.
   Widget _buildSoundButton() {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _videoMuted,
-      builder: (context, muted, _) => _glassIconButton(
-        icon: muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-        onTap: () => _videoMuted.value = !muted,
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ValueListenableBuilder<bool>(
+          valueListenable: _videoMuted,
+          builder: (context, muted, _) => _glassIconButton(
+            icon: muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+            onTap: () => _videoMuted.value = !muted,
+          ),
+        ),
+        // A video finito: "play" per rivederlo.
+        ValueListenableBuilder<bool>(
+          valueListenable: _videoFinished,
+          builder: (context, finished, _) => finished
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: _glassIconButton(
+                    icon: Icons.play_arrow_rounded,
+                    onTap: () => _videoReplay.value++,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 

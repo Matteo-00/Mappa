@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
+import '../services/saved_login_service.dart';
 import '../l10n/app_localizations.dart';
 import 'home_landing_page.dart';
 import 'register_page.dart';
@@ -23,6 +25,26 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+
+  /// Casella "Ricorda password": se attiva, email e password restano salvate
+  /// (in modo sicuro) sul telefono e al prossimo accesso sono già compilate.
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedLogin();
+  }
+
+  Future<void> _loadSavedLogin() async {
+    final saved = await SavedLoginService.load();
+    if (saved == null || !mounted) return;
+    setState(() {
+      _emailController.text = saved.email;
+      _passwordController.text = saved.password;
+      _rememberMe = true;
+    });
+  }
 
   @override
   void dispose() {
@@ -63,6 +85,16 @@ class _LoginPageState extends State<LoginPage> {
       if (user == null) {
         throw 'Login fallito';
       }
+
+      // Ricorda (o dimentica) le credenziali secondo la casella spuntata.
+      if (_rememberMe) {
+        await SavedLoginService.save(email, password);
+      } else {
+        await SavedLoginService.clear();
+      }
+      // Dice ad Android/Google che il login è andato bene: può proporre di
+      // salvare la password nel gestore password del telefono.
+      TextInput.finishAutofillContext(shouldSave: true);
 
       // Recupera dati utente dalla tabella utenti
       final userData = await supabase
@@ -173,7 +205,8 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              Form(
+                              AutofillGroup(
+                                child: Form(
                                 key: _formKey,
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -184,6 +217,10 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                                           const BoxConstraints(maxWidth: 400),
                                       child: TextFormField(
                                         controller: _emailController,
+                                        autofillHints: const [
+                                          AutofillHints.username,
+                                          AutofillHints.email,
+                                        ],
                                         keyboardType:
                                             TextInputType.emailAddress,
                                         cursorColor: Colors.black,
@@ -248,6 +285,9 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                                           const BoxConstraints(maxWidth: 400),
                                       child: TextFormField(
                                         controller: _passwordController,
+                                        autofillHints: const [
+                                          AutofillHints.password,
+                                        ],
                                         obscureText: _obscurePassword,
                                         cursorColor: Colors.black,
                                         textInputAction: TextInputAction.done,
@@ -318,7 +358,54 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                                       ),
                                     ),
 
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 8),
+
+                                    // Ricorda password
+                                    Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      alignment: Alignment.centerLeft,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(8),
+                                        onTap: () => setState(
+                                            () => _rememberMe = !_rememberMe),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 4, horizontal: 2),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: Checkbox(
+                                                  value: _rememberMe,
+                                                  activeColor:
+                                                      const Color(0xFFB13B2E),
+                                                  materialTapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                  onChanged: (v) => setState(
+                                                      () => _rememberMe =
+                                                          v ?? false),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                l10n.t('rememberPassword'),
+                                                style: const TextStyle(
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF162B3D),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 8),
 
                                     // Password dimenticata
                                     Container(
@@ -463,6 +550,7 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                                     LegalLinksRow(l10n: l10n),
                                   ],
                                 ),
+                              ),
                               ),
                             ],
                           ),

@@ -24,7 +24,7 @@
 
 CREATE TABLE IF NOT EXISTS public.luoghi (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tipo TEXT NOT NULL CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'agriturismo')),
   nome TEXT NOT NULL,
   descrizione TEXT NOT NULL DEFAULT '',
   indirizzo TEXT NOT NULL DEFAULT '',
