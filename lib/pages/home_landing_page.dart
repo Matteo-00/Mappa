@@ -21,6 +21,7 @@ import 'restaurants_page.dart';
 import 'bars_page.dart';
 import 'hotels_page.dart';
 import 'admin/scegli_vetrina_page.dart';
+import 'admin/review_reports_page.dart';
 import 'map_page.dart';
 import 'storia_page.dart';
 import 'user_profile_page.dart';
@@ -218,6 +219,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
               tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
               tile(Icons.route, _l10n.addItinerarioMenuItem,
                   const AddItinerarioPage()),
+              tile(Icons.flag_outlined, 'Recensioni segnalate',
+                  const ReviewReportsPage()),
               const SizedBox(height: 12),
             ],
           ),

@@ -106,6 +106,11 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                       ),
 
                       _Bullet(
+                        title: l10n.t('csReviewsTitle'),
+                        text: l10n.t('csReviewsText'),
+                      ),
+
+                      _Bullet(
                         title: 'Supabase',
                         text: l10n.t('csSupabaseText'),
                       ),

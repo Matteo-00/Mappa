@@ -81,6 +81,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     setState(() {
       _allRestaurants = restaurants;
       _loading = false;
+      _filters.dropMissingTag(_allRestaurants.map((p) => p.cuisineTypes));
     });
     _applyFilters();
   }

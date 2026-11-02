@@ -88,6 +88,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
     setState(() {
       _all = items;
       _loading = false;
+      _filters.dropMissingTag(_all.map((p) => p.tags));
     });
     _applyFilters();
   }

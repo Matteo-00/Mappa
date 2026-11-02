@@ -172,6 +172,16 @@ class AppDrawer extends StatelessWidget {
                         l10n.t(LuogoTipo.parcheggio.navKey),
                         () => const LuoghiPage(tipo: LuogoTipo.parcheggio),
                       ),
+                      _SubItem(
+                        LuogoTipo.ascensore.icon,
+                        l10n.t(LuogoTipo.ascensore.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.ascensore),
+                      ),
+                      _SubItem(
+                        LuogoTipo.bagno.icon,
+                        l10n.t(LuogoTipo.bagno.navKey),
+                        () => const LuoghiPage(tipo: LuogoTipo.bagno),
+                      ),
                     ],
                   ),
                   // Contatti.

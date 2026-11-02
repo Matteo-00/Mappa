@@ -29,6 +29,12 @@ class PlaceFilterState {
     topRatedOnly = false;
     tag = null;
   }
+
+  /// Un tag che non esiste più (es. dopo un cambio lingua i tag arrivano
+  /// tradotti) viene azzerato, altrimenti la lista resterebbe vuota.
+  void dropMissingTag(Iterable<List<String>> allTags) {
+    if (tag != null && !allTags.any((tags) => tags.contains(tag))) tag = null;
+  }
 }
 
 /// Logica di filtro/ordinamento comune, indipendente dal tipo di luogo.

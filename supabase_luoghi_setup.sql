@@ -1,16 +1,17 @@
 -- ============================================================
--- VISIT GUBBIO - CHIESE, MUSEI, NEGOZI E PARCHEGGI
+-- VISIT GUBBIO - CHIESE, MUSEI, NEGOZI, PARCHEGGI, ASCENSORI E BAGNI
 -- ============================================================
 -- Esegui questo script nel "SQL Editor" di Supabase, TUTTO IN UNA
 -- VOLTA, dopo aver già eseguito supabase_admin_setup.sql (serve la
 -- funzione public.is_admin()) e supabase_storia_setup.sql (serve la
 -- funzione public.set_updated_at()).
 --
--- Crea UNA sola tabella "luoghi" che contiene tutti e 4 i tipi
--- (colonna "tipo": chiesa, museo, negozio, parcheggio).
+-- Crea UNA sola tabella "luoghi" che contiene tutti e 6 i tipi
+-- (colonna "tipo": chiesa, museo, negozio, parcheggio, ascensore, bagno).
 --   - chiese e musei: collegamenti a "Storia di Gubbio" (storia_ids)
 --   - negozi: valutazione in stelle (rating)
---   - parcheggi: titolo, descrizione, indirizzo e posizione
+--   - parcheggi, ascensori e bagni pubblici: titolo, descrizione,
+--     indirizzo e posizione
 --
 -- RLS: lettura per tutti gli utenti autenticati, scrittura
 -- (insert/update/delete) solo per gli ADMIN.
@@ -24,7 +25,7 @@
 
 CREATE TABLE IF NOT EXISTS public.luoghi (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tipo TEXT NOT NULL CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'agriturismo')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'agriturismo', 'ascensore', 'bagno')),
   nome TEXT NOT NULL,
   descrizione TEXT NOT NULL DEFAULT '',
   indirizzo TEXT NOT NULL DEFAULT '',

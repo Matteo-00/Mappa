@@ -4,7 +4,15 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../utils/geo.dart';
 
 /// I tipi di luogo contenuti nella tabella `luoghi`.
-enum LuogoTipo { chiesa, museo, negozio, parcheggio, agriturismo }
+enum LuogoTipo {
+  chiesa,
+  museo,
+  negozio,
+  parcheggio,
+  agriturismo,
+  ascensore,
+  bagno,
+}
 
 extension LuogoTipoInfo on LuogoTipo {
   /// Valore salvato nella colonna `tipo` (e identificativo del punto sulla
@@ -30,6 +38,10 @@ extension LuogoTipoInfo on LuogoTipo {
         return Icons.local_parking_rounded;
       case LuogoTipo.agriturismo:
         return Icons.cottage_outlined;
+      case LuogoTipo.ascensore:
+        return Icons.elevator_outlined;
+      case LuogoTipo.bagno:
+        return Icons.wc_rounded;
     }
   }
 
@@ -46,6 +58,10 @@ extension LuogoTipoInfo on LuogoTipo {
         return const Color(0xFF546E7A);
       case LuogoTipo.agriturismo:
         return const Color(0xFF7CA82B);
+      case LuogoTipo.ascensore:
+        return const Color(0xFF6D4C41);
+      case LuogoTipo.bagno:
+        return const Color(0xFF7B1FA2);
     }
   }
 
@@ -62,6 +78,10 @@ extension LuogoTipoInfo on LuogoTipo {
         return BitmapDescriptor.hueAzure;
       case LuogoTipo.agriturismo:
         return 90; // verde-lime, tra giallo e verde
+      case LuogoTipo.ascensore:
+        return BitmapDescriptor.hueOrange;
+      case LuogoTipo.bagno:
+        return BitmapDescriptor.hueViolet;
     }
   }
 
@@ -73,8 +93,15 @@ extension LuogoTipoInfo on LuogoTipo {
   bool get hasStoria =>
       this == LuogoTipo.chiesa || this == LuogoTipo.museo;
 
-  /// I parcheggi non hanno tag, telefono e sito web.
-  bool get hasContacts => this != LuogoTipo.parcheggio;
+  /// Le informazioni utili (parcheggi, ascensori e bagni pubblici) non hanno
+  /// tag, telefono e sito web.
+  bool get hasContacts => !isUsefulInfo;
+
+  /// Voci della sezione "Info utili" del menu.
+  bool get isUsefulInfo =>
+      this == LuogoTipo.parcheggio ||
+      this == LuogoTipo.ascensore ||
+      this == LuogoTipo.bagno;
 
   /// Chiavi di `AppLocalizations`.
   String get navKey => 'nav_$name'; // titolo pagina / voce di menu / chip mappa
@@ -84,7 +111,8 @@ extension LuogoTipoInfo on LuogoTipo {
   String get deletedKey => 'deleted_$name';
 }
 
-/// Una chiesa, un museo, un negozio o un parcheggio.
+/// Una chiesa, un museo, un negozio, un parcheggio, un ascensore o un bagno
+/// pubblico.
 class LuogoModel {
   final String id;
   final LuogoTipo tipo;

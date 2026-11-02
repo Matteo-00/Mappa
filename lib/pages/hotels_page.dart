@@ -81,6 +81,7 @@ class _HotelsPageState extends State<HotelsPage> {
     setState(() {
       _allHotels = hotels;
       _loading = false;
+      _filters.dropMissingTag(_allHotels.map((p) => p.cuisineTypes));
     });
     _applyFilters();
   }

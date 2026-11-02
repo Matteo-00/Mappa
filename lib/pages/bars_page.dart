@@ -80,6 +80,7 @@ class _BarsPageState extends State<BarsPage> {
     setState(() {
       _allBars = bars;
       _loading = false;
+      _filters.dropMissingTag(_allBars.map((p) => p.cuisineTypes));
     });
     _applyFilters();
   }

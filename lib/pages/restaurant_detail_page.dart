@@ -10,6 +10,9 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/rating_icons.dart';
+import '../widgets/reviews_section.dart';
+import '../services/content_service.dart';
+import '../services/review_service.dart';
 import 'map_page.dart';
 
 /// Pagina dettaglio ristorante
@@ -32,6 +35,22 @@ class RestaurantDetailPage extends StatelessWidget {
     this.mapKind = MapKind.restaurant,
     this.extraSection,
   });
+
+  /// Tipo per le recensioni degli utenti: solo ristoranti, bar e hotel
+  /// salvati su Supabase (null = niente recensioni).
+  String? get _reviewsEntity {
+    if (!ContentService.isRemoteId(restaurant.id)) return null;
+    switch (mapKind) {
+      case MapKind.restaurant:
+        return ReviewService.restaurants;
+      case MapKind.bar:
+        return ReviewService.bars;
+      case MapKind.hotel:
+        return ReviewService.hotels;
+      default:
+        return null;
+    }
+  }
 
   AppLocalizations _l10n(BuildContext context) => AppLocalizations.of(
       context.read<LanguageService>().currentLanguageCode);
@@ -86,6 +105,17 @@ class RestaurantDetailPage extends StatelessWidget {
 
                   if (restaurant.rating != null) ...[
                     const SizedBox(height: 10),
+                    // Con le recensioni si distingue il voto della redazione
+                    // da quello degli utenti.
+                    if (_reviewsEntity != null)
+                      Text(
+                        l10n.t('rvOfficialRating'),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                     _buildRatingRow(context, restaurant.rating!),
                   ],
 
@@ -204,6 +234,17 @@ class RestaurantDetailPage extends StatelessWidget {
                     suffix: true,
                   ),
 
+                  if (_reviewsEntity != null) ...[
+                    const SizedBox(height: 20),
+                    const Divider(height: 1, color: AppColors.grigioChiaro),
+                    const SizedBox(height: 20),
+                    ReviewsSection(
+                      entityType: _reviewsEntity!,
+                      entityId: restaurant.id,
+                      kind: _ratingKind,
+                    ),
+                  ],
+
                   const SizedBox(height: 90),
                 ],
               ),
@@ -217,16 +258,18 @@ class RestaurantDetailPage extends StatelessWidget {
     );
   }
 
+  // Ogni tipo di luogo ha la sua icona: crescia, Amaro Matto, Palazzo dei Consoli.
+  RatingKind get _ratingKind => mapKind == MapKind.bar
+      ? RatingKind.amaro
+      : mapKind == MapKind.hotel
+          ? RatingKind.palazzo
+          : (mapKind == MapKind.negozio || mapKind == MapKind.agriturismo)
+              ? RatingKind.stelle
+              : RatingKind.crescia;
+
   Widget _buildRatingRow(BuildContext context, double rating) {
-    // Ogni tipo di luogo ha la sua icona: crescia, Amaro Matto, Palazzo dei Consoli.
-    final kind = mapKind == MapKind.bar
-        ? RatingKind.amaro
-        : mapKind == MapKind.hotel
-            ? RatingKind.palazzo
-            : (mapKind == MapKind.negozio || mapKind == MapKind.agriturismo)
-                ? RatingKind.stelle
-                : RatingKind.crescia;
-    return RatingSummary(rating: rating, kind: kind, iconSize: 22, fontSize: 15);
+    return RatingSummary(
+        rating: rating, kind: _ratingKind, iconSize: 22, fontSize: 15);
   }
   
   Widget _buildImagePlaceholder() {

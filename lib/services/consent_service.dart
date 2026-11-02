@@ -2,8 +2,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Gestisce la persistenza dei consensi dell'utente (privacy, ecc.).
 /// La privacy va accettata una sola volta: il flag resta salvato sul dispositivo.
+/// Quando l'informativa cambia in modo sostanziale si alza la versione della
+/// chiave, così la schermata di consenso ricompare a tutti
+/// (v2: recensioni degli utenti con nome visibile).
 class ConsentService {
-  static const String _privacyKey = 'privacy_accepted_v1';
+  static const String _privacyKey = 'privacy_accepted_v2';
   static const String _locationRationaleKey = 'location_rationale_shown_v1';
 
   /// True se l'utente ha già accettato l'informativa sulla privacy.
