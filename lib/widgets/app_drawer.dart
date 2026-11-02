@@ -168,17 +168,19 @@ class AppDrawer extends StatelessWidget {
                       );
                     },
                   ),
-                  // Informazioni utili (per ora solo i parcheggi).
+                  // Informazioni utili: parcheggi, ascensori e bagni pubblici.
                   _menuGroup(
                     context,
                     icon: Icons.info_outline_rounded,
                     title: l10n.t('menuUsefulInfo'),
                     items: [
-                      _SubItem(
-                        LuogoTipo.parcheggio.icon,
-                        l10n.t(LuogoTipo.parcheggio.navKey),
-                        () => const LuoghiPage(tipo: LuogoTipo.parcheggio),
-                      ),
+                      for (final t in const [
+                        LuogoTipo.parcheggio,
+                        LuogoTipo.ascensore,
+                        LuogoTipo.bagno,
+                      ])
+                        _SubItem(t.icon, l10n.t(t.navKey),
+                            () => LuoghiPage(tipo: t)),
                     ],
                   ),
                   _menuItem(

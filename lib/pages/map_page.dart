@@ -38,11 +38,14 @@ class MapKind {
   static const event = 'event';
   static const itinerary = 'itinerary';
 
-  // Chiese, musei, negozi, parcheggi (stessi valori di `LuogoTipo.db`).
+  // Chiese, musei, negozi, parcheggi, ascensori e bagni pubblici (stessi
+  // valori di `LuogoTipo.db`).
   static const chiesa = 'chiesa';
   static const museo = 'museo';
   static const negozio = 'negozio';
   static const parcheggio = 'parcheggio';
+  static const ascensore = 'ascensore';
+  static const bagno = 'bagno';
 
   /// Tappa di un itinerario (compare solo quando si apre un itinerario).
   static const stop = 'stop';
@@ -64,6 +67,8 @@ class MapKind {
       case museo:
       case negozio:
       case parcheggio:
+      case ascensore:
+      case bagno:
         return kind;
       default:
         return 'itin';
@@ -493,6 +498,8 @@ class _MapPageState extends State<MapPage> {
       case MapKind.museo:
       case MapKind.negozio:
       case MapKind.parcheggio:
+      case MapKind.ascensore:
+      case MapKind.bagno:
         return _showLuoghi[LuogoTipoInfo.parse(kind)] ?? true;
       default:
         return _showItinerari;
@@ -517,6 +524,8 @@ class _MapPageState extends State<MapPage> {
       case MapKind.museo:
       case MapKind.negozio:
       case MapKind.parcheggio:
+      case MapKind.ascensore:
+      case MapKind.bagno:
         final tipo = LuogoTipoInfo.parse(kind);
         if (tipo != null) _showLuoghi[tipo] = value;
         break;
@@ -1251,9 +1260,9 @@ class _MapPageState extends State<MapPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Tipo di Mappa',
-                  style: TextStyle(
+                Text(
+                  _l.t('mapTypeTitle'),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.bluNotte,
@@ -1261,13 +1270,13 @@ class _MapPageState extends State<MapPage> {
                 ),
                 const SizedBox(height: 18),
                 _buildMapTypeOption(
-                    'Standard', MapType.normal, Icons.map_outlined),
+                    _l.t('mapTypeStandard'), MapType.normal, Icons.map_outlined),
                 const SizedBox(height: 12),
-                _buildMapTypeOption('Satellite', MapType.satellite,
+                _buildMapTypeOption(_l.t('mapTypeSatellite'), MapType.satellite,
                     Icons.satellite_alt_outlined),
                 const SizedBox(height: 12),
                 _buildMapTypeOption(
-                    'Ibrida', MapType.hybrid, Icons.terrain_outlined),
+                    _l.t('mapTypeHybrid'), MapType.hybrid, Icons.terrain_outlined),
               ],
             ),
           ),

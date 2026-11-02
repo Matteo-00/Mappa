@@ -124,6 +124,11 @@ class UserProfilePage extends StatelessWidget {
                     ],
                   ),
 
+                  const SizedBox(height: 20),
+
+                  // Lingua dell'app (testi e contenuti si aggiornano subito)
+                  _buildLanguageCard(context, l10n),
+
                   const SizedBox(height: 28),
 
                   // Logout
@@ -232,6 +237,80 @@ class UserProfilePage extends StatelessWidget {
         (route) => false,
       );
     }
+  }
+
+  Widget _buildLanguageCard(BuildContext context, AppLocalizations l10n) {
+    final languageService = context.watch<LanguageService>();
+    final current = languageService.currentLanguageCode;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluNotte.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Text(
+              l10n.language,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.bluNotte,
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.grigioChiaro),
+          for (final code in AppLocalizations.supportedCodes)
+            InkWell(
+              onTap: () => languageService.setLanguage(code),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      AppLocalizations.flagFor(code),
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.nameFor(code),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: code == current
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: AppColors.bluNotte,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      code == current
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_off_rounded,
+                      size: 22,
+                      color: code == current
+                          ? AppColors.rossoGubbio
+                          : AppColors.grigioChiaro,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
   }
 
   Widget _buildInfoCard({

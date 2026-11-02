@@ -64,7 +64,8 @@ const ENTITY_CONFIG: Record<
     fields: ["descrizione", "tags"],
   },
 
-  // Chiese, musei, negozi e parcheggi (un'unica tabella con colonna `tipo`)
+  // Chiese, musei, negozi, parcheggi, ascensori e bagni pubblici (un'unica
+  // tabella con colonna `tipo`)
   luoghi: {
     table: "luoghi",
     fields: ["descrizione", "tags"],
@@ -72,6 +73,8 @@ const ENTITY_CONFIG: Record<
       chiesa: ["nome"],
       museo: ["nome"],
       parcheggio: ["nome"],
+      ascensore: ["nome"],
+      bagno: ["nome"],
     },
   },
 
