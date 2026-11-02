@@ -10,6 +10,9 @@ import 'map_page.dart';
 import 'tappa_detail_page.dart';
 import '../models/itinerario_model.dart';
 import '../theme/app_colors.dart';
+import '../services/content_service.dart';
+import '../services/review_service.dart';
+import '../widgets/reviews_section.dart';
 import 'itinerari_page.dart' show itinerarioImagePlaceholder;
 
 /// Pagina di dettaglio di un itinerario, con hero, informazioni e tappe.
@@ -294,6 +297,15 @@ class _ItinerarioDetailView extends StatelessWidget {
                     final isLast = i == itinerario.tappe.length - 1;
                     return _buildTappa(context, l10n, i, tappa, isLast);
                   }),
+                  if (ContentService.isRemoteId(itinerario.id)) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, color: AppColors.grigioChiaro),
+                    const SizedBox(height: 20),
+                    ReviewsSection(
+                      entityType: ReviewService.itineraries,
+                      entityId: itinerario.id,
+                    ),
+                  ],
                 ],
               ),
             ),
