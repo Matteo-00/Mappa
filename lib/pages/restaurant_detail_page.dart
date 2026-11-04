@@ -69,15 +69,12 @@ class RestaurantDetailPage extends StatelessWidget {
             pinned: true,
             automaticallyImplyLeading: false,
             backgroundColor: AppColors.avorio,
-            leadingWidth: 116,
+            leadingWidth: NavButtons.widthFor(context) + 8,
             leading: const Padding(
               padding: EdgeInsets.only(left: 8, top: 4),
-              child: Row(
-                children: [
-                  BackCircleButton(light: true),
-                  SizedBox(width: 8),
-                  HomeButton(light: true),
-                ],
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: NavButtons(light: true),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
@@ -266,7 +263,7 @@ class RestaurantDetailPage extends StatelessWidget {
       ? RatingKind.amaro
       : mapKind == MapKind.hotel
           ? RatingKind.palazzo
-          : mapKind == MapKind.negozio
+          : (mapKind == MapKind.negozio || mapKind == MapKind.agriturismo)
               ? RatingKind.stelle
               : RatingKind.crescia;
 

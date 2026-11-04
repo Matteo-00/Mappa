@@ -247,11 +247,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (Navigator.of(context).canPop()) ...[
-                      const BackCircleButton(),
-                      const SizedBox(width: 8),
-                    ],
-                    const HomeButton(),
+                    const NavButtons(),
                   ],
                 ),
               ),

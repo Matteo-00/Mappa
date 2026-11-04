@@ -54,7 +54,7 @@ class VisitGubbioApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Visit Gubbio',
         debugShowCheckedModeBanner: false,
-        navigatorObservers: [appRouteObserver],
+        navigatorObservers: [appRouteObserver, navStackObserver],
         theme: ThemeData(
           useMaterial3: true,
           scaffoldBackgroundColor: AppColors.avorio,

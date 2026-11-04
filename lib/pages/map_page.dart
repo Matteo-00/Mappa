@@ -8,7 +8,8 @@ import '../theme/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/distance_label.dart';
 import '../widgets/premium_scaffold.dart';
-import '../widgets/scroll_hints.dart';
+import '../widgets/filter_sheet.dart';
+import '../widgets/app_filter_chip.dart';
 import '../widgets/loading_screen.dart';
 import '../models/restaurant_model.dart';
 import '../models/bar_model.dart';
@@ -44,6 +45,7 @@ class MapKind {
   static const museo = 'museo';
   static const negozio = 'negozio';
   static const parcheggio = 'parcheggio';
+  static const agriturismo = 'agriturismo';
   static const ascensore = 'ascensore';
   static const bagno = 'bagno';
 
@@ -67,6 +69,7 @@ class MapKind {
       case museo:
       case negozio:
       case parcheggio:
+      case agriturismo:
       case ascensore:
       case bagno:
         return kind;
@@ -160,6 +163,9 @@ class _MapPageState extends State<MapPage> {
   bool _showHotels = true;
   bool _showEvents = true;
   bool _showItinerari = true;
+
+  /// La legenda parte chiusa (occupa troppo spazio sulla mappa).
+  bool _legendOpen = false;
 
   /// Chiese, musei, negozi, parcheggi: quali tipi sono visibili.
   final Map<LuogoTipo, bool> _showLuoghi = {
@@ -498,6 +504,7 @@ class _MapPageState extends State<MapPage> {
       case MapKind.museo:
       case MapKind.negozio:
       case MapKind.parcheggio:
+      case MapKind.agriturismo:
       case MapKind.ascensore:
       case MapKind.bagno:
         return _showLuoghi[LuogoTipoInfo.parse(kind)] ?? true;
@@ -524,6 +531,7 @@ class _MapPageState extends State<MapPage> {
       case MapKind.museo:
       case MapKind.negozio:
       case MapKind.parcheggio:
+      case MapKind.agriturismo:
       case MapKind.ascensore:
       case MapKind.bagno:
         final tipo = LuogoTipoInfo.parse(kind);
@@ -981,10 +989,9 @@ class _MapPageState extends State<MapPage> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Row(
                   children: [
-                    // Indietro: torna alla tappa / al luogo da cui si è partiti.
-                    const BackCircleButton(),
-                    const SizedBox(width: 8),
-                    const HomeButton(),
+                    // Indietro (solo se la mappa si è aperta da un'altra
+                    // schermata: tappa, ristorante...) + casina.
+                    const NavButtons(),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Align(
@@ -1030,26 +1037,19 @@ class _MapPageState extends State<MapPage> {
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.only(top: 74),
-                child: HintedChipRow(
-                  height: 44,
-                  fadeColor: null, // sopra la mappa: solo la freccia, niente sfumatura
+                // Un solo pulsante "Filtri" che apre un pannello ordinato per
+                // gruppi (mangiare, dormire, visitare...), al posto di tante
+                // pillole a scorrimento.
+                child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                      _kindChip(MapKind.restaurant, _l.restaurantsNav,
-                          Icons.restaurant_menu),
-                      const SizedBox(width: 10),
-                      _kindChip(MapKind.bar, _l.barsNav, Icons.local_cafe_outlined),
-                      const SizedBox(width: 10),
-                      _kindChip(MapKind.hotel, _l.hotelsNav, Icons.hotel_outlined),
-                      const SizedBox(width: 10),
-                      for (final t in LuogoTipo.values) ...[
-                        _kindChip(t.db, _l.t(t.navKey), t.icon),
-                        const SizedBox(width: 10),
-                      ],
-                      _kindChip(MapKind.event, _l.t('mapEventsToday'), Icons.event),
-                      const SizedBox(width: 10),
-                      _kindChip(MapKind.itinerary, _l.t('mapItinerari'), Icons.route),
-                  ],
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilterPillButton(
+                      floating: true,
+                      activeCount: _hiddenKindsCount,
+                      onTap: _openFilters,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1087,7 +1087,7 @@ class _MapPageState extends State<MapPage> {
             Positioned(
               left: 16,
               bottom: 170,
-              child: _legendCard(),
+              child: _legendOpen ? _legendCard() : _legendButton(),
             ),
 
           // Map type
@@ -1116,50 +1116,179 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  /// Chip per accendere / spegnere un tipo di punto sulla mappa.
-  Widget _kindChip(String kind, String label, IconData icon) {
-    return _filterChip(
-      label: label,
-      icon: icon,
-      selected: _isKindVisible(kind),
-      onTap: () {
-        setState(() => _setKindVisible(kind, !_isKindVisible(kind)));
-        _rebuildMarkers();
-      },
+  // ---------------------------------------------------------------- Filtri
+
+  /// Tutti i tipi di punto che si possono accendere / spegnere.
+  static const List<String> _allKinds = [
+    MapKind.restaurant,
+    MapKind.bar,
+    MapKind.hotel,
+    MapKind.agriturismo,
+    MapKind.chiesa,
+    MapKind.museo,
+    MapKind.itinerary,
+    MapKind.negozio,
+    MapKind.parcheggio,
+    MapKind.event,
+  ];
+
+  /// Quanti tipi di punto sono nascosti (= filtri attivi).
+  int get _hiddenKindsCount =>
+      _allKinds.where((k) => !_isKindVisible(k)).length;
+
+  String _kindLabel(String kind) {
+    switch (kind) {
+      case MapKind.restaurant:
+        return _l.restaurantsNav;
+      case MapKind.bar:
+        return _l.barsNav;
+      case MapKind.hotel:
+        return _l.hotelsNav;
+      case MapKind.event:
+        return _l.t('mapEventsToday');
+      case MapKind.itinerary:
+        return _l.t('mapItinerari');
+      default:
+        final tipo = LuogoTipoInfo.parse(kind);
+        return tipo == null ? kind : _l.t(tipo.navKey);
+    }
+  }
+
+  IconData _kindIcon(String kind) {
+    switch (kind) {
+      case MapKind.restaurant:
+        return Icons.restaurant_menu;
+      case MapKind.bar:
+        return Icons.local_cafe_outlined;
+      case MapKind.hotel:
+        return Icons.hotel_outlined;
+      case MapKind.event:
+        return Icons.event;
+      case MapKind.itinerary:
+        return Icons.route;
+      default:
+        return LuogoTipoInfo.parse(kind)?.icon ?? Icons.place;
+    }
+  }
+
+  Color _kindColor(String kind) {
+    switch (kind) {
+      case MapKind.restaurant:
+        return _restaurantColor;
+      case MapKind.bar:
+        return _barColor;
+      case MapKind.hotel:
+        return _hotelColor;
+      case MapKind.event:
+        return _eventColor;
+      case MapKind.itinerary:
+        return _itineraryColor;
+      default:
+        return LuogoTipoInfo.parse(kind)?.color ?? AppColors.rossoGubbio;
+    }
+  }
+
+  void _setAllKinds(bool visible) {
+    for (final k in _allKinds) {
+      _setKindVisible(k, visible);
+    }
+    setState(() {});
+    _rebuildMarkers();
+  }
+
+  /// Pannello dei filtri: i tipi di punto, raggruppati per argomento.
+  void _openFilters() {
+    final groups = <(String, IconData, List<String>)>[
+      (_l.t('mapGroupEat'), Icons.restaurant_menu,
+          [MapKind.restaurant, MapKind.bar]),
+      (_l.t('mapGroupSleep'), Icons.hotel_outlined,
+          [MapKind.hotel, MapKind.agriturismo]),
+      (_l.t('mapGroupVisit'), Icons.account_balance_outlined,
+          [MapKind.chiesa, MapKind.museo, MapKind.itinerary]),
+      (_l.t('mapGroupExplore'), Icons.explore_outlined,
+          [MapKind.negozio, MapKind.parcheggio]),
+      (_l.t('mapGroupToday'), Icons.event, [MapKind.event]),
+    ];
+    showFilterSheet(
+      context,
+      title: _l.t('mapFiltersTitle'),
+      hasActiveFilters: () => _hiddenKindsCount > 0,
+      onReset: () => _setAllKinds(true),
+      header: Align(
+        alignment: Alignment.centerLeft,
+        child: StatefulBuilder(
+          builder: (ctx, setHeader) => TextButton.icon(
+            onPressed: () {
+              _setAllKinds(_hiddenKindsCount == _allKinds.length);
+              setHeader(() {});
+            },
+            icon: Icon(
+              _hiddenKindsCount == _allKinds.length
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              size: 18,
+            ),
+            label: Text(_hiddenKindsCount == _allKinds.length
+                ? _l.t('mapShowAll')
+                : _l.t('mapHideAll')),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.rossoGubbio,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ),
+      ),
+      content: (ctx, rebuild) => [
+        for (final g in groups) ...[
+          FilterGroupTitle(icon: g.$2, text: g.$1),
+          FilterChipsWrap(chips: [
+            for (final kind in g.$3)
+              AppFilterChip(
+                label: _kindLabel(kind),
+                selected: _isKindVisible(kind),
+                leading: Icon(
+                  _kindIcon(kind),
+                  size: 16,
+                  color: _isKindVisible(kind) ? Colors.white : _kindColor(kind),
+                ),
+                onTap: () {
+                  setState(() => _setKindVisible(kind, !_isKindVisible(kind)));
+                  _rebuildMarkers();
+                  rebuild();
+                },
+              ),
+          ]),
+        ],
+        const SizedBox(height: 8),
+      ],
     );
   }
 
-  Widget _filterChip({
-    required String label,
-    required IconData icon,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
+  /// Legenda chiusa: solo un piccolo pulsante, per non coprire la mappa.
+  Widget _legendButton() {
     return Material(
-      color: selected ? AppColors.rossoGubbio : Colors.white,
+      color: Colors.white,
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.2),
       borderRadius: BorderRadius.circular(30),
-      elevation: 3,
-      shadowColor: Colors.black.withOpacity(0.15),
       child: InkWell(
         borderRadius: BorderRadius.circular(30),
-        onTap: onTap,
+        onTap: () => setState(() => _legendOpen = true),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? Colors.white : AppColors.rossoGubbio,
-              ),
+              const Icon(Icons.format_list_bulleted_rounded,
+                  size: 18, color: AppColors.rossoGubbio),
               const SizedBox(width: 7),
               Text(
-                label,
-                style: TextStyle(
+                _l.t('mapLegend'),
+                style: const TextStyle(
                   fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.bluNotte,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.bluNotte,
                 ),
               ),
             ],
@@ -1187,19 +1316,31 @@ class _MapPageState extends State<MapPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _legendRow(_restaurantColor, _l.restaurantsNav),
-          const SizedBox(height: 6),
-          _legendRow(_barColor, _l.barsNav),
-          const SizedBox(height: 6),
-          _legendRow(_hotelColor, _l.hotelsNav),
-          const SizedBox(height: 6),
-          for (final t in LuogoTipo.values) ...[
-            _legendRow(t.color, _l.t(t.navKey)),
-            const SizedBox(height: 6),
+          // Titolo + chiusura
+          InkWell(
+            onTap: () => setState(() => _legendOpen = false),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _l.t('mapLegend'),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.bluNotte,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Icon(Icons.close_rounded,
+                    size: 18, color: AppColors.tortora),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final kind in _allKinds) ...[
+            _legendRow(_kindColor(kind), _kindLabel(kind)),
+            if (kind != _allKinds.last) const SizedBox(height: 6),
           ],
-          _legendRow(_eventColor, _l.t('mapEventsToday')),
-          const SizedBox(height: 6),
-          _legendRow(_itineraryColor, _l.t('mapItinerari')),
         ],
       ),
     );

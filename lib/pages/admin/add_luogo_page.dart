@@ -61,6 +61,8 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
         return 'Negozio';
       case LuogoTipo.parcheggio:
         return 'Parcheggio';
+      case LuogoTipo.agriturismo:
+        return 'Agriturismo';
       case LuogoTipo.ascensore:
         return 'Ascensore';
       case LuogoTipo.bagno:

@@ -10,7 +10,7 @@ import '../widgets/app_filter_chip.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/loading_screen.dart';
-import '../widgets/scroll_hints.dart';
+import '../widgets/filter_sheet.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/edit_itinerario_flow.dart';
 import 'itinerario_detail_page.dart';
@@ -210,34 +210,17 @@ class _ItinerariPageState extends State<ItinerariPage> {
               setState(() => _query = '');
             },
           ),
-          if (temi.length > 1)
-            _chipRow(
-              values: temi,
-              selected: _selectedTema,
-              allLabel: _l.t('itAllThemes'),
-              icon: Icons.palette_outlined,
-              onChanged: (v) => setState(() => _selectedTema = v),
-            ),
-          if (difficolta.length > 1)
-            _chipRow(
-              values: difficolta,
-              selected: _selectedDifficolta,
-              allLabel: _l.t('itAnyDifficulty'),
-              icon: Icons.terrain_outlined,
-              onChanged: (v) => setState(() => _selectedDifficolta = v),
-            ),
-          if (durate.length > 1)
-            _chipRow(
-              values: durate,
-              selected: _selectedDurata,
-              allLabel: _l.t('itAnyDuration'),
-              icon: Icons.schedule,
-              onChanged: (v) => setState(() => _selectedDurata = v),
-            ),
+          // Un solo pulsante "Filtri" (tema, difficoltà, durata, ordine) al
+          // posto delle file di chip: i filtri si scelgono in un pannello.
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 4, 0),
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
             child: Row(
               children: [
+                FilterPillButton(
+                  activeCount: _activeFilterCount,
+                  onTap: () => _openFilters(temi, difficolta, durate),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _l.count('itCount', items.length),
@@ -258,29 +241,6 @@ class _ItinerariPageState extends State<ItinerariPage> {
                     child: Text(_l.t('fltReset'),
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
-                PopupMenuButton<_ItinerarioSort>(
-                  tooltip: _l.t('sortLabel'),
-                  initialValue: _sort,
-                  onSelected: (v) => setState(() => _sort = v),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  icon: const Icon(Icons.swap_vert_rounded,
-                      color: AppColors.bluNotte),
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: _ItinerarioSort.predefinito,
-                      child: Text(_l.t('itSortDefault')),
-                    ),
-                    PopupMenuItem(
-                      value: _ItinerarioSort.titolo,
-                      child: Text(_l.t('itSortTitle')),
-                    ),
-                    PopupMenuItem(
-                      value: _ItinerarioSort.tappe,
-                      child: Text(_l.t('itSortStops')),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -306,33 +266,100 @@ class _ItinerariPageState extends State<ItinerariPage> {
     );
   }
 
-  Widget _chipRow({
-    required List<String> values,
-    required String? selected,
-    required String allLabel,
-    required IconData icon,
-    required void Function(String?) onChanged,
-  }) {
-    return HintedChipRow(
-      height: 42,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-      children: [
-          AppFilterChip(
-            label: allLabel,
-            selected: selected == null,
-            compact: true,
-            icon: icon,
-            onTap: () => onChanged(null),
-          ),
-          for (final v in values) ...[
-            const SizedBox(width: 8),
+  /// Quanti filtri sono attivi (tema, difficoltà, durata, ordine diverso).
+  int get _activeFilterCount =>
+      (_selectedTema != null ? 1 : 0) +
+      (_selectedDifficolta != null ? 1 : 0) +
+      (_selectedDurata != null ? 1 : 0) +
+      (_sort != _ItinerarioSort.predefinito ? 1 : 0);
+
+  /// Pannello dei filtri, raggruppati: tema, difficoltà, durata, ordinamento.
+  void _openFilters(
+    List<String> temi,
+    List<String> difficolta,
+    List<String> durate,
+  ) {
+    Widget group({
+      required IconData icon,
+      required String title,
+      required List<String> values,
+      required String? selected,
+      required void Function(String?) onChanged,
+      required VoidCallback rebuild,
+    }) {
+      if (values.length < 2) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FilterGroupTitle(icon: icon, text: title),
+          FilterChipsWrap(chips: [
+            for (final v in values)
+              AppFilterChip(
+                label: v,
+                selected: selected == v,
+                onTap: () {
+                  setState(() => onChanged(selected == v ? null : v));
+                  rebuild();
+                },
+              ),
+          ]),
+        ],
+      );
+    }
+
+    showFilterSheet(
+      context,
+      title: _l.t('itFiltersTitle'),
+      hasActiveFilters: () => _activeFilterCount > 0,
+      onReset: () => setState(() {
+        _selectedTema = null;
+        _selectedDifficolta = null;
+        _selectedDurata = null;
+        _sort = _ItinerarioSort.predefinito;
+      }),
+      content: (ctx, rebuild) => [
+        group(
+          icon: Icons.palette_outlined,
+          title: _l.t('itFilterTheme'),
+          values: temi,
+          selected: _selectedTema,
+          onChanged: (v) => _selectedTema = v,
+          rebuild: rebuild,
+        ),
+        group(
+          icon: Icons.terrain_outlined,
+          title: _l.t('itFilterDifficulty'),
+          values: difficolta,
+          selected: _selectedDifficolta,
+          onChanged: (v) => _selectedDifficolta = v,
+          rebuild: rebuild,
+        ),
+        group(
+          icon: Icons.schedule,
+          title: _l.t('itFilterDuration'),
+          values: durate,
+          selected: _selectedDurata,
+          onChanged: (v) => _selectedDurata = v,
+          rebuild: rebuild,
+        ),
+        FilterGroupTitle(
+            icon: Icons.swap_vert_rounded, text: _l.t('sortLabel')),
+        FilterChipsWrap(chips: [
+          for (final entry in <(_ItinerarioSort, String)>[
+            (_ItinerarioSort.predefinito, _l.t('itSortDefault')),
+            (_ItinerarioSort.titolo, _l.t('itSortTitle')),
+            (_ItinerarioSort.tappe, _l.t('itSortStops')),
+          ])
             AppFilterChip(
-              label: v,
-              selected: selected == v,
-              compact: true,
-              onTap: () => onChanged(selected == v ? null : v),
+              label: entry.$2,
+              selected: _sort == entry.$1,
+              onTap: () {
+                setState(() => _sort = entry.$1);
+                rebuild();
+              },
             ),
-          ],
+        ]),
+        const SizedBox(height: 8),
       ],
     );
   }
