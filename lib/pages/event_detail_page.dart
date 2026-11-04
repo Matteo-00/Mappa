@@ -7,6 +7,9 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'map_page.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/auth_service.dart';
+import '../services/content_service.dart';
 
 /// Pagina dettaglio evento con informazioni complete
 class EventDetailPage extends StatelessWidget {
@@ -44,6 +47,13 @@ class EventDetailPage extends StatelessWidget {
                         _buildTimeSection(),
                         const SizedBox(height: 16),
 
+                        // Solo admin: evento importato ancora da approvare
+                        if (event.isDraft &&
+                            context.watch<AuthService>().isAdmin) ...[
+                          _DraftAdminBar(event: event),
+                          const SizedBox(height: 16),
+                        ],
+
                         // Titolo evento
                         Text(
                           event.title,
@@ -60,9 +70,18 @@ class EventDetailPage extends StatelessWidget {
                         _buildDescriptionSection(l10n),
                         const SizedBox(height: 24),
 
-                        // Informazioni storiche
-                        _buildHistoricalSection(l10n),
-                        const SizedBox(height: 24),
+                        // Fonte (eventi importati dal sito del Comune)
+                        if (event.isFromComune) ...[
+                          _buildSourceSection(l10n),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Informazioni storiche (non per gli eventi del
+                        // Comune: concerti, mostre... non hanno un testo storico)
+                        if (!event.isFromComune) ...[
+                          _buildHistoricalSection(l10n),
+                          const SizedBox(height: 24),
+                        ],
 
                         // Curiosità (se disponibili)
                         _buildCuriositySection(l10n),
@@ -108,9 +127,9 @@ class EventDetailPage extends StatelessWidget {
               color: AppColors.rossoGubbio.withOpacity(0.5),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Festa dei Ceri',
-              style: TextStyle(
+            Text(
+              event.category.trim().isNotEmpty ? event.category : 'Gubbio',
+              style: const TextStyle(
                 fontSize: 16,
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w500,
@@ -177,6 +196,61 @@ class EventDetailPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Fonte dell'evento con il link alla pagina originale del Comune.
+  Widget _buildSourceSection(AppLocalizations l10n) {
+    final url = event.sourceUrl ?? event.website;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.grigioChiaro),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_outlined,
+                  size: 20, color: AppColors.bluNotte),
+              const SizedBox(width: 8),
+              Text(
+                '${l10n.t('evSourceTitle')}: ${l10n.t('srcComune')}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.bluNotte,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.t('evSourceText'),
+            style: const TextStyle(
+                fontSize: 13.5, height: 1.45, color: AppColors.textMuted),
+          ),
+          if (url != null && url.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => launchUrl(Uri.parse(url),
+                  mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.open_in_new_rounded, size: 18),
+              label: Text(l10n.t('evOpenSource')),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.rossoGubbio,
+                side: const BorderSide(color: AppColors.rossoGubbio),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -442,5 +516,116 @@ class EventDetailPage extends StatelessWidget {
       ],
     };
     return curiositiesMap[eventId] ?? [];
+  }
+}
+
+/// Solo admin: avviso "da approvare" sulle bozze importate dal Comune, con
+/// i pulsanti per pubblicarle o eliminarle.
+class _DraftAdminBar extends StatefulWidget {
+  final EventModel event;
+  const _DraftAdminBar({required this.event});
+
+  @override
+  State<_DraftAdminBar> createState() => _DraftAdminBarState();
+}
+
+class _DraftAdminBarState extends State<_DraftAdminBar> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action, String done) async {
+    setState(() => _busy = true);
+    try {
+      await action();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(done)));
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: const Color(0xFFB71C1C),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = widget.event;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFB74D)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Bozza importata dal sito del Comune',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFFE65100),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            e.datesToVerify
+                ? 'Le date non erano scritte in modo chiaro: controllale (e '
+                    'correggile con la matita nella lista eventi) prima di '
+                    'pubblicare. Gli utenti non vedono questo evento.'
+                : 'Controlla testo, date e foto. Gli utenti non vedono '
+                    'questo evento finché non lo pubblichi.',
+            style: const TextStyle(
+                fontSize: 13, height: 1.4, color: AppColors.bluNotte),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _run(() => ContentService.deleteEvent(e.id),
+                          'Evento eliminato'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFB71C1C),
+                    side: const BorderSide(color: Color(0xFFB71C1C)),
+                  ),
+                  child: const Text('Elimina'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _run(() => ContentService.publishEvent(e.id),
+                          'Evento pubblicato'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.rossoGubbio,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                  child: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Pubblica'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

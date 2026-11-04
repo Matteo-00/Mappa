@@ -205,51 +205,58 @@ Deno.serve(async (req) => {
       },
     );
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAdmin.auth.getUser(token);
+    // Chiamata dal server (es. l'importazione automatica degli eventi,
+    // funzione import-eventi) con la service role key: niente utente da
+    // controllare. La chiave non esce mai dalle Edge Function.
+    const isServerCall = token === serviceRoleKey;
 
-    if (userError || !user) {
-      return jsonResponse(
-        { error: "Sessione utente non valida" },
-        401,
-      );
-    }
+    if (!isServerCall) {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseAdmin.auth.getUser(token);
 
-    // =====================================================
-    // 2. CONTROLLO RUOLO ADMIN
-    // =====================================================
+      if (userError || !user) {
+        return jsonResponse(
+          { error: "Sessione utente non valida" },
+          401,
+        );
+      }
 
-    const {
-      data: utente,
-      error: ruoloError,
-    } = await supabaseAdmin
-      .from("utenti")
-      .select("ruolo")
-      .eq("id", user.id)
-      .single();
+      // =====================================================
+      // 2. CONTROLLO RUOLO ADMIN
+      // =====================================================
 
-    if (ruoloError) {
-      console.error(
-        "Errore controllo ruolo:",
-        ruoloError,
-      );
+      const {
+        data: utente,
+        error: ruoloError,
+      } = await supabaseAdmin
+        .from("utenti")
+        .select("ruolo")
+        .eq("id", user.id)
+        .single();
 
-      return jsonResponse(
-        { error: "Impossibile verificare il ruolo" },
-        500,
-      );
-    }
+      if (ruoloError) {
+        console.error(
+          "Errore controllo ruolo:",
+          ruoloError,
+        );
 
-    if (utente?.ruolo !== "admin") {
-      return jsonResponse(
-        {
-          error:
-            "Solo gli amministratori possono generare traduzioni",
-        },
-        403,
-      );
+        return jsonResponse(
+          { error: "Impossibile verificare il ruolo" },
+          500,
+        );
+      }
+
+      if (utente?.ruolo !== "admin") {
+        return jsonResponse(
+          {
+            error:
+              "Solo gli amministratori possono generare traduzioni",
+          },
+          403,
+        );
+      }
     }
 
     // =====================================================

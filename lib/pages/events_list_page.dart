@@ -14,15 +14,20 @@ import '../widgets/loading_screen.dart';
 import '../widgets/scroll_hints.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/add_event_page.dart';
+import '../utils/route_observer.dart';
 
 /// Filtri temporali della lista eventi.
 enum EventFilter {
   upcoming, // in corso e futuri
   today,
+  weekend,
   week,
   month,
   all,
 }
+
+/// Da dove arriva un evento (filtro "fonte").
+enum EventSource { comune, visitGubbio }
 
 /// Pagina lista eventi: ricerca, filtro temporale, filtro per categoria e
 /// luogo, eventi raggruppati per mese in schede compatte.
@@ -38,7 +43,7 @@ class EventsListPage extends StatefulWidget {
   State<EventsListPage> createState() => _EventsListPageState();
 }
 
-class _EventsListPageState extends State<EventsListPage> {
+class _EventsListPageState extends State<EventsListPage> with RouteAware {
   AppLocalizations get _l => AppLocalizations.of(
       context.read<LanguageService>().currentLanguageCode);
 
@@ -51,7 +56,15 @@ class _EventsListPageState extends State<EventsListPage> {
   EventFilter _currentFilter = EventFilter.upcoming;
   String? _selectedCategory;
   String? _selectedPlace;
+  EventSource? _selectedSource;
   String? _loadedLanguageCode;
+
+  /// Solo admin: mostra soltanto gli eventi importati da approvare.
+  bool _onlyDrafts = false;
+  DateTime? _lastImport;
+  bool _importing = false;
+
+  bool get _isAdmin => context.read<AuthService>().isAdmin;
 
   @override
   void initState() {
@@ -62,6 +75,8 @@ class _EventsListPageState extends State<EventsListPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) appRouteObserver.subscribe(this, route);
     final languageCode = context.watch<LanguageService>().currentLanguageCode;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadEvents();
@@ -70,21 +85,30 @@ class _EventsListPageState extends State<EventsListPage> {
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _searchController.dispose();
     super.dispose();
   }
+
+  /// Si torna alla lista (es. dopo aver pubblicato una bozza): si ricarica.
+  @override
+  void didPopNext() => _loadEvents();
 
   Future<void> _loadEvents() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode;
     final events = await ContentService.fetchEvents(languageCode: languageCode);
+    final lastImport =
+        _isAdmin ? await ContentService.lastEventsImport() : null;
     // La crescia resta almeno un secondo, così non "lampeggia".
     if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
       _allEvents = events;
+      _lastImport = lastImport;
       _loading = false;
+      if (!_allEvents.any((e) => e.isDraft)) _onlyDrafts = false;
       if (_selectedCategory != null && !_categories.contains(_selectedCategory)) {
         _selectedCategory = null;
       }
@@ -107,16 +131,43 @@ class _EventsListPageState extends State<EventsListPage> {
   List<String> get _categories => _distinct((e) => e.category);
   List<String> get _places => _distinct((e) => e.location);
 
+  /// Fonti presenti negli eventi (il filtro compare solo se sono due).
+  bool get _hasBothSources =>
+      _allEvents.any((e) => e.isFromComune) &&
+      _allEvents.any((e) => !e.isFromComune);
+
+  int get _draftCount => _allEvents.where((e) => e.isDraft).length;
+
+  /// L'evento si svolge (anche in parte) nel periodo [from, to).
+  static bool _overlaps(EventModel e, DateTime from, DateTime to) =>
+      e.startTime.isBefore(to) && !e.endTime.isBefore(from);
+
   /// Eventi filtrati: prima i prossimi (dal più vicino), poi i conclusi
   /// (dal più recente) — questi ultimi compaiono solo con "Tutti".
+  /// Un evento di più giorni (es. una mostra) compare in tutti i periodi in
+  /// cui è aperto, non solo nel giorno in cui inizia.
   List<EventModel> get _filteredEvents {
     final q = _searchQuery.trim().toLowerCase();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
     final weekStart = today.subtract(Duration(days: now.weekday - 1));
     final weekEnd = weekStart.add(const Duration(days: 7));
+    // Weekend: sabato e domenica di questa settimana (da oggi se è già sabato
+    // o domenica).
+    final saturday = weekStart.add(const Duration(days: 5));
+    final weekendFrom = today.isAfter(saturday) ? today : saturday;
+    final monthStart = DateTime(now.year, now.month);
+    final monthEnd = DateTime(now.year, now.month + 1);
 
     final filtered = _allEvents.where((event) {
+      if (_onlyDrafts && !event.isDraft) return false;
+      if (_selectedSource == EventSource.comune && !event.isFromComune) {
+        return false;
+      }
+      if (_selectedSource == EventSource.visitGubbio && event.isFromComune) {
+        return false;
+      }
       if (_selectedCategory != null && event.category.trim() != _selectedCategory) {
         return false;
       }
@@ -126,6 +177,7 @@ class _EventsListPageState extends State<EventsListPage> {
       if (q.isNotEmpty &&
           !event.title.toLowerCase().contains(q) &&
           !event.location.toLowerCase().contains(q) &&
+          !event.category.toLowerCase().contains(q) &&
           !event.description.toLowerCase().contains(q)) {
         return false;
       }
@@ -133,15 +185,15 @@ class _EventsListPageState extends State<EventsListPage> {
         case EventFilter.upcoming:
           return !event.endTime.isBefore(now);
         case EventFilter.today:
-          return event.startTime.year == now.year &&
-              event.startTime.month == now.month &&
-              event.startTime.day == now.day;
+          return _overlaps(event, today, tomorrow) &&
+              !event.endTime.isBefore(now);
+        case EventFilter.weekend:
+          return _overlaps(event, weekendFrom, weekEnd) &&
+              !event.endTime.isBefore(now);
         case EventFilter.week:
-          return !event.startTime.isBefore(weekStart) &&
-              event.startTime.isBefore(weekEnd);
+          return _overlaps(event, weekStart, weekEnd);
         case EventFilter.month:
-          return event.startTime.month == now.month &&
-              event.startTime.year == now.year;
+          return _overlaps(event, monthStart, monthEnd);
         case EventFilter.all:
           return true;
       }
@@ -158,6 +210,8 @@ class _EventsListPageState extends State<EventsListPage> {
       _searchQuery.isNotEmpty ||
       _selectedCategory != null ||
       _selectedPlace != null ||
+      _selectedSource != null ||
+      _onlyDrafts ||
       _currentFilter != EventFilter.upcoming;
 
   void _resetFilters() {
@@ -166,6 +220,8 @@ class _EventsListPageState extends State<EventsListPage> {
       _searchQuery = '';
       _selectedCategory = null;
       _selectedPlace = null;
+      _selectedSource = null;
+      _onlyDrafts = false;
       _currentFilter = EventFilter.upcoming;
     });
   }
@@ -212,7 +268,9 @@ class _EventsListPageState extends State<EventsListPage> {
               setState(() => _searchQuery = '');
             },
           ),
+          if (context.watch<AuthService>().isAdmin) _buildAdminImportBar(),
           _buildTimeChips(),
+          if (_hasBothSources) _buildSourceChips(),
           if (_categories.length > 1)
             _chipRow(
               values: _categories,
@@ -289,6 +347,7 @@ class _EventsListPageState extends State<EventsListPage> {
       EventFilter.upcoming: _l.t('fltUpcoming'),
       EventFilter.all: _l.t('fltAll'),
       EventFilter.today: _l.t('fltToday'),
+      EventFilter.weekend: _l.t('fltWeekend'),
       EventFilter.week: _l.t('fltThisWeek'),
       EventFilter.month: _l.t('fltThisMonth'),
     };
@@ -307,6 +366,130 @@ class _EventsListPageState extends State<EventsListPage> {
           ],
       ],
     );
+  }
+
+  /// Filtro per fonte: eventi del Comune di Gubbio o di Visit Gubbio.
+  Widget _buildSourceChips() {
+    return HintedChipRow(
+      height: 40,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      children: [
+        AppFilterChip(
+          label: _l.t('fltAllSources'),
+          selected: _selectedSource == null,
+          compact: true,
+          icon: Icons.source_outlined,
+          onTap: () => setState(() => _selectedSource = null),
+        ),
+        for (final src in EventSource.values) ...[
+          const SizedBox(width: 8),
+          AppFilterChip(
+            label: _l.t(src == EventSource.comune ? 'srcComune' : 'srcVisit'),
+            selected: _selectedSource == src,
+            compact: true,
+            onTap: () => setState(
+                () => _selectedSource = _selectedSource == src ? null : src),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Solo admin: ultimo controllo del sito del Comune, "Importa ora" e le
+  /// bozze da approvare.
+  Widget _buildAdminImportBar() {
+    final last = _lastImport;
+    final lastText = last == null
+        ? 'mai'
+        : '${last.day.toString().padLeft(2, '0')}/'
+            '${last.month.toString().padLeft(2, '0')} '
+            '${last.hour.toString().padLeft(2, '0')}:'
+            '${last.minute.toString().padLeft(2, '0')}';
+    final drafts = _draftCount;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 6),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.grigioChiaro),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_download_outlined,
+                size: 20, color: AppColors.bluNotte),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Eventi dal sito del Comune · ultimo controllo: $lastText',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textMuted),
+                  ),
+                  if (drafts > 0)
+                    GestureDetector(
+                      onTap: () => setState(() => _onlyDrafts = !_onlyDrafts),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          _onlyDrafts
+                              ? 'Mostra tutti gli eventi'
+                              : '$drafts ${drafts == 1 ? 'evento' : 'eventi'} da approvare',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: _importing ? null : _runImport,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.rossoGubbio,
+                visualDensity: VisualDensity.compact,
+              ),
+              child: _importing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.rossoGubbio),
+                    )
+                  : const Text('Importa ora',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runImport() async {
+    setState(() => _importing = true);
+    String message;
+    try {
+      final r = await ContentService.runEventsImport();
+      final nuovi = r['nuovi'] ?? 0;
+      final bozze = r['bozze'] ?? 0;
+      message = nuovi == 0
+          ? 'Nessun evento nuovo sul sito del Comune'
+          : '$nuovi eventi nuovi importati'
+              '${bozze > 0 ? ' ($bozze da approvare)' : ''}';
+    } catch (e) {
+      message = 'Importazione non riuscita: $e';
+    }
+    if (!mounted) return;
+    setState(() => _importing = false);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+    _loadEvents();
   }
 
   Widget _chipRow({
@@ -455,8 +638,17 @@ class _EventsListPageState extends State<EventsListPage> {
                               spacing: 6,
                               runSpacing: 4,
                               children: [
+                                if (event.isDraft)
+                                  _pill(_l.t('evDraft'), const Color(0xFFE65100),
+                                      strong: true),
+                                if (event.isDraft && event.datesToVerify)
+                                  _pill(_l.t('evDatesCheck'),
+                                      const Color(0xFFE65100)),
                                 if (event.category.trim().isNotEmpty)
                                   _pill(event.category, AppColors.verdeSalvia),
+                                if (event.isFromComune &&
+                                    event.category.trim() != _l.t('srcComune'))
+                                  _pill(_l.t('srcComune'), AppColors.bluNotte),
                                 if (status == EventStatus.current)
                                   _pill(_l.t('eventNow'), AppColors.rossoGubbio,
                                       strong: true),
@@ -582,9 +774,19 @@ class _EventsListPageState extends State<EventsListPage> {
   String _timeRange(EventModel e) {
     String hm(DateTime d) =>
         '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-    return e.endTime.isAfter(e.startTime)
-        ? '${hm(e.startTime)} – ${hm(e.endTime)}'
-        : hm(e.startTime);
+    String day(DateTime d) => '${d.day} ${_l.list('monthsShort')[d.month - 1]}';
+    final s = e.startTime;
+    final end = e.endTime;
+    final allDay = s.hour == 0 && s.minute == 0 && end.hour == 23 && end.minute == 59;
+    final sameDay =
+        s.year == end.year && s.month == end.month && s.day == end.day;
+    // Eventi di più giorni (mostre, mercatini...): "4 nov – 24 nov".
+    if (!sameDay && end.isAfter(s)) {
+      final range = '${day(s)} – ${day(end)}';
+      return allDay ? range : '$range · ${hm(s)}';
+    }
+    if (allDay) return _l.t('evAllDay');
+    return end.isAfter(s) ? '${hm(s)} – ${hm(end)}' : hm(s);
   }
 
   Widget _buildEmptyState() {

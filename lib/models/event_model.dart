@@ -22,6 +22,19 @@ class EventModel {
   final String? phoneNumber;
   final String? website;
 
+  /// Bozza: evento importato in automatico, visibile solo agli admin finché
+  /// non viene pubblicato.
+  final bool isDraft;
+
+  /// Da dove arriva (es. "comune_gubbio"); null = inserito a mano.
+  final String? source;
+
+  /// Pagina originale sul sito della fonte.
+  final String? sourceUrl;
+
+  /// Le date non sono state lette con sicurezza dal sito: da controllare.
+  final bool datesToVerify;
+
   const EventModel({
     required this.id,
     required this.time,
@@ -35,7 +48,14 @@ class EventModel {
     this.category = '15 Maggio',
     this.phoneNumber,
     this.website,
+    this.isDraft = false,
+    this.source,
+    this.sourceUrl,
+    this.datesToVerify = false,
   });
+
+  /// Evento importato dal sito del Comune di Gubbio.
+  bool get isFromComune => source == 'comune_gubbio';
 
   /// Crea un evento dai dati di Supabase
   factory EventModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +79,10 @@ class EventModel {
       category: (json['categoria'] ?? 'Eventi') as String,
       phoneNumber: json['telefono'] as String?,
       website: json['sito_web'] as String?,
+      isDraft: json['stato'] == 'bozza',
+      source: json['fonte'] as String?,
+      sourceUrl: json['fonte_url'] as String?,
+      datesToVerify: json['date_da_verificare'] == true,
     );
   }
 

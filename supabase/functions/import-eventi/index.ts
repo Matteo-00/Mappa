@@ -1,0 +1,523 @@
+// Supabase Edge Function: import-eventi
+//
+// Importa in automatico gli eventi pubblicati sul sito del Comune di Gubbio
+// (www.comune.gubbio.pg.it, piattaforma Municipium) leggendo il loro feed
+// RSS, e li salva nella tabella "eventi".
+//
+// - Parte da sola ogni giorno (programmata da supabase_eventi_import_setup.sql)
+//   oppure quando un admin tocca "Importa ora" nell'app.
+// - Un evento già importato non viene importato di nuovo (colonna fonte_id).
+// - Gli eventi con le date lette con sicurezza vengono pubblicati subito e
+//   tradotti (se "pubblica_subito" è attivo); gli altri restano BOZZE che
+//   l'admin controlla e pubblica dall'app.
+// - Ogni evento indica la fonte e il link alla pagina originale del Comune.
+//
+// Impostazioni nella tabella "import_eventi_stato" (riga id = 1):
+//   feed_url          indirizzo del feed; se vuoto lo cerca da sola
+//   pubblica_subito   true/false
+//   importa_immagini  true/false
+//
+// Deploy:
+//   supabase functions deploy import-eventi
+
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { XMLParser } from "npm:fast-xml-parser@4.4.1";
+
+const SITE = "https://www.comune.gubbio.pg.it";
+const SOURCE = "comune_gubbio";
+const SOURCE_LABEL = "Comune di Gubbio";
+const USER_AGENT = "VisitGubbioApp/1.0 (+https://visitgubbio.eu)";
+const MAX_ITEMS = 100;
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-import-secret",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// ---------------------------------------------------------------- testo
+
+const ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  agrave: "à", aacute: "á", egrave: "è", eacute: "é", igrave: "ì",
+  iacute: "í", ograve: "ò", oacute: "ó", ugrave: "ù", uacute: "ú",
+  Agrave: "À", Egrave: "È", Eacute: "É", Igrave: "Ì", Ograve: "Ò",
+  Ugrave: "Ù", laquo: "«", raquo: "»", rsquo: "’", lsquo: "‘",
+  rdquo: "”", ldquo: "“", ndash: "–", mdash: "—", hellip: "…", euro: "€",
+  deg: "°", ordm: "º",
+};
+
+function decodeEntities(s: string): string {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, code: string) => {
+    if (code[0] === "#") {
+      const n = code[1].toLowerCase() === "x"
+        ? parseInt(code.slice(2), 16)
+        : parseInt(code.slice(1), 10);
+      return Number.isFinite(n) ? String.fromCodePoint(n) : m;
+    }
+    return ENTITIES[code] ?? m;
+  });
+}
+
+function htmlToText(html: string): string {
+  return decodeEntities(
+    html
+      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "• ")
+      .replace(/<[^>]+>/g, ""),
+  )
+    .replace(/[ \t ]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Valore testuale di un nodo XML (stringa, {#text}, CDATA...). */
+function text(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string" || typeof v === "number") return String(v).trim();
+  if (Array.isArray(v)) return text(v[0]);
+  if (typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    return text(o["#text"] ?? o["__cdata"] ?? "");
+  }
+  return "";
+}
+
+function asArray<T>(v: T | T[] | undefined | null): T[] {
+  if (v == null) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
+function absoluteUrl(url: string, base: string): string {
+  try {
+    return new URL(decodeEntities(url.trim()), base).toString();
+  } catch {
+    return "";
+  }
+}
+
+// ---------------------------------------------------------------- date
+
+const MONTHS: Record<string, number> = {
+  gennaio: 1, gen: 1, febbraio: 2, feb: 2, marzo: 3, mar: 3, aprile: 4,
+  apr: 4, maggio: 5, mag: 5, giugno: 6, giu: 6, luglio: 7, lug: 7,
+  agosto: 8, ago: 8, settembre: 9, set: 9, sett: 9, ottobre: 10, ott: 10,
+  novembre: 11, nov: 11, dicembre: 12, dic: 12,
+};
+const MONTH_RE =
+  "(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|gen|feb|mar|apr|mag|giu|lug|ago|sett|set|ott|nov|dic)\\.?";
+
+/** Converte un'ora italiana (Europe/Rome) in ISO UTC. */
+function romeToUtcIso(y: number, m: number, d: number, h = 0, mi = 0): string {
+  const guess = Date.UTC(y, m - 1, d, h, mi);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Rome",
+    hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  }).formatToParts(new Date(guess));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const local = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
+  return new Date(guess - (local - guess)).toISOString();
+}
+
+type DayRef = { y: number | null; m: number; d: number };
+type Parsed = { start: string; end: string } | null;
+
+function validDay(d: number, m: number) {
+  return m >= 1 && m <= 12 && d >= 1 && d <= 31;
+}
+
+/** Anno mancante: quello che rende la data "attuale" (non più di 2 mesi fa). */
+function inferYear(m: number, d: number, now: Date): number {
+  const y = now.getUTCFullYear();
+  const candidate = Date.UTC(y, m - 1, d);
+  return candidate < now.getTime() - 60 * 86400000 ? y + 1 : y;
+}
+
+/**
+ * Cerca le date di un evento in un testo italiano, ad esempio:
+ * "dal 5 al 7 novembre 2026", "dal 28 novembre al 6 gennaio",
+ * "sabato 14 dicembre 2026 ore 21:00", "05/11/2026", "dalle 10 alle 18".
+ */
+function parseItalianDates(raw: string, now: Date): Parsed {
+  const s = raw.toLowerCase().replace(/\s+/g, " ");
+  let a: DayRef | null = null;
+  let b: DayRef | null = null;
+
+  const rangeSameMonth = new RegExp(
+    `\\b(?:dal|da)\\s+(\\d{1,2})\\s+(?:al|a|-|–)\\s+(\\d{1,2})\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`,
+  ).exec(s);
+  const rangeTwoMonths = new RegExp(
+    `\\b(\\d{1,2})\\s+${MONTH_RE}(?:\\s+(\\d{4}))?\\s*(?:al|a|-|–)\\s*(\\d{1,2})\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`,
+  ).exec(s);
+  const numericRange =
+    /\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})\s*(?:al|a|-|–)\s*(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/
+      .exec(s);
+
+  if (rangeSameMonth) {
+    const m = MONTHS[rangeSameMonth[3]];
+    const y = rangeSameMonth[4] ? Number(rangeSameMonth[4]) : null;
+    a = { y, m, d: Number(rangeSameMonth[1]) };
+    b = { y, m, d: Number(rangeSameMonth[2]) };
+  } else if (rangeTwoMonths) {
+    const y2 = rangeTwoMonths[6] ? Number(rangeTwoMonths[6]) : null;
+    const y1 = rangeTwoMonths[3] ? Number(rangeTwoMonths[3]) : null;
+    a = { y: y1, m: MONTHS[rangeTwoMonths[2]], d: Number(rangeTwoMonths[1]) };
+    b = { y: y2, m: MONTHS[rangeTwoMonths[5]], d: Number(rangeTwoMonths[4]) };
+    if (a.y == null && b.y != null) a.y = a.m > b.m ? b.y - 1 : b.y;
+  } else if (numericRange) {
+    a = { y: Number(numericRange[3]), m: Number(numericRange[2]), d: Number(numericRange[1]) };
+    b = { y: Number(numericRange[6]), m: Number(numericRange[5]), d: Number(numericRange[4]) };
+  } else {
+    const single = new RegExp(`\\b(\\d{1,2})(?:°|º)?\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`).exec(s);
+    const numeric = /\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})\b/.exec(s);
+    const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(s);
+    if (single) {
+      a = { y: single[3] ? Number(single[3]) : null, m: MONTHS[single[2]], d: Number(single[1]) };
+    } else if (numeric) {
+      a = { y: Number(numeric[3]), m: Number(numeric[2]), d: Number(numeric[1]) };
+    } else if (iso) {
+      a = { y: Number(iso[1]), m: Number(iso[2]), d: Number(iso[3]) };
+    }
+  }
+
+  if (!a || !validDay(a.d, a.m)) return null;
+  if (b && !validDay(b.d, b.m)) b = null;
+  if (a.y == null) a.y = inferYear(a.m, a.d, now);
+  if (b && b.y == null) b.y = b.m < a.m ? a.y + 1 : a.y;
+
+  // Orari: "dalle 10 alle 18", "ore 21:00", "alle 17.30"
+  let h1 = 0, m1 = 0, h2: number | null = null, m2 = 0;
+  const fromTo = /\bdalle\s+(?:ore\s+)?(\d{1,2})(?:[:.](\d{2}))?\s+alle\s+(?:ore\s+)?(\d{1,2})(?:[:.](\d{2}))?/.exec(s);
+  const at = /\b(?:ore|alle)\s+(\d{1,2})(?:[:.](\d{2}))?\b/.exec(s);
+  let hasTime = false;
+  if (fromTo && Number(fromTo[1]) < 24 && Number(fromTo[3]) < 24) {
+    h1 = Number(fromTo[1]); m1 = Number(fromTo[2] ?? 0);
+    h2 = Number(fromTo[3]); m2 = Number(fromTo[4] ?? 0);
+    hasTime = true;
+  } else if (at && Number(at[1]) < 24) {
+    h1 = Number(at[1]); m1 = Number(at[2] ?? 0);
+    hasTime = true;
+  }
+
+  const start = romeToUtcIso(a.y, a.m, a.d, h1, m1);
+  const endDay = b ?? a;
+  let end: string;
+  if (h2 != null) {
+    end = romeToUtcIso(endDay.y!, endDay.m, endDay.d, h2, m2);
+  } else if (hasTime && !b) {
+    end = new Date(new Date(start).getTime() + 2 * 3600000).toISOString();
+  } else {
+    end = romeToUtcIso(endDay.y!, endDay.m, endDay.d, 23, 59);
+  }
+  if (new Date(end) < new Date(start)) {
+    end = romeToUtcIso(a.y, a.m, a.d, 23, 59);
+  }
+  return { start, end };
+}
+
+function parseIsoDate(v: string): string | null {
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+// ---------------------------------------------------------------- feed
+
+type FeedKind = "eventi" | "notizie";
+type Feed = { url: string; kind: FeedKind };
+
+/** Cerca i feed RSS nelle pagine del sito (pagina /it/feeds e home). */
+async function discoverFeeds(): Promise<Feed[]> {
+  const found = new Map<string, FeedKind>();
+  for (const page of [`${SITE}/it/feeds`, `${SITE}/it`]) {
+    try {
+      const res = await fetch(page, { headers: { "User-Agent": USER_AGENT } });
+      if (!res.ok) continue;
+      const html = await res.text();
+      for (const m of html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) {
+        const href = m[1];
+        if (!/(rss|feed|atom|\.xml)/i.test(href)) continue;
+        const url = absoluteUrl(href, page);
+        if (!url.startsWith("http")) continue;
+        const kind: FeedKind | null = /event|eventi/i.test(href)
+          ? "eventi"
+          : /news|notizie/i.test(href)
+          ? "notizie"
+          : null;
+        if (kind && !found.has(url)) found.set(url, kind);
+      }
+    } catch (e) {
+      console.warn("discoverFeeds:", page, e);
+    }
+  }
+  // Indirizzi più comuni dei siti Municipium, se la ricerca non trova nulla.
+  for (const [u, k] of [
+    [`${SITE}/it/events/feed`, "eventi"],
+    [`${SITE}/it/eventi/feed`, "eventi"],
+    [`${SITE}/it/news/feed`, "notizie"],
+  ] as const) {
+    if (!found.has(u)) found.set(u, k);
+  }
+  return [...found.entries()]
+    .map(([url, kind]) => ({ url, kind }))
+    .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "eventi" ? -1 : 1));
+}
+
+type FeedItem = {
+  guid: string;
+  title: string;
+  link: string;
+  html: string;
+  image: string;
+  categories: string[];
+  location: string;
+  startIso: string | null;
+  endIso: string | null;
+};
+
+function parseFeed(xml: string, baseUrl: string): FeedItem[] {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    cdataPropName: "__cdata",
+    processEntities: true,
+  });
+  const doc = parser.parse(xml);
+  const rssItems = asArray(doc?.rss?.channel?.item ?? doc?.["rdf:RDF"]?.item);
+  const atomItems = asArray(doc?.feed?.entry);
+  const raw = rssItems.length ? rssItems : atomItems;
+
+  return raw.slice(0, MAX_ITEMS).map((it: Record<string, unknown>) => {
+    const linkNode = it.link;
+    let link = "";
+    for (const l of asArray(linkNode as unknown)) {
+      if (typeof l === "string") { link = l; break; }
+      const o = l as Record<string, string>;
+      if (o?.["@_href"] && (!o["@_rel"] || o["@_rel"] === "alternate")) {
+        link = o["@_href"];
+        break;
+      }
+    }
+    link = absoluteUrl(text(link) || link, baseUrl);
+
+    const html = text(it["content:encoded"]) || text(it.description) ||
+      text(it.summary) || text(it.content);
+
+    let image = "";
+    for (const key of ["enclosure", "media:content", "media:thumbnail"]) {
+      for (const node of asArray(it[key] as unknown)) {
+        const o = node as Record<string, string>;
+        const url = o?.["@_url"];
+        const type = o?.["@_type"] ?? "";
+        if (url && (!type || type.startsWith("image"))) { image = url; break; }
+      }
+      if (image) break;
+    }
+    if (!image) {
+      const img = /<img[^>]+src\s*=\s*["']([^"']+)["']/i.exec(html);
+      if (img) image = img[1];
+    }
+    if (image) image = absoluteUrl(image, link || baseUrl);
+
+    const categories = asArray(it.category as unknown)
+      .map((c) => text(c))
+      .filter((c) => c.length > 0);
+
+    const start = text(it["ev:startdate"]) || text(it["startDate"]) ||
+      text(it["event:startdate"]);
+    const end = text(it["ev:enddate"]) || text(it["endDate"]) ||
+      text(it["event:enddate"]);
+
+    return {
+      guid: text(it.guid) || text(it.id) || link,
+      title: htmlToText(text(it.title)),
+      link,
+      html,
+      image,
+      categories,
+      location: htmlToText(text(it["ev:location"]) || text(it["location"])),
+      startIso: start ? parseIsoDate(start) : null,
+      endIso: end ? parseIsoDate(end) : null,
+    };
+  });
+}
+
+// ---------------------------------------------------------------- server
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const db = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  // ---------------------------------------------- chi può avviarla
+  // Il programma automatico (parola segreta) oppure un admin collegato.
+  const secret = req.headers.get("x-import-secret");
+  let allowed = false;
+  if (secret) {
+    const { data } = await db.rpc("verifica_segreto_import", { segreto: secret });
+    allowed = data === true;
+  } else {
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: { user } } = await db.auth.getUser(token);
+    if (user) {
+      const { data: utente } = await db.from("utenti").select("ruolo")
+        .eq("id", user.id).single();
+      allowed = utente?.ruolo === "admin";
+    }
+  }
+  if (!allowed) return jsonResponse({ error: "Non autorizzato" }, 403);
+
+  // ---------------------------------------------- impostazioni
+  const { data: config } = await db.from("import_eventi_stato")
+    .select().eq("id", 1).maybeSingle();
+  const publishNow = config?.pubblica_subito ?? true;
+  const withImages = config?.importa_immagini ?? true;
+
+  const result = {
+    feed: "",
+    tipo_feed: "",
+    trovati: 0,
+    nuovi: 0,
+    pubblicati: 0,
+    bozze: 0,
+    saltati: 0,
+    errori: [] as string[],
+  };
+
+  try {
+    // ---------------------------------------------- lettura del feed
+    const feeds: Feed[] = config?.feed_url
+      ? [{ url: config.feed_url, kind: /news|notizie/i.test(config.feed_url) ? "notizie" : "eventi" }]
+      : await discoverFeeds();
+
+    let items: FeedItem[] = [];
+    for (const f of feeds) {
+      try {
+        const res = await fetch(f.url, { headers: { "User-Agent": USER_AGENT } });
+        if (!res.ok) continue;
+        const parsed = parseFeed(await res.text(), f.url);
+        if (parsed.length === 0) continue;
+        items = parsed;
+        result.feed = f.url;
+        result.tipo_feed = f.kind;
+        break;
+      } catch (e) {
+        result.errori.push(`${f.url}: ${e}`);
+      }
+    }
+    if (!result.feed) throw new Error("Nessun feed del Comune trovato");
+    result.trovati = items.length;
+
+    // ---------------------------------------------- solo quelli nuovi
+    const ids = items.map((i) => i.guid).filter(Boolean);
+    const { data: existing } = await db.from("eventi").select("fonte_id")
+      .in("fonte_id", ids);
+    const already = new Set((existing ?? []).map((r) => r.fonte_id));
+
+    const now = new Date();
+    const rows: Record<string, unknown>[] = [];
+    for (const it of items) {
+      if (!it.guid || !it.title || already.has(it.guid)) {
+        result.saltati++;
+        continue;
+      }
+      const body = htmlToText(it.html);
+
+      let start = it.startIso;
+      let end = it.endIso;
+      let sure = !!start;
+      if (!start) {
+        const p = parseItalianDates(`${it.title}\n${body}`, now);
+        if (p) {
+          start = p.start;
+          end = p.end;
+          sure = true;
+        }
+      }
+      if (!start) {
+        // Una notizia senza date non è un evento: si salta.
+        result.saltati++;
+        continue;
+      }
+      if (!end || new Date(end) < new Date(start)) {
+        end = new Date(new Date(start).getTime() + 2 * 3600000).toISOString();
+      }
+      if (new Date(end).getTime() < now.getTime() - 86400000) {
+        result.saltati++; // già finito
+        continue;
+      }
+
+      const publish = publishNow && sure && result.tipo_feed === "eventi";
+      rows.push({
+        titolo: it.title.slice(0, 200),
+        descrizione: `${body.slice(0, 4000)}\n\nFonte: ${SOURCE_LABEL}`.trim(),
+        luogo: it.location || "Gubbio",
+        image_url: withImages && it.image ? it.image : null,
+        sito_web: it.link || null,
+        data_inizio: start,
+        data_fine: end,
+        categoria: it.categories[0] || SOURCE_LABEL,
+        tags: it.categories.slice(0, 5),
+        stato: publish ? "pubblicato" : "bozza",
+        fonte: SOURCE,
+        fonte_id: it.guid,
+        fonte_url: it.link || null,
+        date_da_verificare: !sure,
+      });
+    }
+
+    // ---------------------------------------------- salvataggio
+    if (rows.length > 0) {
+      const { data: inserted, error } = await db.from("eventi")
+        .insert(rows).select("id, stato");
+      if (error) throw error;
+      result.nuovi = inserted?.length ?? 0;
+      for (const ev of inserted ?? []) {
+        if (ev.stato !== "pubblicato") {
+          result.bozze++;
+          continue;
+        }
+        result.pubblicati++;
+        // Traduzione in inglese, francese e tedesco come per gli altri eventi.
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/translate-content`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({ entity_type: "eventi", entity_id: ev.id }),
+          });
+        } catch (e) {
+          result.errori.push(`traduzione ${ev.id}: ${e}`);
+        }
+      }
+    }
+  } catch (e) {
+    result.errori.push(String((e as Error)?.message ?? e));
+  }
+
+  await db.from("import_eventi_stato").update({
+    ultimo_avvio: new Date().toISOString(),
+    ultimo_esito: result,
+  }).eq("id", 1);
+
+  return jsonResponse(result, result.feed ? 200 : 502);
+});

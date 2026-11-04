@@ -256,6 +256,39 @@ class ContentService {
     await _translateSafely(entityType: 'eventi', entityId: e.id);
   }
 
+  /// Solo admin: pubblica un evento importato rimasto in bozza (e lo traduce).
+  static Future<void> publishEvent(String id) async {
+    await _db
+        .from('eventi')
+        .update({'stato': 'pubblicato', 'date_da_verificare': false})
+        .eq('id', id);
+    await _translateSafely(entityType: 'eventi', entityId: id);
+  }
+
+  /// Solo admin: avvia subito l'importazione degli eventi dal sito del
+  /// Comune (Edge Function import-eventi). Ritorna l'esito.
+  static Future<Map<String, dynamic>> runEventsImport() async {
+    final res = await _db.functions.invoke('import-eventi');
+    final data = res.data;
+    return data is Map ? Map<String, dynamic>.from(data) : {};
+  }
+
+  /// Solo admin: data dell'ultima importazione automatica (null se mai
+  /// avvenuta o se lo script supabase_eventi_import_setup.sql manca).
+  static Future<DateTime?> lastEventsImport() async {
+    try {
+      final row = await _db
+          .from('import_eventi_stato')
+          .select('ultimo_avvio')
+          .eq('id', 1)
+          .maybeSingle();
+      final v = row?['ultimo_avvio'];
+      return v == null ? null : DateTime.tryParse(v.toString())?.toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> deleteEvent(String id) async {
     await _db.from('eventi').delete().eq('id', id);
   }
