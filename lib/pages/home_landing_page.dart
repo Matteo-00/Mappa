@@ -22,6 +22,8 @@ import 'bars_page.dart';
 import 'hotels_page.dart';
 import 'admin/scegli_vetrina_page.dart';
 import 'admin/review_reports_page.dart';
+import '../services/review_service.dart';
+import '../utils/route_observer.dart';
 import 'map_page.dart';
 import 'storia_page.dart';
 import 'itinerari_page.dart';
@@ -38,7 +40,7 @@ class HomeLandingPage extends StatefulWidget {
   State<HomeLandingPage> createState() => _HomeLandingPageState();
 }
 
-class _HomeLandingPageState extends State<HomeLandingPage> {
+class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final LocationService _locationService = LocationService();
   bool _showPanel = true;
@@ -49,11 +51,26 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
   late AppLocalizations _l10n;
   List<ItinerarioModel> _itinerariConsigliati = [];
 
+  /// Solo admin: recensioni segnalate ancora da controllare (numero rosso).
+  int _reportedCount = 0;
+
   /// Audio del video di sfondo: parte muto, il pulsante lo attiva.
   final ValueNotifier<bool> _videoMuted = ValueNotifier<bool>(true);
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) appRouteObserver.subscribe(this, route);
+  }
+
+  /// Si torna sulla home (es. dalle recensioni segnalate): numero aggiornato.
+  @override
+  void didPopNext() => _loadReportedCount();
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _videoMuted.dispose();
     super.dispose();
   }
@@ -70,6 +87,22 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
           .then((_) => UserLocationService.instance.refresh());
     });
     _loadItinerari();
+    _loadReportedCount();
+  }
+
+  Future<void> _loadReportedCount() async {
+    if (!context.read<AuthService>().isAdmin) return;
+    final count = await ReviewService.countReported();
+    if (!mounted) return;
+    setState(() => _reportedCount = count);
+  }
+
+  Future<void> _openReportedReviews() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ReviewReportsPage()),
+    );
+    _loadReportedCount();
   }
 
   Future<void> _loadItinerari() async {
@@ -211,8 +244,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
               tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
               tile(Icons.route, _l10n.addItinerarioMenuItem,
                   const AddItinerarioPage()),
-              tile(Icons.flag_outlined, 'Recensioni segnalate',
-                  const ReviewReportsPage()),
               const SizedBox(height: 12),
             ],
           ),
@@ -255,9 +286,24 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
                         onTap: () => _scaffoldKey.currentState?.openDrawer(),
                       ),
                       if (context.watch<AuthService>().isAdmin)
-                        _glassIconButton(
-                          icon: Icons.add,
-                          onTap: _showAdminMenu,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Recensioni segnalate, con il numero di quelle
+                            // ancora da controllare.
+                            _withBadge(
+                              _glassIconButton(
+                                icon: Icons.feedback_outlined,
+                                onTap: _openReportedReviews,
+                              ),
+                              _reportedCount,
+                            ),
+                            const SizedBox(width: 10),
+                            _glassIconButton(
+                              icon: Icons.add,
+                              onTap: _showAdminMenu,
+                            ),
+                          ],
                         ),
                     ],
                   ),
@@ -725,6 +771,43 @@ class _HomeLandingPageState extends State<HomeLandingPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Pallino rosso con il numero in alto a destra (nascosto se 0).
+  Widget _withBadge(Widget child, int count) {
+    if (count <= 0) return child;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        Positioned(
+          top: -3,
+          right: -3,
+          child: IgnorePointer(
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 20),
+              height: 20,
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD32F2F),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

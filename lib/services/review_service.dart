@@ -106,6 +106,19 @@ class ReviewService {
       ..sort((a, b) => b.reasons.length.compareTo(a.reasons.length));
   }
 
+  /// Solo admin: quante recensioni hanno segnalazioni ancora da controllare
+  /// (0 anche in caso di errore o se la tabella non esiste).
+  static Future<int> countReported() async {
+    try {
+      final rows =
+          await _db.from('segnalazioni_recensioni').select('recensione_id');
+      return (rows as List).map((r) => r['recensione_id']).toSet().length;
+    } catch (e) {
+      debugPrint('ReviewService.countReported: errore $e');
+      return 0;
+    }
+  }
+
   /// Solo admin: la recensione va bene, si tolgono le sue segnalazioni.
   static Future<void> dismissReports(String reviewId) async {
     await _db

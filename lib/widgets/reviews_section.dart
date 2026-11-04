@@ -315,13 +315,38 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      isMine ? '${r.author} · ${l.t('rvYours')}' : r.author,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.bluNotte,
-                      ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          r.author,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.bluNotte,
+                          ),
+                        ),
+                        // Etichetta colorata sulla propria recensione.
+                        if (isMine)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.rossoGubbio,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              l.t('rvYours'),
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     Text(
                       r.isEdited ? '$date · ${l.t('rvEdited')}' : date,
