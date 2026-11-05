@@ -85,6 +85,20 @@ class ReviewService {
   }
 
   /// Elimina una recensione (la propria, oppure qualsiasi se admin).
+  /// Traduce il commento di una recensione nella lingua [lang] (Edge
+  /// Function translate-review, Azure Translator). Ritorna il testo tradotto,
+  /// oppure null se il commento è già in quella lingua.
+  static Future<String?> translate(String reviewId, String lang) async {
+    final res = await _db.functions.invoke(
+      'translate-review',
+      body: {'review_id': reviewId, 'lang': lang},
+    );
+    final data = res.data;
+    if (data is! Map) throw Exception('Traduzione non disponibile');
+    if (data['stessa_lingua'] == true) return null;
+    return data['testo']?.toString();
+  }
+
   static Future<void> delete(String id) async {
     await _db.from('recensioni').delete().eq('id', id);
   }

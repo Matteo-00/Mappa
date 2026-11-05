@@ -175,3 +175,47 @@ CREATE POLICY "admin_read_segnalazioni" ON public.segnalazioni_recensioni
 
 CREATE POLICY "admin_delete_segnalazioni" ON public.segnalazioni_recensioni
   FOR DELETE TO authenticated USING (public.is_admin());
+
+
+-- ============================================================
+-- 5. TRADUZIONI DEI COMMENTI (tasto "Traduci")
+-- ============================================================
+-- Le traduzioni fatte dalla Edge Function "translate-review" restano
+-- salvate: chi le chiede dopo le vede subito. Se l'autore modifica il
+-- commento, le traduzioni vecchie si cancellano da sole.
+-- Le scrive solo il server (Edge Function), le leggono gli utenti.
+
+CREATE TABLE IF NOT EXISTS public.recensioni_traduzioni (
+  recensione_id UUID NOT NULL
+    REFERENCES public.recensioni(id) ON DELETE CASCADE,
+  lingua TEXT NOT NULL,
+  testo TEXT NOT NULL,
+  lingua_originale TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  PRIMARY KEY (recensione_id, lingua)
+);
+
+ALTER TABLE public.recensioni_traduzioni ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "read_recensioni_traduzioni" ON public.recensioni_traduzioni;
+CREATE POLICY "read_recensioni_traduzioni" ON public.recensioni_traduzioni
+  FOR SELECT TO authenticated USING (true);
+
+CREATE OR REPLACE FUNCTION public.reset_traduzioni_recensione()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.commento IS DISTINCT FROM OLD.commento THEN
+    DELETE FROM public.recensioni_traduzioni WHERE recensione_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_recensioni_reset_traduzioni ON public.recensioni;
+CREATE TRIGGER trg_recensioni_reset_traduzioni
+  AFTER UPDATE ON public.recensioni
+  FOR EACH ROW EXECUTE FUNCTION public.reset_traduzioni_recensione();
