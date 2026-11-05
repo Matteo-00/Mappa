@@ -36,8 +36,8 @@ import 'itinerario_detail_page.dart';
 /// Home page landing di Visit Gubbio.
 /// Video/hero a tutto schermo sullo sfondo; in basso il pannello "Esplora
 /// Gubbio" che si tira su e giù con il dito (o con il pulsante freccia): chiuso
-/// in basso lascia vedere il video, a metà mostra gli accessi rapidi, aperto
-/// mostra anche gli itinerari consigliati e i prossimi eventi.
+/// in basso lascia vedere il video, a metà mostra i 3 itinerari della vetrina,
+/// aperto anche gli accessi rapidi e i prossimi eventi.
 class HomeLandingPage extends StatefulWidget {
   const HomeLandingPage({super.key});
 
@@ -59,9 +59,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
 
   /// Quanto è aperto il pannello (frazione dell'altezza dello schermo).
   double _sheetExtent = 0;
-
-  /// Itinerario mostrato nel carosello (per i pallini).
-  int _itinerarioPage = 0;
 
   /// Solo admin: recensioni segnalate ancora da controllare (numero rosso).
   int _reportedCount = 0;
@@ -294,7 +291,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     // Posizioni del pannello: chiuso (solo il titolo), metà, aperto.
     final minExtent = ((96 + bottomInset) / size.height).clamp(0.08, 0.2);
-    const midExtent = 0.44;
+    // A metà: quanto basta per vedere per intero i 3 itinerari della vetrina
+    // (titolo del pannello + intestazione + schede), su qualsiasi schermo.
+    final midExtent =
+        ((385 + bottomInset) / size.height).clamp(minExtent + 0.1, 0.7);
     const maxExtent = 0.88;
     if (_sheetExtent == 0) _sheetExtent = midExtent;
 
@@ -396,7 +396,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               minChildSize: minExtent,
               maxChildSize: maxExtent,
               snap: true,
-              snapSizes: const [midExtent],
+              snapSizes: [midExtent],
               builder: (context, scrollController) => _buildPanel(
                 scrollController,
                 minExtent: minExtent,
@@ -633,15 +633,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               ),
             ),
 
-            // Accessi rapidi (2 righe da 4)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-              child: _buildQuickGrid(),
-            ),
-
-            // Itinerari consigliati
+            // Itinerari consigliati: i 3 della vetrina, tutti visibili già
+            // con il pannello a metà.
             _sectionHeader(
               _l10n.suggestedItinerariesNav,
+              top: 6,
               onSeeAll: _openItinerari,
               extra: isAdmin
                   ? GestureDetector(
@@ -668,7 +664,13 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                     )
                   : null,
             ),
-            _buildItinerariCarousel(),
+            _buildItinerariVetrina(),
+
+            // Accessi rapidi (2 righe da 4)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 0),
+              child: _buildQuickGrid(),
+            ),
 
             // Prossimi eventi
             _sectionHeader(_l10n.t('homeUpcomingEvents'),
@@ -682,9 +684,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   }
 
   Widget _sectionHeader(String title,
-      {required VoidCallback onSeeAll, Widget? extra}) {
+      {required VoidCallback onSeeAll, Widget? extra, double top = 22}) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
+      padding: EdgeInsets.fromLTRB(20, top, 20, 10),
       child: Row(
         children: [
           Expanded(
@@ -788,9 +790,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     );
   }
 
-  // -------------------------------------------------- Itinerari (carosello)
-  Widget _buildItinerariCarousel() {
-    final items = _itinerariConsigliati;
+  // -------------------------------------------------- Itinerari (vetrina)
+  /// I 3 itinerari scelti per la vetrina, affiancati e tutti visibili.
+  Widget _buildItinerariVetrina() {
+    final items = _itinerariConsigliati.take(3).toList();
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -799,7 +802,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           child: SizedBox(
             height: 150,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(20),
               child: itinerarioImagePlaceholder('',
                   icon: Icons.route_outlined),
             ),
@@ -807,63 +810,48 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
         ),
       );
     }
-    return Column(
-      children: [
-        SizedBox(
-          height: 250,
-          child: PageView.builder(
-            controller: PageController(viewportFraction: 0.86),
-            padEnds: false,
-            itemCount: items.length,
-            onPageChanged: (i) => setState(() => _itinerarioPage = i),
-            itemBuilder: (context, i) => Padding(
-              padding: EdgeInsets.only(left: i == 0 ? 20 : 6, right: 6),
-              child: _buildItinerarioCard(items[i]),
-            ),
-          ),
-        ),
-        if (items.length > 1) ...[
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < items.length; i++)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: i == _itinerarioPage ? 18 : 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: i == _itinerarioPage
-                        ? AppColors.rossoGubbio
-                        : AppColors.tortora.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SizedBox(
+        height: 200,
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(width: 10),
+              Expanded(child: _buildItinerarioCard(items[i])),
             ],
-          ),
-        ],
-      ],
+            // Con meno di 3 itinerari le schede restano della stessa larghezza.
+            for (var i = items.length; i < 3; i++) ...[
+              const SizedBox(width: 10),
+              const Expanded(child: SizedBox()),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildItinerarioCard(ItinerarioModel it) {
     final placeholder = itinerarioImagePlaceholder('', icon: it.icona);
+    final meta = [
+      if (it.durata.trim().isNotEmpty) it.durata.trim(),
+      if (it.tappe.isNotEmpty) _l10n.count('homeStops', it.tappe.length),
+    ].join(' · ');
     return GestureDetector(
       onTap: () => _openItinerario(it),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.18),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: AppColors.bluNotte.withOpacity(0.16),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -881,84 +869,56 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0x33000000),
+                      Color(0x26000000),
                       Color(0x00000000),
-                      Color(0xD9000000),
+                      Color(0xE6000000),
                     ],
-                    stops: [0.0, 0.35, 1.0],
+                    stops: [0.0, 0.3, 1.0],
                   ),
                 ),
               ),
-              // Tema in alto a sinistra
               if (it.tema.trim().isNotEmpty)
                 Positioned(
-                  top: 14,
-                  left: 14,
-                  child: _glassChip(it.tema.toUpperCase(), strong: true),
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _glassChip(it.tema.toUpperCase(), strong: true),
+                  ),
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       it.titolo,
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontFamily: 'serif',
                         color: Colors.white,
-                        fontSize: 22,
+                        fontSize: 15.5,
                         fontWeight: FontWeight.w700,
-                        height: 1.1,
+                        height: 1.12,
                       ),
                     ),
-                    if (it.sottotitolo.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 5),
                       Text(
-                        it.sottotitolo,
-                        maxLines: 1,
+                        meta,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.88),
-                          fontSize: 13.5,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              if (it.durata.trim().isNotEmpty)
-                                _glassChip(it.durata, icon: Icons.schedule),
-                              if (it.tappe.isNotEmpty)
-                                _glassChip(
-                                    _l10n.count('homeStops', it.tappe.length),
-                                    icon: Icons.place_outlined),
-                              if (it.difficolta.trim().isNotEmpty)
-                                _glassChip(it.difficolta,
-                                    icon: Icons.terrain_outlined),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: AppColors.rossoGubbio,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.arrow_forward_rounded,
-                              color: Colors.white, size: 22),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
