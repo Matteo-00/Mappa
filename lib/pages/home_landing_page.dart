@@ -30,6 +30,7 @@ import '../utils/route_observer.dart';
 import 'map_page.dart';
 import 'storia_page.dart';
 import 'user_profile_page.dart';
+import 'search_page.dart';
 import 'itinerari_page.dart' show ItinerariPage, itinerarioImagePlaceholder;
 import 'itinerario_detail_page.dart';
 
@@ -194,6 +195,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     if (changed == true) _loadItinerari();
   }
 
+  void _openSearch() => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SearchPage()),
+      );
+
   void _openItinerari() => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ItinerariPage()),
@@ -294,7 +300,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     // A metà: quanto basta per vedere per intero i 3 itinerari della vetrina
     // (titolo del pannello + intestazione + schede), su qualsiasi schermo.
     final midExtent =
-        ((385 + bottomInset) / size.height).clamp(minExtent + 0.1, 0.7);
+        ((445 + bottomInset) / size.height).clamp(minExtent + 0.1, 0.72);
     const maxExtent = 0.88;
     if (_sheetExtent == 0) _sheetExtent = midExtent;
 
@@ -345,6 +351,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                             ),
                             const SizedBox(width: 10),
                           ],
+                          _glassIconButton(
+                            icon: Icons.search_rounded,
+                            onTap: _openSearch,
+                          ),
+                          const SizedBox(width: 10),
                           _glassIconButton(
                             icon: Icons.person_outline_rounded,
                             onTap: () => Navigator.push(
@@ -633,6 +644,12 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               ),
             ),
 
+            // Ricerca in tutta l'app
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+              child: _buildSearchBar(),
+            ),
+
             // Itinerari consigliati: i 3 della vetrina, tutti visibili già
             // con il pannello a metà.
             _sectionHeader(
@@ -678,6 +695,42 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             _buildEventsRow(),
           ],
         ),
+        ),
+      ),
+    );
+  }
+
+  /// Barra "Cerca…": apre la ricerca in tutta l'app.
+  Widget _buildSearchBar() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _openSearch,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.grigioChiaro),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.search_rounded,
+                  color: AppColors.rossoGubbio, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _l10n.t('searchHint'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 15, color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

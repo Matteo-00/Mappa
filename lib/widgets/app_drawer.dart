@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../pages/favorites_page.dart';
+import '../pages/search_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../theme/app_colors.dart';
 import 'scroll_hints.dart';
@@ -185,6 +186,19 @@ class AppDrawer extends StatelessWidget {
                         () => const LuoghiPage(tipo: LuogoTipo.bagno),
                       ),
                     ],
+                  ),
+                  // Ricerca in tutta l'app.
+                  _menuItem(
+                    context,
+                    icon: Icons.search_rounded,
+                    title: l10n.t('searchNav'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SearchPage()),
+                      );
+                    },
                   ),
                   // Preferiti salvati con il cuore.
                   _menuItem(

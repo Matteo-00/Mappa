@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mappa/models/event_model.dart';
+import 'package:mappa/services/search_service.dart';
 
 /// Chiavi definite per ogni lingua in lib/l10n/app_localizations.dart.
 Map<String, Set<String>> _keysByLanguage() {
@@ -61,5 +62,11 @@ void main() {
     });
     expect(e.isDraft, isFalse);
     expect(e.isFromComune, isFalse);
+  });
+
+  test('la ricerca ignora maiuscole, accenti e apostrofi', () {
+    expect(SearchService.normalize("Città"), 'citta');
+    expect(SearchService.normalize("Sant'Ubaldo"), 'sant ubaldo');
+    expect(SearchService.normalize('  Basilica   di  SAN  '), 'basilica di san');
   });
 }
