@@ -305,79 +305,8 @@ class UserProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguageCard(BuildContext context, AppLocalizations l10n) {
-    final languageService = context.watch<LanguageService>();
-    final current = languageService.currentLanguageCode;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Text(
-              l10n.language,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.bluNotte,
-              ),
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.grigioChiaro),
-          for (final code in AppLocalizations.supportedCodes)
-            InkWell(
-              onTap: () => languageService.setLanguage(code),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  children: [
-                    Text(
-                      AppLocalizations.flagFor(code),
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        AppLocalizations.nameFor(code),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: code == current
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: AppColors.bluNotte,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      code == current
-                          ? Icons.radio_button_checked_rounded
-                          : Icons.radio_button_off_rounded,
-                      size: 22,
-                      color: code == current
-                          ? AppColors.rossoGubbio
-                          : AppColors.grigioChiaro,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 6),
-        ],
-      ),
-    );
-  }
+  Widget _buildLanguageCard(BuildContext context, AppLocalizations l10n) =>
+      _LanguageCard(l10n: l10n);
 
   Widget _buildInfoCard({
     required String title,
@@ -470,4 +399,133 @@ class _InfoItem {
     required this.label,
     required this.value,
   });
+}
+
+/// Scheda "Lingua": chiusa di base (mostra la lingua attuale); toccandola si
+/// apre l'elenco delle lingue.
+class _LanguageCard extends StatefulWidget {
+  final AppLocalizations l10n;
+  const _LanguageCard({required this.l10n});
+
+  @override
+  State<_LanguageCard> createState() => _LanguageCardState();
+}
+
+class _LanguageCardState extends State<_LanguageCard> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final languageService = context.watch<LanguageService>();
+    final current = languageService.currentLanguageCode;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _open = !_open),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+                child: Row(
+                  children: [
+                    Text(
+                      AppLocalizations.flagFor(current),
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.l10n.language,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.bluNotte,
+                            ),
+                          ),
+                          Text(
+                            AppLocalizations.nameFor(current),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.bluNotte),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_open) ...[
+              const Divider(height: 1, color: AppColors.grigioChiaro),
+              for (final code in AppLocalizations.supportedCodes)
+                InkWell(
+                  onTap: () {
+                    languageService.setLanguage(code);
+                    setState(() => _open = false);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    child: Row(
+                      children: [
+                        Text(
+                          AppLocalizations.flagFor(code),
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.nameFor(code),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: code == current
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: AppColors.bluNotte,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          code == current
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_off_rounded,
+                          size: 22,
+                          color: code == current
+                              ? AppColors.rossoGubbio
+                              : AppColors.grigioChiaro,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 6),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

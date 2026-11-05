@@ -36,6 +36,7 @@ class OfflineModeService extends ChangeNotifier {
   DateTime? _dataSavedAt;
   int _generation = 0;
   Future<bool>? _pendingQuestion;
+  Future<bool>? _pendingNoData;
   Timer? _timer;
 
   bool get isOffline => _offline;
@@ -66,6 +67,43 @@ class OfflineModeService extends ChangeNotifier {
     return _pendingQuestion ??= _ask(savedAt).whenComplete(() {
       _pendingQuestion = null;
     });
+  }
+
+  /// Senza rete e senza una copia salvata non si può mostrare nulla: lo si
+  /// dice chiaramente (invece di "nessun risultato"). true = riprova.
+  Future<bool> askNoSavedData() {
+    return _pendingNoData ??= _askNoData().whenComplete(() {
+      _pendingNoData = null;
+    });
+  }
+
+  Future<bool> _askNoData() async {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return false;
+    final l = AppLocalizations.of(language?.currentLanguageCode ?? 'it');
+    final retry = await showDialog<bool>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        icon: const Icon(Icons.cloud_off_rounded,
+            color: AppColors.rossoGubbio, size: 34),
+        title: Text(l.t('offNoDataTitle')),
+        content: Text(l.t('offNoDataText')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: Text(l.close),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.rossoGubbio),
+            child: Text(l.t('offRetry')),
+          ),
+        ],
+      ),
+    );
+    return retry == true;
   }
 
   Future<bool> _ask(DateTime? savedAt) async {

@@ -61,6 +61,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   /// Quanto è aperto il pannello (frazione dell'altezza dello schermo).
   double _sheetExtent = 0;
 
+  /// Punti di aggancio del pannello (vedi build): istanza stabile.
+  double _snapFor = -1;
+  List<double> _snapSizes = const [];
+
   /// Solo admin: recensioni segnalate ancora da controllare (numero rosso).
   int _reportedCount = 0;
 
@@ -296,13 +300,18 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     final size = MediaQuery.of(context).size;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     // Posizioni del pannello: chiuso (solo il titolo), metà, aperto.
-    final minExtent = ((96 + bottomInset) / size.height).clamp(0.08, 0.2);
-    // A metà: quanto basta per vedere per intero i 3 itinerari della vetrina
-    // (titolo del pannello + intestazione + schede), su qualsiasi schermo.
-    final midExtent =
-        ((445 + bottomInset) / size.height).clamp(minExtent + 0.1, 0.72);
+    final minExtent = ((84 + bottomInset) / size.height).clamp(0.08, 0.2);
+    // A metà: il 45% dello schermo (video visibile, itinerari non tagliati).
+    final midExtent = 0.45.clamp(minExtent + 0.1, 0.72);
     const maxExtent = 0.88;
     if (_sheetExtent == 0) _sheetExtent = midExtent;
+    // Elenco dei punti di aggancio: SEMPRE lo stesso oggetto finché la metà non
+    // cambia. Se fosse un elenco nuovo a ogni ricostruzione, Flutter riaggancia
+    // il pannello a ogni movimento e non si riesce più a trascinarlo.
+    if (_snapFor != midExtent) {
+      _snapFor = midExtent;
+      _snapSizes = [midExtent];
+    }
 
     return Scaffold(
       key: _scaffoldKey,
@@ -407,7 +416,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               minChildSize: minExtent,
               maxChildSize: maxExtent,
               snap: true,
-              snapSizes: [midExtent],
+              snapSizes: _snapSizes,
               builder: (context, scrollController) => _buildPanel(
                 scrollController,
                 minExtent: minExtent,
@@ -592,10 +601,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                               Text(
                                 _l10n.exploreGubbioTitle,
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.rossoGubbio,
-                                  letterSpacing: 1.6,
+                                  letterSpacing: 1.5,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -603,7 +612,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                                 _l10n.t('homeExploreSubtitle'),
                                 style: const TextStyle(
                                   fontFamily: 'serif',
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.bluNotte,
                                   height: 1.15,
@@ -644,12 +653,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               ),
             ),
 
-            // Ricerca in tutta l'app
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-              child: _buildSearchBar(),
-            ),
-
             // Itinerari consigliati: i 3 della vetrina, tutti visibili già
             // con il pannello a metà.
             _sectionHeader(
@@ -685,7 +688,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
 
             // Accessi rapidi (2 righe da 4)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 18, 14, 0),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
               child: _buildQuickGrid(),
             ),
 
@@ -695,42 +698,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             _buildEventsRow(),
           ],
         ),
-        ),
-      ),
-    );
-  }
-
-  /// Barra "Cerca…": apre la ricerca in tutta l'app.
-  Widget _buildSearchBar() {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: _openSearch,
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.grigioChiaro),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.search_rounded,
-                  color: AppColors.rossoGubbio, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _l10n.t('searchHint'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 15, color: AppColors.textMuted),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -747,7 +714,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               title,
               style: const TextStyle(
                 fontFamily: 'serif',
-                fontSize: 19,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: AppColors.bluNotte,
               ),
@@ -866,7 +833,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: SizedBox(
-        height: 200,
+        height: 180,
         child: Row(
           children: [
             for (var i = 0; i < items.length; i++) ...[
@@ -1001,13 +968,17 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             Icon(icon, size: 13, color: Colors.white),
             const SizedBox(width: 4),
           ],
-          Text(
-            text,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: strong ? 10.5 : 11.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: strong ? 0.8 : 0,
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: strong ? 10.5 : 11.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: strong ? 0.8 : 0,
+              ),
             ),
           ),
         ],

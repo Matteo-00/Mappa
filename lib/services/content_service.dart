@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -408,7 +409,12 @@ class ContentService {
         // Il server ha risposto (con un errore): non è un problema di rete.
         rethrow;
       } catch (e) {
-        if (cached == null) rethrow;
+        if (cached == null) {
+          // Nessuna rete e nessuna copia salvata: lo si dice, non si mostra
+          // un "nessun risultato" che sembrerebbe un elenco vuoto.
+          if (_isNetworkError(e) && await offline.askNoSavedData()) continue;
+          rethrow;
+        }
         debugPrint('$entityType: rete lenta o assente ($e)');
         // "Modalità offline" -> copia salvata; "Riprova" -> un altro tentativo.
         if (await offline.askToGoOffline(cached.$3)) {
@@ -417,6 +423,17 @@ class ContentService {
         }
       }
     }
+  }
+
+  /// Errore di rete (niente connessione, server irraggiungibile, timeout).
+  static bool _isNetworkError(Object e) {
+    if (e is TimeoutException) return true;
+    final t = e.toString();
+    return t.contains('SocketException') ||
+        t.contains('ClientException') ||
+        t.contains('Failed host lookup') ||
+        t.contains('Connection') ||
+        t.contains('Network is unreachable');
   }
 
   static Future<void> _saveCache(
