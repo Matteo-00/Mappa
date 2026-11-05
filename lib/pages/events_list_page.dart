@@ -589,7 +589,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.06),
+              color: AppColors.bluNotte.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -704,7 +704,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: (isPast ? AppColors.tortora : AppColors.rossoGubbio)
-            .withOpacity(0.12),
+            .withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -736,7 +736,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: strong ? color : color.withOpacity(0.15),
+        color: strong ? color : color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -797,7 +797,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       children: [
         const SizedBox(height: 50),
         Icon(Icons.event_busy,
-            size: 70, color: AppColors.tortora.withOpacity(0.55)),
+            size: 70, color: AppColors.tortora.withValues(alpha: 0.55)),
         const SizedBox(height: 16),
         Text(
           l10n.noEventsFound,

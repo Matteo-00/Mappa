@@ -106,8 +106,8 @@ class _HorizontalScrollHintState extends State<HorizontalScrollHint> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: left
-                        ? [fade, fade.withOpacity(0)]
-                        : [fade.withOpacity(0), fade],
+                        ? [fade, fade.withValues(alpha: 0)]
+                        : [fade.withValues(alpha: 0), fade],
                   ),
                 ),
               ),
@@ -125,7 +125,7 @@ class _HorizontalScrollHintState extends State<HorizontalScrollHint> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.22),
+                      color: Colors.black.withValues(alpha: 0.22),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -218,7 +218,7 @@ class _VerticalScrollHintState extends State<VerticalScrollHint> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        widget.fadeColor.withOpacity(0),
+                        widget.fadeColor.withValues(alpha: 0),
                         widget.fadeColor,
                       ],
                     ),

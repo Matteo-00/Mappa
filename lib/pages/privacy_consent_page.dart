@@ -201,7 +201,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.rossoGubbio,
                     disabledBackgroundColor:
-                        AppColors.rossoGubbio.withOpacity(0.35),
+                        AppColors.rossoGubbio.withValues(alpha: 0.35),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),

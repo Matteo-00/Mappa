@@ -112,7 +112,7 @@ class EventDetailPage extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.tortora.withOpacity(0.4),
+            AppColors.tortora.withValues(alpha: 0.4),
             AppColors.avorio,
           ],
         ),
@@ -124,7 +124,7 @@ class EventDetailPage extends StatelessWidget {
             Icon(
               Icons.festival_outlined,
               size: 72,
-              color: AppColors.rossoGubbio.withOpacity(0.5),
+              color: AppColors.rossoGubbio.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 12),
             Text(
@@ -146,7 +146,7 @@ class EventDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.rossoGubbio.withOpacity(0.08),
+        color: AppColors.rossoGubbio.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -263,7 +263,7 @@ class EventDetailPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.05),
+            color: AppColors.bluNotte.withValues(alpha: 0.05),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -277,7 +277,7 @@ class EventDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.rossoGubbio.withOpacity(0.1),
+                  color: AppColors.rossoGubbio.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -319,10 +319,10 @@ class EventDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.rossoGubbio.withOpacity(0.05),
+        color: AppColors.rossoGubbio.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.rossoGubbio.withOpacity(0.18),
+          color: AppColors.rossoGubbio.withValues(alpha: 0.18),
           width: 1,
         ),
       ),
@@ -334,7 +334,7 @@ class EventDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.rossoGubbio.withOpacity(0.1),
+                  color: AppColors.rossoGubbio.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -407,7 +407,7 @@ class EventDetailPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: AppColors.bluNotte.withOpacity(0.05),
+                color: AppColors.bluNotte.withValues(alpha: 0.05),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),

@@ -320,7 +320,7 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.bluNotte.withOpacity(0.7),
+                  color: AppColors.bluNotte.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 6),
@@ -366,7 +366,7 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
                 'Scrivi un voto da 0 a 5, anche con i decimali. Lascia vuoto per nessuna valutazione.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.bluNotte.withOpacity(0.55),
+                  color: AppColors.bluNotte.withValues(alpha: 0.55),
                 ),
               ),
             ],
@@ -376,7 +376,7 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.bluNotte.withOpacity(0.7),
+                color: AppColors.bluNotte.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 6),

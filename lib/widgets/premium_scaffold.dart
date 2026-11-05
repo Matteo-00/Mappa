@@ -47,10 +47,10 @@ class HomeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: light ? Colors.white.withOpacity(0.92) : Colors.white,
+      color: light ? Colors.white.withValues(alpha: 0.92) : Colors.white,
       shape: const CircleBorder(),
       elevation: 3,
-      shadowColor: Colors.black.withOpacity(0.25),
+      shadowColor: Colors.black.withValues(alpha: 0.25),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: () =>
@@ -74,10 +74,10 @@ class BackCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: light ? Colors.white.withOpacity(0.92) : Colors.white,
+      color: light ? Colors.white.withValues(alpha: 0.92) : Colors.white,
       shape: const CircleBorder(),
       elevation: 3,
-      shadowColor: Colors.black.withOpacity(0.25),
+      shadowColor: Colors.black.withValues(alpha: 0.25),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: () => Navigator.of(context).maybePop(),

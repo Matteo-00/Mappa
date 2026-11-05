@@ -112,7 +112,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Material(
-                    color: Colors.black.withOpacity(0.28),
+                    color: Colors.black.withValues(alpha: 0.28),
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
@@ -130,7 +130,7 @@ class _ItinerarioDetailView extends StatelessWidget {
             leading: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Material(
-                color: Colors.black.withOpacity(0.28),
+                color: Colors.black.withValues(alpha: 0.28),
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
@@ -324,7 +324,7 @@ class _ItinerarioDetailView extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.05),
+              color: AppColors.bluNotte.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -394,7 +394,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: AppColors.tortora.withOpacity(0.5),
+                    color: AppColors.tortora.withValues(alpha: 0.5),
                   ),
                 ),
             ],
@@ -411,7 +411,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.bluNotte.withOpacity(0.05),
+                      color: AppColors.bluNotte.withValues(alpha: 0.05),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),

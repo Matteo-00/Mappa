@@ -1,30 +1,65 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mappa/models/event_model.dart';
 
-import 'package:mappa/main.dart';
+/// Chiavi definite per ogni lingua in lib/l10n/app_localizations.dart.
+Map<String, Set<String>> _keysByLanguage() {
+  final src = File('lib/l10n/app_localizations.dart').readAsStringSync();
+  final result = <String, Set<String>>{};
+  String? current;
+  final langRe = RegExp(r"^    '(it|en|de|fr)': \{");
+  final keyRe = RegExp(r"^      '([A-Za-z0-9_]+)':");
+  for (final line in src.split('\n')) {
+    final lang = langRe.firstMatch(line);
+    if (lang != null) {
+      current = lang.group(1);
+      result[current!] = {};
+      continue;
+    }
+    final key = keyRe.firstMatch(line);
+    if (current != null && key != null) result[current]!.add(key.group(1)!);
+  }
+  return result;
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MappaApp());
+  test('ogni testo esiste in tutte e 4 le lingue', () {
+    final keys = _keysByLanguage();
+    expect(keys.keys, containsAll(['it', 'en', 'de', 'fr']));
+    for (final lang in ['en', 'de', 'fr']) {
+      final missing = keys['it']!.difference(keys[lang]!);
+      final extra = keys[lang]!.difference(keys['it']!);
+      expect(missing, isEmpty, reason: 'mancano in $lang');
+      expect(extra, isEmpty, reason: 'in più in $lang');
+    }
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('un evento importato in bozza dal Comune viene letto correttamente', () {
+    final e = EventModel.fromJson({
+      'id': 'abc-1',
+      'titolo': 'Concerto',
+      'data_inizio': '2026-11-21T17:00:00Z',
+      'data_fine': '2026-11-21T19:00:00Z',
+      'stato': 'bozza',
+      'fonte': 'comune_gubbio',
+      'fonte_url': 'https://www.comune.gubbio.pg.it/it/events/1',
+      'date_da_verificare': true,
+    });
+    expect(e.isDraft, isTrue);
+    expect(e.isFromComune, isTrue);
+    expect(e.datesToVerify, isTrue);
+    expect(e.location, '');
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('un evento inserito a mano resta pubblicato', () {
+    final e = EventModel.fromJson({
+      'id': 'abc-2',
+      'titolo': 'Festa',
+      'data_inizio': '2026-05-15T08:00:00Z',
+      'data_fine': '2026-05-15T20:00:00Z',
+    });
+    expect(e.isDraft, isFalse);
+    expect(e.isFromComune, isFalse);
   });
 }

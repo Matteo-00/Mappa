@@ -116,7 +116,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                       decoration: BoxDecoration(gradient: AppColors.heroFallback),
                       child: Center(
                         child: Icon(_categoryIcon(c.category),
-                            size: 64, color: Colors.white.withOpacity(0.85)),
+                            size: 64, color: Colors.white.withValues(alpha: 0.85)),
                       ),
                     ),
                   const DecoratedBox(decoration: BoxDecoration(gradient: AppColors.heroOverlay)),
@@ -161,7 +161,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],

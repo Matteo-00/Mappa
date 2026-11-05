@@ -216,7 +216,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
         Widget tile(IconData icon, String label, Widget page) {
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: AppColors.rossoGubbio.withOpacity(0.12),
+              backgroundColor: AppColors.rossoGubbio.withValues(alpha: 0.12),
               child: Icon(icon, color: AppColors.rossoGubbio),
             ),
             title: Text(label,
@@ -435,9 +435,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withOpacity(0.28),
-                Colors.black.withOpacity(0.05),
-                Colors.black.withOpacity(0.15),
+                Colors.black.withValues(alpha: 0.28),
+                Colors.black.withValues(alpha: 0.05),
+                Colors.black.withValues(alpha: 0.15),
               ],
               stops: const [0.0, 0.4, 1.0],
             ),
@@ -455,7 +455,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           'VISIT',
           style: TextStyle(
             fontFamily: 'serif',
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             fontSize: 24,
             fontWeight: FontWeight.w500,
             letterSpacing: 5,
@@ -537,7 +537,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.28),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 26,
             offset: const Offset(0, -6),
           ),
@@ -567,7 +567,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                       width: 44,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: AppColors.tortora.withOpacity(0.55),
+                        color: AppColors.tortora.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -768,7 +768,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(icon, color: color, size: 26),
@@ -844,7 +844,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.16),
+              color: AppColors.bluNotte.withValues(alpha: 0.16),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -912,7 +912,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.88),
+                          color: Colors.white.withValues(alpha: 0.88),
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           height: 1.25,
@@ -934,12 +934,12 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: strong
-            ? AppColors.rossoGubbio.withOpacity(0.92)
-            : Colors.white.withOpacity(0.2),
+            ? AppColors.rossoGubbio.withValues(alpha: 0.92)
+            : Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
         border: strong
             ? null
-            : Border.all(color: Colors.white.withOpacity(0.35)),
+            : Border.all(color: Colors.white.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1012,7 +1012,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                 width: 56,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: AppColors.rossoGubbio.withOpacity(0.09),
+                  color: AppColors.rossoGubbio.withValues(alpha: 0.09),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
@@ -1135,7 +1135,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   Widget _glassIconButton(
       {required IconData icon, required VoidCallback onTap}) {
     return Material(
-      color: Colors.black.withOpacity(0.22),
+      color: Colors.black.withValues(alpha: 0.22),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),

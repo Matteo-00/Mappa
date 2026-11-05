@@ -127,7 +127,7 @@ class _StoriaLinksSectionState extends State<StoriaLinksSection> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.05),
+            color: AppColors.bluNotte.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),

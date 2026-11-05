@@ -157,7 +157,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Material(
-                    color: Colors.black.withOpacity(0.28),
+                    color: Colors.black.withValues(alpha: 0.28),
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
@@ -175,7 +175,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
             leading: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Material(
-                color: Colors.black.withOpacity(0.28),
+                color: Colors.black.withValues(alpha: 0.28),
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
@@ -329,7 +329,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.tortora.withOpacity(0.18),
+                          color: AppColors.tortora.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -389,7 +389,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.05),
+              color: AppColors.bluNotte.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -513,7 +513,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.05),
+            color: AppColors.bluNotte.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -619,7 +619,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.08),
+            color: AppColors.bluNotte.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, -4),
           ),

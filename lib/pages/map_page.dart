@@ -558,7 +558,7 @@ class _MapPageState extends State<MapPage> {
           icon: (p.kind == MapKind.stop && _stopIcons[p.stopIndex] != null)
               ? _stopIcons[p.stopIndex]!
               : BitmapDescriptor.defaultMarkerWithHue(p.hue),
-          zIndex: _selected?.key == p.key ? 2 : 1,
+          zIndexInt: _selected?.key == p.key ? 2 : 1,
           infoWindow: InfoWindow(title: p.name, snippet: p.kindLabel),
           onTap: () => _selectPlace(p),
         ),
@@ -587,7 +587,7 @@ class _MapPageState extends State<MapPage> {
               Polyline(
                 polylineId: const PolylineId('itinerary_route'),
                 points: routePoints,
-                color: AppColors.rossoGubbio.withOpacity(0.85),
+                color: AppColors.rossoGubbio.withValues(alpha: 0.85),
                 width: 5,
                 patterns: [PatternItem.dash(18), PatternItem.gap(10)],
                 jointType: JointType.round,
@@ -723,7 +723,7 @@ class _MapPageState extends State<MapPage> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -737,7 +737,7 @@ class _MapPageState extends State<MapPage> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: _itineraryColor.withOpacity(0.18),
+                backgroundColor: _itineraryColor.withValues(alpha: 0.18),
                 child: const Icon(Icons.route, color: _itineraryColor, size: 22),
               ),
               const SizedBox(width: 12),
@@ -815,7 +815,7 @@ class _MapPageState extends State<MapPage> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -829,7 +829,7 @@ class _MapPageState extends State<MapPage> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: place.color.withOpacity(0.14),
+                backgroundColor: place.color.withValues(alpha: 0.14),
                 child: Icon(place.icon, color: place.color, size: 22),
               ),
               const SizedBox(width: 12),
@@ -951,7 +951,7 @@ class _MapPageState extends State<MapPage> {
                   circleId: const CircleId('selected_place'),
                   center: _selected!.position,
                   radius: 40,
-                  fillColor: _selected!.color.withOpacity(0.22),
+                  fillColor: _selected!.color.withValues(alpha: 0.22),
                   strokeColor: _selected!.color,
                   strokeWidth: 3,
                 ),
@@ -972,8 +972,8 @@ class _MapPageState extends State<MapPage> {
                 polygonId: const PolygonId('gubbio_municipal_boundary'),
                 points: _gubbioMunicipalBoundary,
                 strokeWidth: 3,
-                strokeColor: AppColors.rossoGubbio.withOpacity(0.7),
-                fillColor: AppColors.rossoGubbio.withOpacity(0.04),
+                strokeColor: AppColors.rossoGubbio.withValues(alpha: 0.7),
+                fillColor: AppColors.rossoGubbio.withValues(alpha: 0.04),
                 geodesic: true,
               ),
             },
@@ -1004,7 +1004,7 @@ class _MapPageState extends State<MapPage> {
                             borderRadius: BorderRadius.circular(30),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
+                                color: Colors.black.withValues(alpha: 0.12),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -1270,7 +1270,7 @@ class _MapPageState extends State<MapPage> {
     return Material(
       color: Colors.white,
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.2),
+      shadowColor: Colors.black.withValues(alpha: 0.2),
       borderRadius: BorderRadius.circular(30),
       child: InkWell(
         borderRadius: BorderRadius.circular(30),
@@ -1306,7 +1306,7 @@ class _MapPageState extends State<MapPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1373,7 +1373,7 @@ class _MapPageState extends State<MapPage> {
       color: Colors.white,
       shape: const CircleBorder(),
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.2),
+      shadowColor: Colors.black.withValues(alpha: 0.2),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
@@ -1438,7 +1438,7 @@ class _MapPageState extends State<MapPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.rossoGubbio.withOpacity(0.08)
+              ? AppColors.rossoGubbio.withValues(alpha: 0.08)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(

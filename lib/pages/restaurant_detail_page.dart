@@ -131,10 +131,10 @@ class RestaurantDetailPage extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.rossoGubbio.withOpacity(0.08),
+                            color: AppColors.rossoGubbio.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: AppColors.rossoGubbio.withOpacity(0.25),
+                              color: AppColors.rossoGubbio.withValues(alpha: 0.25),
                             ),
                           ),
                           child: Text(
@@ -279,7 +279,7 @@ class RestaurantDetailPage extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.tortora.withOpacity(0.6),
+            AppColors.tortora.withValues(alpha: 0.6),
             AppColors.avorio,
           ],
         ),
@@ -288,7 +288,7 @@ class RestaurantDetailPage extends StatelessWidget {
         child: Icon(
           fallbackIcon,
           size: 92,
-          color: AppColors.rossoGubbio.withOpacity(0.5),
+          color: AppColors.rossoGubbio.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -309,7 +309,7 @@ class RestaurantDetailPage extends StatelessWidget {
         ),
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: Container(color: Colors.black.withOpacity(0.15)),
+          child: Container(color: Colors.black.withValues(alpha: 0.15)),
         ),
         Image.network(
           url,
@@ -358,7 +358,7 @@ class RestaurantDetailPage extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.08),
+            color: AppColors.bluNotte.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, -4),
           ),

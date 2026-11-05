@@ -374,7 +374,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -519,7 +519,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
       children: [
         const SizedBox(height: 50),
         Icon(Icons.route_outlined,
-            size: 64, color: AppColors.tortora.withOpacity(0.6)),
+            size: 64, color: AppColors.tortora.withValues(alpha: 0.6)),
         const SizedBox(height: 14),
         Text(
           _itinerari.isEmpty ? _l.t('itNoneYet') : _l.t('itNoneFound'),
@@ -572,7 +572,7 @@ Widget itinerarioImagePlaceholder(String label,
       ),
     ),
     child: Center(
-      child: Icon(icon, size: 40, color: Colors.white.withOpacity(0.55)),
+      child: Icon(icon, size: 40, color: Colors.white.withValues(alpha: 0.55)),
     ),
   );
 }

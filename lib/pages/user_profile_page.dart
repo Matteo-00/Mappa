@@ -56,13 +56,13 @@ class UserProfilePage extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppColors.tortora.withOpacity(0.5),
+                                AppColors.tortora.withValues(alpha: 0.5),
                                 AppColors.avorio,
                               ],
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.bluNotte.withOpacity(0.08),
+                                color: AppColors.bluNotte.withValues(alpha: 0.08),
                                 blurRadius: 18,
                                 offset: const Offset(0, 8),
                               ),
@@ -223,7 +223,7 @@ class UserProfilePage extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
 
     final authService = context.read<AuthService>();
     try {
@@ -248,7 +248,7 @@ class UserProfilePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -323,7 +323,7 @@ class UserProfilePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -358,7 +358,7 @@ class UserProfilePage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppColors.rossoGubbio.withOpacity(0.08),
+              color: AppColors.rossoGubbio.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(item.icon, size: 20, color: AppColors.rossoGubbio),

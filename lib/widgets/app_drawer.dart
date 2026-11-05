@@ -235,7 +235,7 @@ class AppDrawer extends StatelessWidget {
                 l10n.appVersionLabel('1.2.1'),
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textMuted.withOpacity(0.8),
+                  color: AppColors.textMuted.withValues(alpha: 0.8),
                 ),
               ),
             ),
@@ -374,7 +374,7 @@ class AppDrawer extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          hoverColor: AppColors.grigioChiaro.withOpacity(0.4),
+          hoverColor: AppColors.grigioChiaro.withValues(alpha: 0.4),
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),

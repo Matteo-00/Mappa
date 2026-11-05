@@ -290,7 +290,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isMine
-              ? AppColors.rossoGubbio.withOpacity(0.35)
+              ? AppColors.rossoGubbio.withValues(alpha: 0.35)
               : AppColors.grigioChiaro,
         ),
       ),
@@ -301,7 +301,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
             children: [
               CircleAvatar(
                 radius: 17,
-                backgroundColor: AppColors.rossoGubbio.withOpacity(0.1),
+                backgroundColor: AppColors.rossoGubbio.withValues(alpha: 0.1),
                 child: Text(
                   initial.toUpperCase(),
                   style: const TextStyle(

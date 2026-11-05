@@ -325,7 +325,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                     boxShadow: [
                       BoxShadow(
                         color: LoadingScreen.logoRingColor
-                            .withOpacity(0.18 + 0.14 * glow),
+                            .withValues(alpha: 0.18 + 0.14 * glow),
                         blurRadius: (14 + 10 * glow) * k,
                         spreadRadius: (1 + 2 * glow) * k,
                       ),
@@ -373,7 +373,7 @@ class _LoadingScreenState extends State<LoadingScreen>
               color: LoadingScreen.orbitRingColor, width: 2.2 * scale),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: Colors.black.withValues(alpha: 0.12),
               blurRadius: 6 * scale,
               offset: Offset(0, 2 * scale),
             ),
@@ -403,7 +403,7 @@ class _OrbitPathPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.tortora.withOpacity(0.35)
+      ..color = AppColors.tortora.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2 * scale;
     final center = size.center(Offset.zero);

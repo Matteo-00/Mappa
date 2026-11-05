@@ -231,7 +231,7 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
                   Text('Foto principale',
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.bluNotte.withOpacity(0.7))),
+                          color: AppColors.bluNotte.withValues(alpha: 0.7))),
                   const SizedBox(height: 8),
                   ImagePickerField(
                     initialImageUrl: _existingCoverUrl,
@@ -355,7 +355,7 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
                   Text('Galleria foto (opzionale)',
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.bluNotte.withOpacity(0.7))),
+                          color: AppColors.bluNotte.withValues(alpha: 0.7))),
                   const SizedBox(height: 8),
                   GalleryPickerField(
                     initialUrls: _galleryItems
@@ -376,7 +376,7 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
                   Text('Posizione (opzionale, per le indicazioni stradali)',
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.bluNotte.withOpacity(0.7))),
+                          color: AppColors.bluNotte.withValues(alpha: 0.7))),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -403,7 +403,7 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Pubblicato (visibile agli utenti)'),
                     value: _isPublished,
-                    activeColor: AppColors.rossoGubbio,
+                    activeThumbColor: AppColors.rossoGubbio,
                     onChanged: (v) => setState(() => _isPublished = v),
                   ),
                   const SizedBox(height: 20),

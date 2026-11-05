@@ -210,7 +210,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                       points: gubbioMunicipalBoundary,
                       strokeWidth: 4,
                       strokeColor: Colors.red,
-                      fillColor: Colors.red.withOpacity(0.05),
+                      fillColor: Colors.red.withValues(alpha: 0.05),
                       geodesic: true,
                     ),
                   },
@@ -258,7 +258,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -333,7 +333,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -358,7 +358,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.tortora.withOpacity(0.45),
+                      AppColors.tortora.withValues(alpha: 0.45),
                       AppColors.avorio,
                     ],
                   ),
@@ -452,7 +452,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
           Icon(
             Icons.restaurant_menu,
             size: 76,
-            color: AppColors.tortora.withOpacity(0.5),
+            color: AppColors.tortora.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
