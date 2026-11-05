@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/rating_icons.dart';
 import '../widgets/reviews_section.dart';
+import '../widgets/favorite_button.dart';
 import '../services/content_service.dart';
 import '../services/review_service.dart';
 import 'map_page.dart';
@@ -77,6 +78,13 @@ class RestaurantDetailPage extends StatelessWidget {
                 child: NavButtons(light: true),
               ),
             ),
+            actions: [
+              if (ContentService.isRemoteId(restaurant.id))
+                Padding(
+                  padding: const EdgeInsets.only(right: 12, top: 4),
+                  child: FavoriteButton(kind: mapKind, id: restaurant.id),
+                ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: restaurant.imageUrl != null
                   ? _buildHeroImage(restaurant.imageUrl!)

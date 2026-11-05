@@ -6,6 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'login_page.dart';
+import 'favorites_page.dart';
+import '../services/favorites_service.dart';
 
 /// Schermata profilo utente che mostra le informazioni di registrazione.
 class UserProfilePage extends StatelessWidget {
@@ -126,6 +128,11 @@ class UserProfilePage extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
+                  // Preferiti salvati con il cuore
+                  _buildFavoritesCard(context, l10n),
+
+                  const SizedBox(height: 20),
+
                   // Lingua dell'app (testi e contenuti si aggiornano subito)
                   _buildLanguageCard(context, l10n),
 
@@ -237,6 +244,65 @@ class UserProfilePage extends StatelessWidget {
         (route) => false,
       );
     }
+  }
+
+  Widget _buildFavoritesCard(BuildContext context, AppLocalizations l10n) {
+    return ListenableBuilder(
+      listenable: FavoritesService.instance,
+      builder: (context, _) {
+        final n = FavoritesService.instance.count;
+        return Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavoritesPage()),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: AppColors.rossoGubbio.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.favorite_rounded,
+                        size: 20, color: AppColors.rossoGubbio),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      l10n.t('favTitle'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.bluNotte,
+                      ),
+                    ),
+                  ),
+                  if (n > 0)
+                    Text(
+                      '$n',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.rossoGubbio,
+                      ),
+                    ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.tortora),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildLanguageCard(BuildContext context, AppLocalizations l10n) {

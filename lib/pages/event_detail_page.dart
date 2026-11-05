@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'map_page.dart';
+import '../widgets/favorite_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/auth_service.dart';
@@ -29,7 +30,12 @@ class EventDetailPage extends StatelessWidget {
       backgroundColor: AppColors.avorio,
       body: Column(
         children: [
-          PremiumHeader(title: l10n.eventHeaderTitle),
+          PremiumHeader(
+            title: l10n.eventHeaderTitle,
+            trailing: ContentService.isRemoteId(event.id)
+                ? FavoriteButton(kind: MapKind.event, id: event.id)
+                : null,
+          ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(

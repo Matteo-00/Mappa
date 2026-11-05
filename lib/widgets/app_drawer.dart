@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../pages/favorites_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../theme/app_colors.dart';
 import 'scroll_hints.dart';
@@ -184,6 +185,19 @@ class AppDrawer extends StatelessWidget {
                         () => const LuoghiPage(tipo: LuogoTipo.bagno),
                       ),
                     ],
+                  ),
+                  // Preferiti salvati con il cuore.
+                  _menuItem(
+                    context,
+                    icon: Icons.favorite_border_rounded,
+                    title: l10n.t('favTitle'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                      );
+                    },
                   ),
                   // Contatti.
                   _menuItem(

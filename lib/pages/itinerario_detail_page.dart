@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 import '../services/content_service.dart';
 import '../services/review_service.dart';
 import '../widgets/reviews_section.dart';
+import '../widgets/favorite_button.dart';
 import 'itinerari_page.dart' show itinerarioImagePlaceholder;
 
 /// Pagina di dettaglio di un itinerario, con hero, informazioni e tappe.
@@ -108,6 +109,12 @@ class _ItinerarioDetailView extends StatelessWidget {
             backgroundColor: AppColors.bluNotte,
             foregroundColor: Colors.white,
             actions: [
+              if (ContentService.isRemoteId(itinerario.id))
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FavoriteButton(
+                      kind: MapKind.itinerary, id: itinerario.id, light: false),
+                ),
               if (onEdit != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
