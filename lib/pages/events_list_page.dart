@@ -54,7 +54,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
   bool _loading = true;
 
   String _searchQuery = '';
-  EventFilter _currentFilter = EventFilter.upcoming;
+  // Di base si vedono tutti gli eventi (prima i prossimi, poi i conclusi).
+  EventFilter _currentFilter = EventFilter.all;
   String? _selectedCategory;
   String? _selectedPlace;
   EventSource? _selectedSource;
@@ -215,7 +216,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       _selectedPlace != null ||
       _selectedSource != null ||
       _onlyDrafts ||
-      _currentFilter != EventFilter.upcoming;
+      _currentFilter != EventFilter.all;
 
   void _resetFilters() {
     _searchController.clear();
@@ -225,7 +226,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       _selectedPlace = null;
       _selectedSource = null;
       _onlyDrafts = false;
-      _currentFilter = EventFilter.upcoming;
+      _currentFilter = EventFilter.all;
     });
   }
 
@@ -345,10 +346,10 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   /// Chip per il filtro temporale
   Widget _buildTimeChips() {
-    // "Tutti" subito dopo "Prossimi": così si vede senza dover scorrere.
+    // "Tutti" per primo (è il filtro di base), poi "Prossimi".
     final labels = {
-      EventFilter.upcoming: _l.t('fltUpcoming'),
       EventFilter.all: _l.t('fltAll'),
+      EventFilter.upcoming: _l.t('fltUpcoming'),
       EventFilter.today: _l.t('fltToday'),
       EventFilter.weekend: _l.t('fltWeekend'),
       EventFilter.week: _l.t('fltThisWeek'),
@@ -362,7 +363,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             AppFilterChip(
               label: entry.value,
               selected: _currentFilter == entry.key,
-              icon: entry.key == EventFilter.upcoming ? Icons.event_available : null,
+              icon: entry.key == EventFilter.all ? Icons.event_available : null,
               onTap: () => setState(() => _currentFilter = entry.key),
             ),
             const SizedBox(width: 8),
