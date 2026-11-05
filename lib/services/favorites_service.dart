@@ -8,8 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// (restaurant, bar, hotel, chiesa, museo, ..., itinerary, event).
 class FavoritesService extends ChangeNotifier {
   FavoritesService._() {
-    _load();
+    _ready = _load();
   }
+
+  /// Lettura dei preferiti salvati, attesa prima di ogni modifica (così un
+  /// tocco sul cuore appena aperta l'app non va perso).
+  late final Future<void> _ready;
 
   static final FavoritesService instance = FavoritesService._();
 
@@ -37,6 +41,7 @@ class FavoritesService extends ChangeNotifier {
   }
 
   Future<void> toggle(String kind, String id) async {
+    await _ready;
     final k = keyFor(kind, id);
     if (!_items.remove(k)) _items.add(k);
     notifyListeners();
