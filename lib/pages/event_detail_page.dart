@@ -1,4 +1,5 @@
 import '../widgets/distance_label.dart';
+import '../widgets/full_photo.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/event_model.dart';
@@ -34,8 +35,16 @@ class EventDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Immagine grande in alto
-                  _buildEventImage(),
+                  // Foto dell'evento (la stessa della lista), se c'è
+                  if ((event.imageUrl ?? '').isNotEmpty)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 220,
+                      child: FullPhoto(
+                        url: event.imageUrl!,
+                        fallback: const ColoredBox(color: AppColors.grigioChiaro),
+                      ),
+                    ),
 
                   // Contenuto dettagli
                   Padding(
@@ -98,45 +107,6 @@ class EventDetailPage extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Immagine evento (segnaposto)
-  Widget _buildEventImage() {
-    return Container(
-      width: double.infinity,
-      height: 220,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.tortora.withOpacity(0.4),
-            AppColors.avorio,
-          ],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.festival_outlined,
-              size: 72,
-              color: AppColors.rossoGubbio.withOpacity(0.5),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              event.category.trim().isNotEmpty ? event.category : 'Gubbio',
-              style: const TextStyle(
-                fontSize: 16,
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

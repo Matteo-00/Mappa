@@ -17,7 +17,7 @@ ALTER TABLE public.luoghi
 
 ALTER TABLE public.luoghi
   ADD CONSTRAINT luoghi_tipo_check
-  CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'agriturismo'));
+  CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'agriturismo', 'ascensore', 'bagno'));
 
 -- 2) Posizione dei contenuti di Storia di Gubbio
 ALTER TABLE public.storia_contenuti

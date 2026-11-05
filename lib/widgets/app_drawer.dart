@@ -90,10 +90,12 @@ class AppDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => EventsListPage(
+                          builder: (pageContext) => EventsListPage(
                             onEventTap: (event) {
+                              // Il menu si è già chiuso: si usa il contesto
+                              // della pagina Eventi, non quello del menu.
                               Navigator.push(
-                                context,
+                                pageContext,
                                 MaterialPageRoute(
                                   builder: (_) => EventDetailPage(event: event),
                                 ),

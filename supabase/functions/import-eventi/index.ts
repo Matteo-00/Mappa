@@ -4,12 +4,14 @@
 // (www.comune.gubbio.pg.it, piattaforma Municipium) leggendo il loro feed
 // RSS, e li salva nella tabella "eventi".
 //
-// - Parte da sola ogni giorno (programmata da supabase_eventi_import_setup.sql)
-//   oppure quando un admin tocca "Importa ora" nell'app.
+// - Parte da sola ogni giorno alle 11:00 (programmata da supabase_eventi_orari.sql)
+//   oppure quando un admin tocca "Importa ora" nell'app. Gli eventi importati
+//   sono BOZZE; alle 13:00 quelle non toccate vengono pubblicate da sole
+//   (chiamata con {"azione": "pubblica"}).
 // - Un evento già importato non viene importato di nuovo (colonna fonte_id).
-// - Gli eventi con le date lette con sicurezza vengono pubblicati subito e
-//   tradotti (se "pubblica_subito" è attivo); gli altri restano BOZZE che
-//   l'admin controlla e pubblica dall'app.
+// - Ogni evento nuovo viene tradotto subito in EN/FR/DE (anche le bozze).
+//   Con "pubblica_subito" attivo quelli con date sicure sono pubblicati
+//   subito; gli altri restano BOZZE che l'admin controlla e pubblica.
 // - Ogni evento indica la fonte e il link alla pagina originale del Comune.
 //
 // Impostazioni nella tabella "import_eventi_stato" (riga id = 1):
@@ -353,6 +355,52 @@ function parseFeed(xml: string, baseUrl: string): FeedItem[] {
   });
 }
 
+// ---------------------------------------------------------------- traduzioni
+
+/** Traduce un evento in EN/FR/DE (funzione translate-content). Ritorna il
+ *  messaggio d'errore, oppure null se è andata bene. */
+async function translateEvent(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  id: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/translate-content`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ entity_type: "eventi", entity_id: id }),
+    });
+    if (res.ok) return null;
+    return `${res.status} ${(await res.text()).slice(0, 200)}`;
+  } catch (e) {
+    return String(e);
+  }
+}
+
+/** Traduce più eventi, pochi alla volta, e annota gli errori. */
+async function translateEvents(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  ids: string[],
+  errori: string[],
+): Promise<number> {
+  let ok = 0;
+  for (let i = 0; i < ids.length; i += 3) {
+    const chunk = ids.slice(i, i + 3);
+    const out = await Promise.all(
+      chunk.map((id) => translateEvent(supabaseUrl, serviceRoleKey, id)),
+    );
+    out.forEach((err, k) => {
+      if (err) errori.push(`traduzione ${chunk[k]}: ${err}`);
+      else ok++;
+    });
+  }
+  return ok;
+}
+
 // ---------------------------------------------------------------- server
 
 Deno.serve(async (req) => {
@@ -384,6 +432,37 @@ Deno.serve(async (req) => {
   }
   if (!allowed) return jsonResponse({ error: "Non autorizzato" }, 403);
 
+  // ---------------------------------------------- pubblicazione delle bozze
+  // Chiamata dal programma automatico alle 13:00 (ora italiana): le bozze
+  // importate che nessuno ha toccato vengono pubblicate così come sono.
+  const reqBody = await req.json().catch(() => ({}));
+  if (reqBody?.azione === "pubblica") {
+    const out = { pubblicati: 0, errori: [] as string[] };
+    const { data: drafts, error } = await db.from("eventi")
+      .update({ stato: "pubblicato" })
+      .eq("stato", "bozza").eq("fonte", SOURCE).select("id");
+    if (error) {
+      out.errori.push(error.message);
+    } else {
+      out.pubblicati = drafts?.length ?? 0;
+      // Sono già tradotti dall'importazione (e dalle modifiche dell'admin):
+      // si traducono solo quelli che non hanno ancora la traduzione.
+      const ids = (drafts ?? []).map((d) => d.id as string);
+      const { data: done } = ids.length
+        ? await db.from("content_translations").select("entity_id")
+          .eq("entity_type", "eventi").eq("language_code", "de").in("entity_id", ids)
+        : { data: [] };
+      const translated = new Set((done ?? []).map((r) => r.entity_id));
+      await translateEvents(
+        supabaseUrl,
+        serviceRoleKey,
+        ids.filter((id) => !translated.has(id)),
+        out.errori,
+      );
+    }
+    return jsonResponse(out, error ? 500 : 200);
+  }
+
   // ---------------------------------------------- impostazioni
   const { data: config } = await db.from("import_eventi_stato")
     .select().eq("id", 1).maybeSingle();
@@ -397,6 +476,7 @@ Deno.serve(async (req) => {
     nuovi: 0,
     pubblicati: 0,
     bozze: 0,
+    tradotti: 0,
     saltati: 0,
     errori: [] as string[],
   };
@@ -490,25 +570,18 @@ Deno.serve(async (req) => {
       if (error) throw error;
       result.nuovi = inserted?.length ?? 0;
       for (const ev of inserted ?? []) {
-        if (ev.stato !== "pubblicato") {
-          result.bozze++;
-          continue;
-        }
-        result.pubblicati++;
-        // Traduzione in inglese, francese e tedesco come per gli altri eventi.
-        try {
-          await fetch(`${supabaseUrl}/functions/v1/translate-content`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceRoleKey}`,
-            },
-            body: JSON.stringify({ entity_type: "eventi", entity_id: ev.id }),
-          });
-        } catch (e) {
-          result.errori.push(`traduzione ${ev.id}: ${e}`);
-        }
+        if (ev.stato === "pubblicato") result.pubblicati++;
+        else result.bozze++;
       }
+      // Traduzione in inglese, francese e tedesco SUBITO, anche per le bozze:
+      // quando vengono pubblicate sono già nelle 4 lingue. Se l'admin le
+      // modifica, l'app le ritraduce da sola.
+      result.tradotti = await translateEvents(
+        supabaseUrl,
+        serviceRoleKey,
+        (inserted ?? []).map((ev) => ev.id as string),
+        result.errori,
+      );
     }
   } catch (e) {
     result.errori.push(String((e as Error)?.message ?? e));

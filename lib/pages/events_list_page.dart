@@ -270,23 +270,6 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           ),
           if (context.watch<AuthService>().isAdmin) _buildAdminImportBar(),
           _buildTimeChips(),
-          if (_hasBothSources) _buildSourceChips(),
-          if (_categories.length > 1)
-            _chipRow(
-              values: _categories,
-              selected: _selectedCategory,
-              allLabel: _l.t('fltAllCategories'),
-              icon: Icons.category_outlined,
-              onChanged: (v) => setState(() => _selectedCategory = v),
-            ),
-          if (_places.length > 1)
-            _chipRow(
-              values: _places,
-              selected: _selectedPlace,
-              allLabel: _l.t('fltAllPlaces'),
-              icon: Icons.place_outlined,
-              onChanged: (v) => setState(() => _selectedPlace = v),
-            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 12, 2),
             child: Row(
@@ -301,6 +284,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                     ),
                   ),
                 ),
+                if (_hasExtraFilters || _hasBothSources)
+                  _buildFiltersButton(),
                 if (_hasActiveFilters)
                   TextButton(
                     onPressed: _resetFilters,
@@ -368,30 +353,173 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     );
   }
 
-  /// Filtro per fonte: eventi del Comune di Gubbio o di Visit Gubbio.
-  Widget _buildSourceChips() {
-    return HintedChipRow(
-      height: 40,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-      children: [
-        AppFilterChip(
-          label: _l.t('fltAllSources'),
-          selected: _selectedSource == null,
-          compact: true,
-          icon: Icons.source_outlined,
-          onTap: () => setState(() => _selectedSource = null),
-        ),
-        for (final src in EventSource.values) ...[
-          const SizedBox(width: 8),
-          AppFilterChip(
-            label: _l.t(src == EventSource.comune ? 'srcComune' : 'srcVisit'),
-            selected: _selectedSource == src,
-            compact: true,
-            onTap: () => setState(
-                () => _selectedSource = _selectedSource == src ? null : src),
+  bool get _hasExtraFilters => _categories.length > 1 || _places.length > 1;
+
+  int get _extraFiltersCount =>
+      (_selectedSource != null ? 1 : 0) +
+      (_selectedCategory != null ? 1 : 0) +
+      (_selectedPlace != null ? 1 : 0);
+
+  /// Un solo pulsante al posto delle righe di chip di fonte, categoria e luogo.
+  Widget _buildFiltersButton() {
+    final n = _extraFiltersCount;
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: GestureDetector(
+        onTap: _openFiltersSheet,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: n > 0 ? AppColors.rossoGubbio : Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+                color: n > 0 ? AppColors.rossoGubbio : AppColors.grigioChiaro),
           ),
-        ],
-      ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.tune_rounded,
+                  size: 16, color: n > 0 ? Colors.white : AppColors.bluNotte),
+              const SizedBox(width: 6),
+              Text(
+                n > 0 ? '${_l.t('fltFilters')} ($n)' : _l.t('fltFilters'),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: n > 0 ? Colors.white : AppColors.bluNotte,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openFiltersSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.avorio,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheet) {
+          void change(VoidCallback fn) {
+            setState(fn);
+            setSheet(() {});
+          }
+
+          Widget section(String title, List<Widget> chips) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(title,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textMuted)),
+                    ),
+                    Wrap(spacing: 8, runSpacing: 8, children: chips),
+                  ],
+                ),
+              );
+
+          List<Widget> stringChips(List<String> values, String? selected,
+                  String allLabel, void Function(String?) onChanged) =>
+              [
+                AppFilterChip(
+                  label: allLabel,
+                  selected: selected == null,
+                  compact: true,
+                  onTap: () => change(() => onChanged(null)),
+                ),
+                for (final v in values)
+                  AppFilterChip(
+                    label: v,
+                    selected: selected == v,
+                    compact: true,
+                    onTap: () =>
+                        change(() => onChanged(selected == v ? null : v)),
+                  ),
+              ];
+
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(_l.t('fltFilters'),
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w800)),
+                        ),
+                        if (_extraFiltersCount > 0)
+                          TextButton(
+                            onPressed: () => change(() {
+                              _selectedSource = null;
+                              _selectedCategory = null;
+                              _selectedPlace = null;
+                            }),
+                            child: Text(_l.t('fltReset')),
+                          ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: Text(_l.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_hasBothSources)
+                      section(_l.t('fltAllSources'), [
+                        AppFilterChip(
+                          label: _l.t('fltAllSources'),
+                          selected: _selectedSource == null,
+                          compact: true,
+                          onTap: () => change(() => _selectedSource = null),
+                        ),
+                        for (final src in EventSource.values)
+                          AppFilterChip(
+                            label: _l.t(src == EventSource.comune
+                                ? 'srcComune'
+                                : 'srcVisit'),
+                            selected: _selectedSource == src,
+                            compact: true,
+                            onTap: () => change(() => _selectedSource =
+                                _selectedSource == src ? null : src),
+                          ),
+                      ]),
+                    if (_categories.length > 1)
+                      section(
+                        _l.t('fltAllCategories'),
+                        stringChips(_categories, _selectedCategory,
+                            _l.t('fltAllCategories'),
+                            (v) => _selectedCategory = v),
+                      ),
+                    if (_places.length > 1)
+                      section(
+                        _l.t('fltAllPlaces'),
+                        stringChips(_places, _selectedPlace,
+                            _l.t('fltAllPlaces'), (v) => _selectedPlace = v),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -482,6 +610,10 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           ? 'Nessun evento nuovo sul sito del Comune'
           : '$nuovi eventi nuovi importati'
               '${bozze > 0 ? ' ($bozze da approvare)' : ''}';
+      final errori = r['errori'];
+      if (errori is List && errori.isNotEmpty) {
+        message += '\nAttenzione: ${errori.first}';
+      }
     } catch (e) {
       message = 'Importazione non riuscita: $e';
     }
@@ -490,37 +622,6 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
     _loadEvents();
-  }
-
-  Widget _chipRow({
-    required List<String> values,
-    required String? selected,
-    required String allLabel,
-    required IconData icon,
-    required void Function(String?) onChanged,
-  }) {
-    return HintedChipRow(
-      height: 40,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-      children: [
-          AppFilterChip(
-            label: allLabel,
-            selected: selected == null,
-            compact: true,
-            icon: icon,
-            onTap: () => onChanged(null),
-          ),
-          for (final v in values) ...[
-            const SizedBox(width: 8),
-            AppFilterChip(
-              label: v,
-              selected: selected == v,
-              compact: true,
-              onTap: () => onChanged(selected == v ? null : v),
-            ),
-          ],
-      ],
-    );
   }
 
   Widget _buildGroupHeader(String text) {

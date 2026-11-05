@@ -27,4 +27,4 @@ END $$;
 
 ALTER TABLE public.luoghi
   ADD CONSTRAINT luoghi_tipo_check
-  CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'ascensore', 'bagno'));
+  CHECK (tipo IN ('chiesa', 'museo', 'negozio', 'parcheggio', 'agriturismo', 'ascensore', 'bagno'));
