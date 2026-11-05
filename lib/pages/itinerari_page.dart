@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/user_rating_badge.dart';
+import '../models/review_model.dart';
+import '../services/review_service.dart';
 import '../models/itinerario_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
@@ -15,7 +18,7 @@ import 'admin/admin_widgets.dart';
 import 'admin/edit_itinerario_flow.dart';
 import 'itinerario_detail_page.dart';
 
-enum _ItinerarioSort { predefinito, titolo, tappe }
+enum _ItinerarioSort { predefinito, votati, titolo, tappe }
 
 /// Elenco degli itinerari consigliati per visitare Gubbio: ricerca, filtri
 /// per tema, difficoltà e durata, ordinamento e schede compatte.
@@ -41,6 +44,9 @@ class _ItinerariPageState extends State<ItinerariPage> {
   String? _selectedDifficolta;
   String? _selectedDurata;
   _ItinerarioSort _sort = _ItinerarioSort.predefinito;
+
+  /// Media delle recensioni degli utenti per ogni itinerario.
+  Map<String, ReviewStats> _userStats = {};
 
   @override
   void initState() {
@@ -83,6 +89,8 @@ class _ItinerariPageState extends State<ItinerariPage> {
         _selectedDurata = null;
       }
     });
+    final stats = await ReviewService.fetchStats(ReviewService.itineraries);
+    if (mounted) setState(() => _userStats = stats);
   }
 
   /// Valori distinti (non vuoti) di un campo, in ordine di comparsa.
@@ -115,6 +123,10 @@ class _ItinerariPageState extends State<ItinerariPage> {
 
     switch (_sort) {
       case _ItinerarioSort.predefinito:
+        break;
+      case _ItinerarioSort.votati:
+        double avg(ItinerarioModel i) => _userStats[i.id]?.average ?? -1;
+        result.sort((a, b) => avg(b).compareTo(avg(a)));
         break;
       case _ItinerarioSort.titolo:
         result.sort(
@@ -347,6 +359,8 @@ class _ItinerariPageState extends State<ItinerariPage> {
         FilterChipsWrap(chips: [
           for (final entry in <(_ItinerarioSort, String)>[
             (_ItinerarioSort.predefinito, _l.t('itSortDefault')),
+            if (_userStats.isNotEmpty)
+              (_ItinerarioSort.votati, _l.t('sortUserRating')),
             (_ItinerarioSort.titolo, _l.t('itSortTitle')),
             (_ItinerarioSort.tappe, _l.t('itSortStops')),
           ])
@@ -470,6 +484,10 @@ class _ItinerariPageState extends State<ItinerariPage> {
                               ),
                             ],
                           ),
+                          if (_userStats[it.id] != null) ...[
+                            const SizedBox(height: 6),
+                            UserRatingBadge(stats: _userStats[it.id]!),
+                          ],
                         ],
                       ),
                     ),

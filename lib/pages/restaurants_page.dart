@@ -15,6 +15,9 @@ import 'admin/add_place_page.dart';
 import 'restaurant_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
+import '../widgets/user_rating_badge.dart';
+import '../models/review_model.dart';
+import '../services/review_service.dart';
 import '../widgets/loading_screen.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
@@ -84,6 +87,10 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
       _filters.dropMissingTag(_allRestaurants.map((p) => p.cuisineTypes));
     });
     _applyFilters();
+    final stats = await ReviewService.fetchStats(ReviewService.restaurants);
+    if (!mounted) return;
+    setState(() => _userStats = stats);
+    _applyFilters();
   }
   
   /// Usa la posizione condivisa dell'app. Il controllo è silenzioso: l'invito
@@ -107,6 +114,9 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   /// Filtri e ordinamento (vicino a me, stelle, tag...).
   final PlaceFilterState _filters = PlaceFilterState();
 
+  /// Media delle recensioni degli utenti per ogni scheda.
+  Map<String, ReviewStats> _userStats = {};
+
   void _applyFilters() {
     final result = PlaceFilters.apply<RestaurantModel>(
       _allRestaurants,
@@ -116,6 +126,8 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
       description: (p) => p.description,
       tags: (p) => p.cuisineTypes,
       rating: (p) => p.rating,
+      userRating: (p) => _userStats[p.id]?.average,
+      userCount: (p) => _userStats[p.id]?.count ?? 0,
       distance: (p) => _currentLocation == null
           ? null
           : p.calculateDistance(_currentLocation!),
@@ -231,6 +243,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
             locationAvailable: _currentLocation != null,
             resultCount: _filteredRestaurants.length,
             onChanged: _applyFilters,
+            showUserRating: _userStats.isNotEmpty,
           ),
           // Lista ristoranti
           Expanded(
@@ -429,6 +442,10 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                     const SizedBox(height: 8),
                     if (restaurant.rating != null)
                       _buildMiniRating(restaurant.rating!),
+                    if (_userStats[restaurant.id] != null) ...[
+                      const SizedBox(height: 4),
+                      UserRatingBadge(stats: _userStats[restaurant.id]!),
+                    ],
                     const SizedBox(height: 6),
                     DistanceLabel(target: restaurant.coordinates),
                   ],

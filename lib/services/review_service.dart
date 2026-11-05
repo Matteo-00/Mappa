@@ -39,6 +39,31 @@ class ReviewService {
     }
   }
 
+  /// Media e numero delle recensioni per ogni scheda di un tipo (per le
+  /// liste). Mappa vuota se la tabella non esiste o in caso di errore.
+  static Future<Map<String, ReviewStats>> fetchStats(String entityType) async {
+    try {
+      final rows = await _db
+          .from('recensioni')
+          .select('entity_id, stelle')
+          .eq('entity_type', entityType);
+      final sums = <String, int>{};
+      final counts = <String, int>{};
+      for (final r in rows as List) {
+        final id = r['entity_id'].toString();
+        sums[id] = (sums[id] ?? 0) + ((r['stelle'] as num?)?.toInt() ?? 0);
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      return {
+        for (final id in counts.keys)
+          id: ReviewStats(sums[id]! / counts[id]!, counts[id]!),
+      };
+    } catch (e) {
+      debugPrint('ReviewService.fetchStats: errore $e');
+      return {};
+    }
+  }
+
   /// Crea o aggiorna la recensione dell'utente collegato.
   static Future<void> save({
     required String entityType,

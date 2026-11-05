@@ -11,7 +11,7 @@ import 'rating_icons.dart';
 import 'scroll_hints.dart';
 
 /// Ordinamenti disponibili per ristoranti, bar e hotel.
-enum PlaceSort { nearest, ratingDesc, ratingAsc, name }
+enum PlaceSort { nearest, ratingDesc, ratingAsc, userRating, name }
 
 /// Stato dei filtri di una lista di luoghi (ristoranti, bar, hotel).
 class PlaceFilterState {
@@ -50,6 +50,9 @@ class PlaceFilters {
     required List<String> Function(T) tags,
     required double? Function(T) rating,
     required double? Function(T) distance, // metri, null se posizione ignota
+    // Media e numero delle recensioni degli utenti (null = nessuna).
+    double? Function(T)? userRating,
+    int Function(T)? userCount,
   }) {
     final q = query.trim().toLowerCase();
 
@@ -86,6 +89,11 @@ class PlaceFilters {
           final rb = rating(b) ?? double.infinity;
           c = ra.compareTo(rb);
           break;
+        case PlaceSort.userRating:
+          // Prima i più votati dagli utenti; a parità, quelli con più recensioni.
+          c = (userRating?.call(b) ?? -1).compareTo(userRating?.call(a) ?? -1);
+          if (c == 0) c = (userCount?.call(b) ?? 0).compareTo(userCount?.call(a) ?? 0);
+          break;
         case PlaceSort.name:
           c = byName(a, b);
           break;
@@ -120,6 +128,8 @@ String _sortLabel(AppLocalizations l, PlaceSort sort) {
       return l.t('sortRatingDesc');
     case PlaceSort.ratingAsc:
       return l.t('sortRatingAsc');
+    case PlaceSort.userRating:
+      return l.t('sortUserRating');
     case PlaceSort.name:
       return l.t('sortName');
   }
@@ -143,10 +153,14 @@ class PlaceFilterBar extends StatelessWidget {
   final int resultCount;
   final VoidCallback onChanged;
 
+  /// Mostra l'ordinamento "più votati dagli utenti" (se ci sono recensioni).
+  final bool showUserRating;
+
   const PlaceFilterBar({
     super.key,
     this.ratingKind = RatingKind.crescia,
     this.showRating = true,
+    this.showUserRating = false,
     required this.state,
     required this.availableTags,
     required this.locationAvailable,
@@ -280,6 +294,11 @@ class PlaceFilterBar extends StatelessWidget {
           PopupMenuItem(
             value: PlaceSort.ratingAsc,
             child: Text(_l10n(context).t('sortMenuRatingAsc')),
+          ),
+        if (showUserRating)
+          PopupMenuItem(
+            value: PlaceSort.userRating,
+            child: Text(_l10n(context).t('sortMenuUserRating')),
           ),
         PopupMenuItem(
           value: PlaceSort.name,
