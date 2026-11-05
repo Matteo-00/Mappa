@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 
 import '../models/storia_model.dart';
 import '../services/auth_service.dart';
@@ -63,7 +64,9 @@ class _StoriaPageState extends State<StoriaPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _load();
     }
@@ -78,7 +81,7 @@ class _StoriaPageState extends State<StoriaPage> {
   Future<void> _load() async {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     final firstLoad = _loadedLanguageCode == null;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     if (firstLoad) setState(() => _loading = true);
     final loadingStart = DateTime.now();
     final epoche = await ContentService.fetchStoriaEpoche(languageCode: languageCode);

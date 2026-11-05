@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/storia_model.dart';
@@ -37,13 +38,15 @@ class _StoriaLinksSectionState extends State<StoriaLinksSection> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final code = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final code = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != code) _load();
   }
 
   Future<void> _load() async {
     final code = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = code;
+    _loadedLanguageCode = code + OfflineModeService.instance.reloadKey;
     if (widget.storiaIds.isEmpty) {
       setState(() => _loading = false);
       return;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 import '../models/hotel_model.dart';
 import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
@@ -59,7 +60,9 @@ class _HotelsPageState extends State<HotelsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadHotels();
     }
@@ -75,7 +78,7 @@ class _HotelsPageState extends State<HotelsPage> {
   Future<void> _loadHotels() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final hotels =
         await ContentService.fetchHotels(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".

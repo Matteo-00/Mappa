@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/auth_service.dart';
 import 'services/language_service.dart';
+import 'services/offline_mode_service.dart';
 import 'theme/app_colors.dart';
 import 'pages/splash_intro_page.dart';
 
@@ -50,9 +51,36 @@ class VisitGubbioApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
+        ChangeNotifierProvider.value(value: OfflineModeService.instance),
       ],
       child: MaterialApp(
         title: 'Visit Gubbio',
+        // Serve alla modalità offline per mostrare la sua finestra.
+        navigatorKey: OfflineModeService.navigatorKey,
+        // Barra "Modalità offline" in basso, sotto tutte le schermate.
+        builder: (context, child) {
+          OfflineModeService.instance.language =
+              context.read<LanguageService>();
+          return ListenableBuilder(
+            listenable: OfflineModeService.instance,
+            builder: (context, _) {
+              final offline = OfflineModeService.instance.isOffline;
+              final page = child ?? const SizedBox.shrink();
+              return Column(
+                children: [
+                  Expanded(
+                    // Con la barra visibile il margine in basso lo occupa lei.
+                    child: offline
+                        ? MediaQuery.removePadding(
+                            context: context, removeBottom: true, child: page)
+                        : page,
+                  ),
+                  const OfflineBanner(),
+                ],
+              );
+            },
+          );
+        },
         debugShowCheckedModeBanner: false,
         navigatorObservers: [appRouteObserver, navStackObserver],
         theme: ThemeData(

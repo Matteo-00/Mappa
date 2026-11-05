@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 import '../widgets/user_rating_badge.dart';
 import '../models/review_model.dart';
 import '../services/review_service.dart';
@@ -57,7 +58,9 @@ class _ItinerariPageState extends State<ItinerariPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _load();
     }
@@ -72,7 +75,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
   Future<void> _load() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final items = await ContentService.fetchItinerari(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
     if (_loading) await LoadingScreen.waitMinimum(loadingStart);

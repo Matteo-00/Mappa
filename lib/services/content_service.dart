@@ -12,6 +12,7 @@ import '../models/luogo_model.dart';
 import '../models/restaurant_model.dart';
 import '../models/storia_model.dart';
 import 'content_translation_service.dart';
+import 'offline_mode_service.dart';
 import 'translation_service.dart';
 
 /// Servizio per leggere e scrivere i contenuti (ristoranti, bar, eventi,
@@ -358,9 +359,10 @@ class ContentService {
 
 
   // -------------------------------------------------- Copia sul telefono
-  // L'ultima lista scaricata (righe + traduzioni) resta salvata sul telefono:
-  // se la rete non risponde (poco segnale in centro storico, modalità aereo)
-  // l'app mostra quella invece di una pagina vuota.
+  // L'ultima lista scaricata (righe + traduzioni) resta salvata sul telefono.
+  // Se la rete non risponde entro 10 secondi (poco segnale in centro storico,
+  // modalità aereo) l'app propone la modalità offline: vedi
+  // OfflineModeService.
 
   static const _cachePrefix = 'cache_v1';
 
@@ -372,24 +374,48 @@ class ContentService {
     String? cacheKey,
   }) async {
     final key = '$_cachePrefix:${cacheKey ?? entityType}:$languageCode';
-    try {
-      final rows = await query().timeout(const Duration(seconds: 12));
-      final originals =
-          (rows as List).map((e) => Map<String, dynamic>.from(e)).toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: entityType,
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
-      );
-      _saveCache(key, originals, translations);
-      return (originals, translations);
-    } catch (e) {
+    final offline = OfflineModeService.instance;
+
+    // In modalità offline si apre subito la copia salvata (se c'è).
+    if (offline.isOffline) {
       final cached = await _readCache(key);
       if (cached != null) {
-        debugPrint('$entityType: rete non disponibile, uso la copia salvata');
-        return cached;
+        offline.usedCopyFrom(cached.$3);
+        return (cached.$1, cached.$2);
       }
-      rethrow;
+    }
+
+    while (true) {
+      final cached = await _readCache(key);
+      try {
+        // Con una copia salvata si aspetta al massimo 10 secondi, poi si
+        // propone la modalità offline; senza copia si aspetta come sempre.
+        final pending = query();
+        final rows = cached == null
+            ? await pending
+            : await pending.timeout(OfflineModeService.slowAfter);
+        final originals =
+            (rows as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        final translations =
+            await ContentTranslationService.fetchTranslations(
+          entityType: entityType,
+          entityIds: originals.map((e) => e['id'].toString()).toList(),
+          languageCode: languageCode,
+        );
+        _saveCache(key, originals, translations);
+        return (originals, translations);
+      } on PostgrestException {
+        // Il server ha risposto (con un errore): non è un problema di rete.
+        rethrow;
+      } catch (e) {
+        if (cached == null) rethrow;
+        debugPrint('$entityType: rete lenta o assente ($e)');
+        // "Modalità offline" -> copia salvata; "Riprova" -> un altro tentativo.
+        if (await offline.askToGoOffline(cached.$3)) {
+          offline.usedCopyFrom(cached.$3);
+          return (cached.$1, cached.$2);
+        }
+      }
     }
   }
 
@@ -399,7 +425,11 @@ class ContentService {
     Map<String, Map<String, dynamic>> translations,
   ) async {
     try {
-      final json = jsonEncode({'o': originals, 't': translations});
+      final json = jsonEncode({
+        'at': DateTime.now().toIso8601String(),
+        'o': originals,
+        't': translations,
+      });
       if (json.length > 1500000) return; // troppo grande per le preferenze
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(key, json);
@@ -408,8 +438,13 @@ class ContentService {
     }
   }
 
-  static Future<(List<Map<String, dynamic>>, Map<String, Map<String, dynamic>>)?>
-      _readCache(String key) async {
+  /// Copia salvata: righe, traduzioni e quando è stata salvata.
+  static Future<
+      (
+        List<Map<String, dynamic>>,
+        Map<String, Map<String, dynamic>>,
+        DateTime?
+      )?> _readCache(String key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(key);
@@ -420,7 +455,8 @@ class ContentService {
           .toList();
       final translations = (data['t'] as Map).map((k, v) =>
           MapEntry(k.toString(), Map<String, dynamic>.from(v as Map)));
-      return (originals, translations);
+      final at = DateTime.tryParse(data['at']?.toString() ?? '');
+      return (originals, translations, at);
     } catch (_) {
       return null;
     }

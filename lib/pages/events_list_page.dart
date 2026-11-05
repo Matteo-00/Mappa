@@ -1,6 +1,7 @@
 import '../widgets/distance_label.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 import '../models/event_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
@@ -77,7 +78,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
     if (route is PageRoute) appRouteObserver.subscribe(this, route);
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadEvents();
     }
@@ -97,7 +100,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
   Future<void> _loadEvents() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final events = await ContentService.fetchEvents(languageCode: languageCode);
     final lastImport =
         _isAdmin ? await ContentService.lastEventsImport() : null;
