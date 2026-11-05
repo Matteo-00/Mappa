@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -50,14 +52,10 @@ class ContentService {
     String languageCode = 'it',
   }) async {
     try {
-      final rows = await _db.from('ristoranti').select().order('created_at');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'ristoranti',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'ristoranti',
+        languageCode,
+        () => _db.from('ristoranti').select().order('created_at'),
       );
       return originals
           .map((e) => RestaurantModel.fromJson(ContentTranslationService
@@ -93,14 +91,10 @@ class ContentService {
   // Solo dati reali inseriti dai master su Supabase (niente dati di prova).
   static Future<List<BarModel>> fetchBars({String languageCode = 'it'}) async {
     try {
-      final rows = await _db.from('bar').select().order('created_at');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'bar',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'bar',
+        languageCode,
+        () => _db.from('bar').select().order('created_at'),
       );
       return originals
           .map((e) => BarModel.fromJson(ContentTranslationService
@@ -134,14 +128,10 @@ class ContentService {
   // ancora (script supabase_hotel_setup.sql non eseguito) la lista è vuota.
   static Future<List<HotelModel>> fetchHotels({String languageCode = 'it'}) async {
     try {
-      final rows = await _db.from('hotel').select().order('created_at');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'hotel',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'hotel',
+        languageCode,
+        () => _db.from('hotel').select().order('created_at'),
       );
       return originals
           .map((e) => HotelModel.fromJson(ContentTranslationService
@@ -181,14 +171,10 @@ class ContentService {
     try {
       var query = _db.from('luoghi').select();
       if (tipo != null) query = query.eq('tipo', tipo.db);
-      final rows = await query.order('created_at');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'luoghi',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'luoghi',
+        languageCode,
+        () => query.order('created_at'), cacheKey: 'luoghi_${tipo?.db ?? 'tutti'}',
       );
       return _parseRows(
         originals,
@@ -224,14 +210,10 @@ class ContentService {
   // Solo dati reali inseriti dai master su Supabase (niente dati di prova).
   static Future<List<EventModel>> fetchEvents({String languageCode = 'it'}) async {
     try {
-      final rows = await _db.from('eventi').select().order('data_inizio');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'eventi',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'eventi',
+        languageCode,
+        () => _db.from('eventi').select().order('data_inizio'),
       );
       return originals
           .map((e) => EventModel.fromJson(ContentTranslationService
@@ -299,14 +281,10 @@ class ContentService {
     String languageCode = 'it',
   }) async {
     try {
-      final rows = await _db.from('itinerari').select().order('created_at');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'itinerari',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'itinerari',
+        languageCode,
+        () => _db.from('itinerari').select().order('created_at'),
       );
       return originals
           .map((e) => ItinerarioModel.fromJson(ContentTranslationService
@@ -378,6 +356,76 @@ class ContentService {
 
   // -------------------------------------------------- Storia di Gubbio
 
+
+  // -------------------------------------------------- Copia sul telefono
+  // L'ultima lista scaricata (righe + traduzioni) resta salvata sul telefono:
+  // se la rete non risponde (poco segnale in centro storico, modalità aereo)
+  // l'app mostra quella invece di una pagina vuota.
+
+  static const _cachePrefix = 'cache_v1';
+
+  static Future<(List<Map<String, dynamic>>, Map<String, Map<String, dynamic>>)>
+      _cachedRows(
+    String entityType,
+    String languageCode,
+    Future<dynamic> Function() query, {
+    String? cacheKey,
+  }) async {
+    final key = '$_cachePrefix:${cacheKey ?? entityType}:$languageCode';
+    try {
+      final rows = await query().timeout(const Duration(seconds: 12));
+      final originals =
+          (rows as List).map((e) => Map<String, dynamic>.from(e)).toList();
+      final translations = await ContentTranslationService.fetchTranslations(
+        entityType: entityType,
+        entityIds: originals.map((e) => e['id'].toString()).toList(),
+        languageCode: languageCode,
+      );
+      _saveCache(key, originals, translations);
+      return (originals, translations);
+    } catch (e) {
+      final cached = await _readCache(key);
+      if (cached != null) {
+        debugPrint('$entityType: rete non disponibile, uso la copia salvata');
+        return cached;
+      }
+      rethrow;
+    }
+  }
+
+  static Future<void> _saveCache(
+    String key,
+    List<Map<String, dynamic>> originals,
+    Map<String, Map<String, dynamic>> translations,
+  ) async {
+    try {
+      final json = jsonEncode({'o': originals, 't': translations});
+      if (json.length > 1500000) return; // troppo grande per le preferenze
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, json);
+    } catch (_) {
+      // La copia è solo un aiuto: se non si salva pazienza.
+    }
+  }
+
+  static Future<(List<Map<String, dynamic>>, Map<String, Map<String, dynamic>>)?>
+      _readCache(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(key);
+      if (raw == null) return null;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final originals = (data['o'] as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      final translations = (data['t'] as Map).map((k, v) =>
+          MapEntry(k.toString(), Map<String, dynamic>.from(v as Map)));
+      return (originals, translations);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Applica le traduzioni e crea i modelli riga per riga: una riga con dati
   /// non validi viene saltata (e segnalata nel log) invece di svuotare tutta
   /// la lista. Se la traduzione di una riga non è valida si riprova con
@@ -410,15 +458,10 @@ class ContentService {
     String languageCode = 'it',
   }) async {
     try {
-      final rows =
-          await _db.from('storia_epoche').select().order('sort_order');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'storia_epoche',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'storia_epoche',
+        languageCode,
+        () => _db.from('storia_epoche').select().order('sort_order'),
       );
       return _parseRows(
         originals,
@@ -436,15 +479,10 @@ class ContentService {
     String languageCode = 'it',
   }) async {
     try {
-      final rows =
-          await _db.from('storia_contenuti').select().order('sort_order');
-      final originals = (rows as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      final translations = await ContentTranslationService.fetchTranslations(
-        entityType: 'storia_contenuti',
-        entityIds: originals.map((e) => e['id'].toString()).toList(),
-        languageCode: languageCode,
+      final (originals, translations) = await _cachedRows(
+        'storia_contenuti',
+        languageCode,
+        () => _db.from('storia_contenuti').select().order('sort_order'),
       );
       return _parseRows(
         originals,
