@@ -68,7 +68,7 @@ class FilterPillButton extends StatelessWidget {
                   child: Text(
                     '$activeCount',
                     style: const TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),

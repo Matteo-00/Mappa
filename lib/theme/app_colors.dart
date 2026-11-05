@@ -28,7 +28,7 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
 
   /// Testo secondario (grigio caldo)
-  static const Color textMuted = Color(0xFF8C857D);
+  static const Color textMuted = Color(0xFF736C64);
 
   /// Overlay scuro per le hero image
   static const LinearGradient heroOverlay = LinearGradient(

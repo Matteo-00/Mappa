@@ -340,7 +340,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                             child: Text(
                               l.t('rvYours'),
                               style: const TextStyle(
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),

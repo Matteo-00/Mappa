@@ -137,7 +137,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
                               widget.epoca!.nome.toUpperCase(),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10.5,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 1.0,
                               ),

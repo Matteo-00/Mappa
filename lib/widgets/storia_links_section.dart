@@ -171,7 +171,7 @@ class _StoriaLinksSectionState extends State<StoriaLinksSection> {
                         Text(
                           c.displayDate.toUpperCase(),
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
                             color: AppColors.rossoGubbio,

@@ -401,7 +401,7 @@ class _StoriaPageState extends State<StoriaPage> {
                                   child: Text(
                                     _l.t('stNoEra'),
                                     style: const TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 0.8,
                                       color: AppColors.textMuted,
@@ -742,7 +742,7 @@ class _StoriaPageState extends State<StoriaPage> {
                             Text(
                               c.displayDate.toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.6,
                                 color: AppColors.rossoGubbio,
@@ -826,7 +826,7 @@ class _StoriaPageState extends State<StoriaPage> {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11.5,
           fontWeight: FontWeight.w700,
           color: dark ? AppColors.bluNotte : AppColors.bluNotte.withValues(alpha: 0.85),
         ),
@@ -1034,7 +1034,7 @@ class _EraIntroState extends State<_EraIntro> {
               Text(
                 l10n.t('stRemember'),
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
                   color: AppColors.textMuted,
@@ -1056,7 +1056,7 @@ class _EraIntroState extends State<_EraIntro> {
                       child: Text(
                         ev,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.bluNotte,
                         ),
@@ -1173,7 +1173,7 @@ class _EraHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Text(
                 epoca.periodo,
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: AppColors.rossoGubbio,
                 ),

@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import 'map_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/auth_service.dart';
 import '../services/content_service.dart';
 
@@ -43,8 +44,10 @@ class EventDetailPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Orario con icona
-                        _buildTimeSection(),
+                        // Data e orario
+                        _buildTimeSection(l10n),
+                        const SizedBox(height: 12),
+                        _buildActions(l10n),
                         const SizedBox(height: 16),
 
                         // Solo admin: evento importato ancora da approvare
@@ -75,17 +78,6 @@ class EventDetailPage extends StatelessWidget {
                           _buildSourceSection(l10n),
                           const SizedBox(height: 24),
                         ],
-
-                        // Informazioni storiche (non per gli eventi del
-                        // Comune: concerti, mostre... non hanno un testo storico)
-                        if (!event.isFromComune) ...[
-                          _buildHistoricalSection(l10n),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Curiosità (se disponibili)
-                        _buildCuriositySection(l10n),
-                        const SizedBox(height: 24),
 
                         // Luogo
                         _buildLocationSection(context, l10n),
@@ -141,34 +133,141 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  /// Sezione orario
-  Widget _buildTimeSection() {
+  /// Data ("Sabato 14 novembre 2026", oppure "4 nov – 24 nov" per gli
+  /// eventi di più giorni) e orario ("21:00 – 23:00" o "Tutto il giorno").
+  Widget _buildTimeSection(AppLocalizations l10n) {
+    final s = event.startTime;
+    final e = event.endTime;
+    final days = l10n.list('weekdaysFull');
+    final months = l10n.list('monthsFull');
+    String cap(String v) =>
+        v.isEmpty ? v : v[0].toUpperCase() + v.substring(1).toLowerCase();
+    // Mesi con la maiuscola in inglese e tedesco, minuscola in italiano e
+    // francese ("14 November" / "14 novembre").
+    final upperMonths = l10n.languageCode == 'en' || l10n.languageCode == 'de';
+    String month(int m) =>
+        upperMonths ? cap(months[m - 1]) : months[m - 1].toLowerCase();
+    String longDate(DateTime d) =>
+        '${cap(days[d.weekday - 1])} ${d.day} ${month(d.month)} ${d.year}';
+    String hm(DateTime d) =>
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    final sameDay = s.year == e.year && s.month == e.month && s.day == e.day;
+    final allDay = s.hour == 0 && s.minute == 0 && e.hour == 23 && e.minute == 59;
+
+    final dateText = sameDay || !e.isAfter(s)
+        ? longDate(s)
+        : '${s.day} ${month(s.month)} – ${e.day} ${month(e.month)} ${e.year}';
+    final timeText = allDay
+        ? l10n.t('evAllDay')
+        : (sameDay && e.isAfter(s) ? '${hm(s)} – ${hm(e)}' : hm(s));
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.rossoGubbio.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.access_time_rounded,
-            color: AppColors.rossoGubbio,
-            size: 22,
-          ),
-          const SizedBox(width: 10),
-          Text(
-            event.time,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.rossoGubbio,
+          const Icon(Icons.event_rounded,
+              color: AppColors.rossoGubbio, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dateText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.bluNotte,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  timeText,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.rossoGubbio,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// "Aggiungi al calendario" e "Condividi".
+  Widget _buildActions(AppLocalizations l10n) {
+    Widget button(IconData icon, String label, VoidCallback onTap) {
+      return Expanded(
+        child: OutlinedButton.icon(
+          onPressed: onTap,
+          icon: Icon(icon, size: 19),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.rossoGubbio,
+            side: const BorderSide(color: AppColors.rossoGubbio),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            textStyle:
+                const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        button(Icons.edit_calendar_outlined, l10n.t('evAddCalendar'),
+            _addToCalendar),
+        const SizedBox(width: 10),
+        button(Icons.share_outlined, l10n.t('evShare'), () => _share(l10n)),
+      ],
+    );
+  }
+
+  /// Apre Google Calendar (app o sito) con l'evento già compilato: non
+  /// servono permessi sul telefono.
+  void _addToCalendar() {
+    String utc(DateTime d) => d
+        .toUtc()
+        .toIso8601String()
+        .replaceAll(RegExp(r'[-:]'), '')
+        .replaceAll(RegExp(r'\.\d+'), '');
+    final details = [
+      if (event.description.trim().isNotEmpty) event.description.trim(),
+      if (event.sourceUrl != null) event.sourceUrl!,
+    ].join('\n\n');
+    final uri = Uri.https('calendar.google.com', '/calendar/render', {
+      'action': 'TEMPLATE',
+      'text': event.title,
+      'dates': '${utc(event.startTime)}/${utc(event.endTime)}',
+      'details': details.length > 1500 ? details.substring(0, 1500) : details,
+      'location': event.location.trim().isEmpty
+          ? 'Gubbio'
+          : '${event.location}, Gubbio',
+    });
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _share(AppLocalizations l10n) {
+    final s = event.startTime;
+    final months = l10n.list('monthsFull');
+    final date = '${s.day} ${months[s.month - 1].toLowerCase()} ${s.year}';
+    final text = [
+      event.title,
+      [date, if (event.location.trim().isNotEmpty) event.location].join(' · '),
+      if (event.sourceUrl != null) event.sourceUrl!,
+      l10n.t('evShareFooter'),
+    ].join('\n');
+    SharePlus.instance.share(ShareParams(text: text, subject: event.title));
   }
 
   /// Sezione descrizione
@@ -249,138 +348,6 @@ class EventDetailPage extends StatelessWidget {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  /// Sezione informazioni storiche
-  Widget _buildHistoricalSection(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.rossoGubbio.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  color: AppColors.rossoGubbio,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                l10n.historicalContextLabel,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.bluNotte,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _getHistoricalContext(event.id),
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppColors.textMuted,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Sezione curiosità
-  Widget _buildCuriositySection(AppLocalizations l10n) {
-    final curiosities = _getCuriosities(event.id);
-    if (curiosities.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.rossoGubbio.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.rossoGubbio.withValues(alpha: 0.18),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.rossoGubbio.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.lightbulb_outline_rounded,
-                  color: AppColors.rossoGubbio,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                l10n.didYouKnowLabel,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.bluNotte,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...curiosities.map((curiosity) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '• ',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.rossoGubbio,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        curiosity,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: AppColors.textMuted,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
         ],
       ),
     );
@@ -479,43 +446,6 @@ class EventDetailPage extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  /// Restituisce il contesto storico per un evento
-  String _getHistoricalContext(String eventId) {
-    final contexts = {
-      'evt_1': 'La tradizione dei tamburi che svegliano i Capitani risale al Medioevo, '
-          'quando era necessario radunare i ceraioli prima dell\'alba per prepararsi alla lunga giornata di celebrazioni.',
-      'evt_2': 'Il Campanone del Palazzo dei Consoli, con il suo suono inconfondibile, '
-          'risuona per tutta Gubbio annunciando ufficialmente l\'inizio della Festa dei Ceri.',
-      'evt_4': 'La Messa dei Ceraioli nel Duomo è un momento di raccoglimento e spiritualità '
-          'che precede l\'energica celebrazione della giornata.',
-      'evt_6': 'L\'Alzata dei Ceri è il momento culminante della mattinata: i tre Ceri, '
-          'alti 4 metri e pesanti circa 280 kg ciascuno, vengono issati sulle spalle dei ceraioli '
-          'tra il boato della folla in Piazza Grande.',
-      'evt_8': 'La Corsa dei Ceri è il momento più atteso: una sfida secolare dove i tre Ceri '
-          'vengono portati di corsa dal centro storico fino alla Basilica di Sant\'Ubaldo sul Monte Ingino. '
-          'Non è una gara di velocità, ma un atto di devozione e orgoglio.',
-    };
-    return contexts[eventId] ?? 
-        'Un evento importante della tradizione eugubina che si tramanda di generazione in generazione.';
-  }
-
-  /// Restituisce curiosità per un evento
-  List<String> _getCuriosities(String eventId) {
-    final curiositiesMap = {
-      'evt_6': [
-        'Ogni Cero pesa circa 280 kg ed è alto oltre 4 metri',
-        'I tre Ceri rappresentano i Santi Ubaldo, Giorgio e Antonio',
-        'L\'ordine dei Ceri non cambia mai: Sant\'Ubaldo arriva sempre per primo',
-      ],
-      'evt_8': [
-        'La corsa dura circa 30 minuti',
-        'I ceraioli percorrono oltre 4 km in salita',
-        'La festa ha origini medievali e risale al XII secolo',
-      ],
-    };
-    return curiositiesMap[eventId] ?? [];
   }
 }
 

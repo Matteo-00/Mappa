@@ -780,7 +780,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.bluNotte,
             ),
@@ -913,7 +913,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.88),
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           height: 1.25,
                         ),
@@ -1021,7 +1021,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                     Text(
                       months[e.startTime.month - 1],
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppColors.rossoGubbio,
                         letterSpacing: 0.8,
@@ -1049,7 +1049,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                       Text(
                         _l10n.t('eventNow'),
                         style: const TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           color: AppColors.rossoGubbio,
                           letterSpacing: 0.6,
@@ -1120,7 +1120,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                 count > 99 ? '99+' : '$count',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   height: 1,
                 ),

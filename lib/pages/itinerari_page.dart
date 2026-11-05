@@ -423,7 +423,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.8,
                                 color: AppColors.rossoGubbio,

@@ -712,7 +712,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           Text(
             _l.list('monthsShort')[date.month - 1],
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
               color: isPast ? AppColors.textMuted : AppColors.rossoGubbio,
@@ -742,7 +742,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11.5,
           fontWeight: FontWeight.w800,
           color: strong ? Colors.white : AppColors.bluNotte,
         ),

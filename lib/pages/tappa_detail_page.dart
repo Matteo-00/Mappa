@@ -233,7 +233,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10.5,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.8,
                             ),
@@ -557,7 +557,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                         Text(
                           c.displayDate.toUpperCase(),
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
                             color: AppColors.rossoGubbio,

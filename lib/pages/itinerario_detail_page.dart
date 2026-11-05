@@ -189,7 +189,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                             itinerario.tema.toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10.5,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.0,
                             ),
@@ -347,7 +347,7 @@ class _ItinerarioDetailView extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12,
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w500,
               ),
@@ -458,7 +458,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                                 Text(
                                   tappa.durata,
                                   style: const TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.bluNotte,
                                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../theme/app_colors.dart';
 import 'scroll_hints.dart';
 import '../services/auth_service.dart';
@@ -231,11 +232,16 @@ class AppDrawer extends StatelessWidget {
 
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                l10n.appVersionLabel('1.2.1'),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMuted.withValues(alpha: 0.8),
+              // Versione letta dall'app installata (quella del pubspec.yaml):
+              // non va più aggiornata a mano.
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snap) => Text(
+                  snap.hasData ? l10n.appVersionLabel(snap.data!.version) : '',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted.withValues(alpha: 0.8),
+                  ),
                 ),
               ),
             ),
