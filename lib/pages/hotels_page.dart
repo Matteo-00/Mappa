@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 import '../models/hotel_model.dart';
 import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
@@ -15,6 +16,9 @@ import 'admin/add_place_page.dart';
 import 'hotel_detail_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
+import '../widgets/user_rating_badge.dart';
+import '../models/review_model.dart';
+import '../services/review_service.dart';
 import '../widgets/loading_screen.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
@@ -56,7 +60,9 @@ class _HotelsPageState extends State<HotelsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadHotels();
     }
@@ -72,7 +78,7 @@ class _HotelsPageState extends State<HotelsPage> {
   Future<void> _loadHotels() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final hotels =
         await ContentService.fetchHotels(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
@@ -83,6 +89,10 @@ class _HotelsPageState extends State<HotelsPage> {
       _loading = false;
       _filters.dropMissingTag(_allHotels.map((p) => p.cuisineTypes));
     });
+    _applyFilters();
+    final stats = await ReviewService.fetchStats(ReviewService.hotels);
+    if (!mounted) return;
+    setState(() => _userStats = stats);
     _applyFilters();
   }
   
@@ -107,6 +117,9 @@ class _HotelsPageState extends State<HotelsPage> {
   /// Filtri e ordinamento (vicino a me, stelle, tag...).
   final PlaceFilterState _filters = PlaceFilterState();
 
+  /// Media delle recensioni degli utenti per ogni scheda.
+  Map<String, ReviewStats> _userStats = {};
+
   void _applyFilters() {
     final result = PlaceFilters.apply<HotelModel>(
       _allHotels,
@@ -116,6 +129,8 @@ class _HotelsPageState extends State<HotelsPage> {
       description: (p) => p.description,
       tags: (p) => p.cuisineTypes,
       rating: (p) => p.rating,
+      userRating: (p) => _userStats[p.id]?.average,
+      userCount: (p) => _userStats[p.id]?.count ?? 0,
       distance: (p) => _currentLocation == null
           ? null
           : p.calculateDistance(_currentLocation!),
@@ -210,7 +225,7 @@ class _HotelsPageState extends State<HotelsPage> {
                       points: gubbioMunicipalBoundary,
                       strokeWidth: 4,
                       strokeColor: Colors.red,
-                      fillColor: Colors.red.withOpacity(0.05),
+                      fillColor: Colors.red.withValues(alpha: 0.05),
                       geodesic: true,
                     ),
                   },
@@ -232,6 +247,7 @@ class _HotelsPageState extends State<HotelsPage> {
             locationAvailable: _currentLocation != null,
             resultCount: _filteredHotels.length,
             onChanged: _applyFilters,
+            showUserRating: _userStats.isNotEmpty,
           ),
           // Lista hotel
           Expanded(
@@ -259,7 +275,7 @@ class _HotelsPageState extends State<HotelsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -334,7 +350,7 @@ class _HotelsPageState extends State<HotelsPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -359,7 +375,7 @@ class _HotelsPageState extends State<HotelsPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.tortora.withOpacity(0.45),
+                      AppColors.tortora.withValues(alpha: 0.45),
                       AppColors.avorio,
                     ],
                   ),
@@ -430,6 +446,10 @@ class _HotelsPageState extends State<HotelsPage> {
                     const SizedBox(height: 8),
                     if (hotel.rating != null)
                       _buildMiniRating(hotel.rating!),
+                    if (_userStats[hotel.id] != null) ...[
+                      const SizedBox(height: 4),
+                      UserRatingBadge(stats: _userStats[hotel.id]!),
+                    ],
                     const SizedBox(height: 6),
                     DistanceLabel(target: hotel.coordinates),
                   ],
@@ -453,7 +473,7 @@ class _HotelsPageState extends State<HotelsPage> {
           Icon(
             Icons.hotel,
             size: 76,
-            color: AppColors.tortora.withOpacity(0.5),
+            color: AppColors.tortora.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(

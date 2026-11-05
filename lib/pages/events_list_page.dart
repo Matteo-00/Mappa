@@ -1,6 +1,7 @@
 import '../widgets/distance_label.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 import '../models/event_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
@@ -53,7 +54,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
   bool _loading = true;
 
   String _searchQuery = '';
-  EventFilter _currentFilter = EventFilter.upcoming;
+  // Di base si vedono tutti gli eventi (prima i prossimi, poi i conclusi).
+  EventFilter _currentFilter = EventFilter.all;
   String? _selectedCategory;
   String? _selectedPlace;
   EventSource? _selectedSource;
@@ -77,7 +79,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
     if (route is PageRoute) appRouteObserver.subscribe(this, route);
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadEvents();
     }
@@ -97,7 +101,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
   Future<void> _loadEvents() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final events = await ContentService.fetchEvents(languageCode: languageCode);
     final lastImport =
         _isAdmin ? await ContentService.lastEventsImport() : null;
@@ -212,7 +216,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       _selectedPlace != null ||
       _selectedSource != null ||
       _onlyDrafts ||
-      _currentFilter != EventFilter.upcoming;
+      _currentFilter != EventFilter.all;
 
   void _resetFilters() {
     _searchController.clear();
@@ -222,7 +226,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       _selectedPlace = null;
       _selectedSource = null;
       _onlyDrafts = false;
-      _currentFilter = EventFilter.upcoming;
+      _currentFilter = EventFilter.all;
     });
   }
 
@@ -327,10 +331,10 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   /// Chip per il filtro temporale
   Widget _buildTimeChips() {
-    // "Tutti" subito dopo "Prossimi": così si vede senza dover scorrere.
+    // "Tutti" per primo (è il filtro di base), poi "Prossimi".
     final labels = {
-      EventFilter.upcoming: _l.t('fltUpcoming'),
       EventFilter.all: _l.t('fltAll'),
+      EventFilter.upcoming: _l.t('fltUpcoming'),
       EventFilter.today: _l.t('fltToday'),
       EventFilter.weekend: _l.t('fltWeekend'),
       EventFilter.week: _l.t('fltThisWeek'),
@@ -344,7 +348,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             AppFilterChip(
               label: entry.value,
               selected: _currentFilter == entry.key,
-              icon: entry.key == EventFilter.upcoming ? Icons.event_available : null,
+              icon: entry.key == EventFilter.all ? Icons.event_available : null,
               onTap: () => setState(() => _currentFilter = entry.key),
             ),
             const SizedBox(width: 8),
@@ -690,7 +694,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.06),
+              color: AppColors.bluNotte.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -805,7 +809,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: (isPast ? AppColors.tortora : AppColors.rossoGubbio)
-            .withOpacity(0.12),
+            .withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -813,7 +817,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           Text(
             _l.list('monthsShort')[date.month - 1],
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
               color: isPast ? AppColors.textMuted : AppColors.rossoGubbio,
@@ -837,13 +841,13 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: strong ? color : color.withOpacity(0.15),
+        color: strong ? color : color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11.5,
           fontWeight: FontWeight.w800,
           color: strong ? Colors.white : AppColors.bluNotte,
         ),
@@ -898,7 +902,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       children: [
         const SizedBox(height: 50),
         Icon(Icons.event_busy,
-            size: 70, color: AppColors.tortora.withOpacity(0.55)),
+            size: 70, color: AppColors.tortora.withValues(alpha: 0.55)),
         const SizedBox(height: 16),
         Text(
           l10n.noEventsFound,

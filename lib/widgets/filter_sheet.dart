@@ -33,7 +33,7 @@ class FilterPillButton extends StatelessWidget {
     return Material(
       color: Colors.white,
       elevation: floating ? 4 : 1.5,
-      shadowColor: Colors.black.withOpacity(floating ? 0.22 : 0.12),
+      shadowColor: Colors.black.withValues(alpha: floating ? 0.22 : 0.12),
       borderRadius: BorderRadius.circular(30),
       child: InkWell(
         borderRadius: BorderRadius.circular(30),
@@ -68,7 +68,7 @@ class FilterPillButton extends StatelessWidget {
                   child: Text(
                     '$activeCount',
                     style: const TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
@@ -150,7 +150,7 @@ Future<void> showFilterSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.avorio,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
     ),

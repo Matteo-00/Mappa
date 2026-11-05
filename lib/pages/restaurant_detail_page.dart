@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/rating_icons.dart';
 import '../widgets/reviews_section.dart';
+import '../widgets/favorite_button.dart';
 import '../services/content_service.dart';
 import '../services/review_service.dart';
 import 'map_page.dart';
@@ -77,6 +78,13 @@ class RestaurantDetailPage extends StatelessWidget {
                 child: NavButtons(light: true),
               ),
             ),
+            actions: [
+              if (ContentService.isRemoteId(restaurant.id))
+                Padding(
+                  padding: const EdgeInsets.only(right: 12, top: 4),
+                  child: FavoriteButton(kind: mapKind, id: restaurant.id),
+                ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: restaurant.imageUrl != null
                   ? _buildHeroImage(restaurant.imageUrl!)
@@ -131,10 +139,10 @@ class RestaurantDetailPage extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.rossoGubbio.withOpacity(0.08),
+                            color: AppColors.rossoGubbio.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: AppColors.rossoGubbio.withOpacity(0.25),
+                              color: AppColors.rossoGubbio.withValues(alpha: 0.25),
                             ),
                           ),
                           child: Text(
@@ -279,7 +287,7 @@ class RestaurantDetailPage extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.tortora.withOpacity(0.6),
+            AppColors.tortora.withValues(alpha: 0.6),
             AppColors.avorio,
           ],
         ),
@@ -288,7 +296,7 @@ class RestaurantDetailPage extends StatelessWidget {
         child: Icon(
           fallbackIcon,
           size: 92,
-          color: AppColors.rossoGubbio.withOpacity(0.5),
+          color: AppColors.rossoGubbio.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -309,7 +317,7 @@ class RestaurantDetailPage extends StatelessWidget {
         ),
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: Container(color: Colors.black.withOpacity(0.15)),
+          child: Container(color: Colors.black.withValues(alpha: 0.15)),
         ),
         Image.network(
           url,
@@ -358,7 +366,7 @@ class RestaurantDetailPage extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.08),
+            color: AppColors.bluNotte.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, -4),
           ),

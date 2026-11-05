@@ -115,7 +115,7 @@ class _ScegliVetrinaPageState extends State<ScegliVetrinaPage> {
                           style: TextStyle(
                             fontSize: 13.5,
                             height: 1.4,
-                            color: AppColors.bluNotte.withOpacity(0.75),
+                            color: AppColors.bluNotte.withValues(alpha: 0.75),
                           ),
                         ),
                       ),
@@ -126,7 +126,7 @@ class _ScegliVetrinaPageState extends State<ScegliVetrinaPage> {
                         decoration: BoxDecoration(
                           color: _selected.length == _max
                               ? AppColors.verdeSalvia
-                              : AppColors.tortora.withOpacity(0.25),
+                              : AppColors.tortora.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -279,7 +279,7 @@ class _ScegliVetrinaPageState extends State<ScegliVetrinaPage> {
           colors: [AppColors.grigioChiaro, AppColors.tortora],
         ),
       ),
-      child: Icon(it.icona, color: Colors.white.withOpacity(0.9)),
+      child: Icon(it.icona, color: Colors.white.withValues(alpha: 0.9)),
     );
   }
 }

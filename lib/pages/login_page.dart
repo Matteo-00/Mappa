@@ -449,7 +449,7 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                                           foregroundColor: Colors.white,
                                           elevation: 0,
                                           shadowColor: const Color(0xFFB13B2E)
-                                              .withOpacity(0.3),
+                                              .withValues(alpha: 0.3),
                                           shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(12),
@@ -572,7 +572,7 @@ final double contentHeight = size.height - padding.top - padding.bottom;
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

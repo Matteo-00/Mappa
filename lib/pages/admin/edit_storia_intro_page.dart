@@ -105,7 +105,7 @@ class _EditStoriaIntroPageState extends State<EditStoriaIntroPage> {
             Text('Foto di copertina (opzionale)',
                 style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.bluNotte.withOpacity(0.7))),
+                    color: AppColors.bluNotte.withValues(alpha: 0.7))),
             const SizedBox(height: 8),
             ImagePickerField(
               initialImageUrl: widget.intro.imageUrl,

@@ -35,6 +35,10 @@ class _ReviewsSectionState extends State<ReviewsSection> {
   Set<String> _blocked = {};
   bool _loading = true;
 
+  /// Commenti tradotti con "Traduci" (id recensione -> testo tradotto).
+  final Map<String, String> _translated = {};
+  final Set<String> _translating = {};
+
   AppLocalizations get _l => AppLocalizations.of(
       context.read<LanguageService>().currentLanguageCode);
 
@@ -249,6 +253,73 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     );
   }
 
+  /// "Traduci" / "Mostra originale" sotto un commento.
+  Widget _translateLink(AppLocalizations l, ReviewModel r) {
+    final shown = _translated.containsKey(r.id);
+    final busy = _translating.contains(r.id);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          TextButton.icon(
+            onPressed: busy ? null : () => _toggleTranslation(r),
+            icon: busy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.rossoGubbio),
+                  )
+                : Icon(shown ? Icons.undo_rounded : Icons.translate_rounded,
+                    size: 17),
+            label: Text(l.t(shown ? 'rvShowOriginal' : 'rvTranslate')),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.rossoGubbio,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              textStyle:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+          if (shown) ...[
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                l.t('rvTranslatedBy'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleTranslation(ReviewModel r) async {
+    if (_translated.containsKey(r.id)) {
+      setState(() => _translated.remove(r.id));
+      return;
+    }
+    final l = _l;
+    setState(() => _translating.add(r.id));
+    try {
+      final lang = context.read<LanguageService>().currentLanguageCode;
+      final text = await ReviewService.translate(r.id, lang);
+      if (!mounted) return;
+      if (text == null) {
+        _snack(l.t('rvSameLanguage'));
+      } else {
+        _translated[r.id] = text;
+      }
+    } catch (_) {
+      if (mounted) _snack(l.t('rvTranslateError'));
+    }
+    if (mounted) setState(() => _translating.remove(r.id));
+  }
+
   Widget _summary(AppLocalizations l, List<ReviewModel> reviews) {
     final avg =
         reviews.fold<int>(0, (sum, r) => sum + r.stars) / reviews.length;
@@ -290,7 +361,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isMine
-              ? AppColors.rossoGubbio.withOpacity(0.35)
+              ? AppColors.rossoGubbio.withValues(alpha: 0.35)
               : AppColors.grigioChiaro,
         ),
       ),
@@ -301,7 +372,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
             children: [
               CircleAvatar(
                 radius: 17,
-                backgroundColor: AppColors.rossoGubbio.withOpacity(0.1),
+                backgroundColor: AppColors.rossoGubbio.withValues(alpha: 0.1),
                 child: Text(
                   initial.toUpperCase(),
                   style: const TextStyle(
@@ -340,7 +411,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                             child: Text(
                               l.t('rvYours'),
                               style: const TextStyle(
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -400,7 +471,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: Text(
-                r.comment,
+                _translated[r.id] ?? r.comment,
                 style: const TextStyle(
                   fontSize: 14.5,
                   height: 1.5,
@@ -408,6 +479,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                 ),
               ),
             ),
+            if (!isMine) _translateLink(l, r),
           ],
         ],
       ),

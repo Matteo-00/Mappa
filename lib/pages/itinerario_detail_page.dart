@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 import '../services/content_service.dart';
 import '../services/review_service.dart';
 import '../widgets/reviews_section.dart';
+import '../widgets/favorite_button.dart';
 import 'itinerari_page.dart' show itinerarioImagePlaceholder;
 
 /// Pagina di dettaglio di un itinerario, con hero, informazioni e tappe.
@@ -108,11 +109,17 @@ class _ItinerarioDetailView extends StatelessWidget {
             backgroundColor: AppColors.bluNotte,
             foregroundColor: Colors.white,
             actions: [
+              if (ContentService.isRemoteId(itinerario.id))
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FavoriteButton(
+                      kind: MapKind.itinerary, id: itinerario.id, light: false),
+                ),
               if (onEdit != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Material(
-                    color: Colors.black.withOpacity(0.28),
+                    color: Colors.black.withValues(alpha: 0.28),
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
@@ -130,7 +137,7 @@ class _ItinerarioDetailView extends StatelessWidget {
             leading: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Material(
-                color: Colors.black.withOpacity(0.28),
+                color: Colors.black.withValues(alpha: 0.28),
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
@@ -189,7 +196,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                             itinerario.tema.toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10.5,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.0,
                             ),
@@ -324,7 +331,7 @@ class _ItinerarioDetailView extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.05),
+              color: AppColors.bluNotte.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -347,7 +354,7 @@ class _ItinerarioDetailView extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12,
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w500,
               ),
@@ -394,7 +401,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: AppColors.tortora.withOpacity(0.5),
+                    color: AppColors.tortora.withValues(alpha: 0.5),
                   ),
                 ),
             ],
@@ -411,7 +418,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.bluNotte.withOpacity(0.05),
+                      color: AppColors.bluNotte.withValues(alpha: 0.05),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -458,7 +465,7 @@ class _ItinerarioDetailView extends StatelessWidget {
                                 Text(
                                   tappa.durata,
                                   style: const TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.bluNotte,
                                   ),

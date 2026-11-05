@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/consent_service.dart';
@@ -127,16 +128,15 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
 
                       const SizedBox(height: 10),
 
-                      Text(
-                        '${l10n.t('csPolicyLabel')}\n'
-                        'https://visitgubbio.eu/privacy-policy.html\n\n'
-                        '${l10n.t('csTermsLabel')}\n'
-                        'https://visitgubbio.eu/terms.html',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.5,
-                          color: AppColors.textMuted,
-                        ),
+                      // Link da toccare: si aprono nel browser.
+                      _LegalLink(
+                        label: l10n.t('csPolicyLabel'),
+                        url: 'https://visitgubbio.eu/privacy-policy.html',
+                      ),
+                      const SizedBox(height: 8),
+                      _LegalLink(
+                        label: l10n.t('csTermsLabel'),
+                        url: 'https://visitgubbio.eu/terms.html',
                       ),
 
                       const SizedBox(height: 12),
@@ -201,7 +201,7 @@ class _PrivacyConsentPageState extends State<PrivacyConsentPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.rossoGubbio,
                     disabledBackgroundColor:
-                        AppColors.rossoGubbio.withOpacity(0.35),
+                        AppColors.rossoGubbio.withValues(alpha: 0.35),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -329,6 +329,67 @@ class _Bullet extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Riga con il nome del documento e il link (toccabile) alla pagina web.
+class _LegalLink extends StatelessWidget {
+  final String label;
+  final String url;
+
+  const _LegalLink({required this.label, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () =>
+            launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.grigioChiaro),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.description_outlined,
+                  size: 20, color: AppColors.rossoGubbio),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label.replaceAll(RegExp(r'[:\s]+$'), ''),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.bluNotte,
+                      ),
+                    ),
+                    Text(
+                      url.replaceFirst('https://', ''),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.rossoGubbio,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.rossoGubbio,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new_rounded,
+                  size: 18, color: AppColors.rossoGubbio),
+            ],
+          ),
+        ),
       ),
     );
   }

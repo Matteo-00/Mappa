@@ -113,7 +113,7 @@ class ContactPage extends StatelessWidget {
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -129,7 +129,7 @@ class ContactPage extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.tortora.withOpacity(0.45),
+            AppColors.tortora.withValues(alpha: 0.45),
             Colors.white,
           ],
         ),
@@ -194,7 +194,7 @@ class ContactPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -281,7 +281,7 @@ class ContactPage extends StatelessWidget {
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 2),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 
 import '../data/gubbio_boundary.dart';
 import '../l10n/app_localizations.dart';
@@ -63,7 +64,9 @@ class _LuoghiPageState extends State<LuoghiPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _load();
     }
@@ -79,7 +82,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
   Future<void> _load() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final items = await ContentService.fetchLuoghi(
         tipo: _tipo, languageCode: languageCode);
     // La schermata di caricamento resta almeno il tempo minimo.
@@ -242,7 +245,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
                       points: gubbioMunicipalBoundary,
                       strokeWidth: 4,
                       strokeColor: Colors.red,
-                      fillColor: Colors.red.withOpacity(0.05),
+                      fillColor: Colors.red.withValues(alpha: 0.05),
                       geodesic: true,
                     ),
                   },
@@ -289,7 +292,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -332,7 +335,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -357,7 +360,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.tortora.withOpacity(0.45),
+                      AppColors.tortora.withValues(alpha: 0.45),
                       AppColors.avorio,
                     ],
                   ),
@@ -467,7 +470,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
             Icon(
               _tipo.icon,
               size: 76,
-              color: AppColors.tortora.withOpacity(0.5),
+              color: AppColors.tortora.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(

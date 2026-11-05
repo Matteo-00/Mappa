@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 import '../models/bar_model.dart';
 import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
@@ -14,6 +15,9 @@ import 'admin/admin_widgets.dart';
 import 'admin/add_place_page.dart';
 import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
+import '../widgets/user_rating_badge.dart';
+import '../models/review_model.dart';
+import '../services/review_service.dart';
 import '../widgets/loading_screen.dart';
 import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
@@ -56,7 +60,9 @@ class _BarsPageState extends State<BarsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadBars();
     }
@@ -72,7 +78,7 @@ class _BarsPageState extends State<BarsPage> {
   Future<void> _loadBars() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final bars = await ContentService.fetchBars(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
     if (_loading) await LoadingScreen.waitMinimum(loadingStart);
@@ -82,6 +88,10 @@ class _BarsPageState extends State<BarsPage> {
       _loading = false;
       _filters.dropMissingTag(_allBars.map((p) => p.cuisineTypes));
     });
+    _applyFilters();
+    final stats = await ReviewService.fetchStats(ReviewService.bars);
+    if (!mounted) return;
+    setState(() => _userStats = stats);
     _applyFilters();
   }
 
@@ -106,6 +116,9 @@ class _BarsPageState extends State<BarsPage> {
   /// Filtri e ordinamento (vicino a me, stelle, tag...).
   final PlaceFilterState _filters = PlaceFilterState();
 
+  /// Media delle recensioni degli utenti per ogni scheda.
+  Map<String, ReviewStats> _userStats = {};
+
   void _applyFilters() {
     final result = PlaceFilters.apply<BarModel>(
       _allBars,
@@ -115,6 +128,8 @@ class _BarsPageState extends State<BarsPage> {
       description: (p) => p.description,
       tags: (p) => p.cuisineTypes,
       rating: (p) => p.rating,
+      userRating: (p) => _userStats[p.id]?.average,
+      userCount: (p) => _userStats[p.id]?.count ?? 0,
       distance: (p) => _currentLocation == null
           ? null
           : p.calculateDistance(_currentLocation!),
@@ -208,7 +223,7 @@ class _BarsPageState extends State<BarsPage> {
                       points: gubbioMunicipalBoundary,
                       strokeWidth: 4,
                       strokeColor: Colors.red,
-                      fillColor: Colors.red.withOpacity(0.05),
+                      fillColor: Colors.red.withValues(alpha: 0.05),
                       geodesic: true,
                     ),
                   },
@@ -230,6 +245,7 @@ class _BarsPageState extends State<BarsPage> {
             locationAvailable: _currentLocation != null,
             resultCount: _filteredBars.length,
             onChanged: _applyFilters,
+            showUserRating: _userStats.isNotEmpty,
           ),
           // Lista bar
           Expanded(
@@ -257,7 +273,7 @@ class _BarsPageState extends State<BarsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -332,7 +348,7 @@ class _BarsPageState extends State<BarsPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -357,7 +373,7 @@ class _BarsPageState extends State<BarsPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.tortora.withOpacity(0.45),
+                      AppColors.tortora.withValues(alpha: 0.45),
                       AppColors.avorio,
                     ],
                   ),
@@ -427,6 +443,10 @@ class _BarsPageState extends State<BarsPage> {
                     ),
                     const SizedBox(height: 8),
                     if (bar.rating != null) _buildMiniRating(bar.rating!),
+                    if (_userStats[bar.id] != null) ...[
+                      const SizedBox(height: 4),
+                      UserRatingBadge(stats: _userStats[bar.id]!),
+                    ],
                     const SizedBox(height: 6),
                     DistanceLabel(target: bar.coordinates),
                   ],
@@ -448,7 +468,7 @@ class _BarsPageState extends State<BarsPage> {
           Icon(
             Icons.local_cafe_outlined,
             size: 76,
-            color: AppColors.tortora.withOpacity(0.5),
+            color: AppColors.tortora.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(

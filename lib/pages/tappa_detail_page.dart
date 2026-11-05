@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/itinerario_model.dart';
@@ -54,7 +55,9 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final code = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final code = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != code) {
       _loadStoria();
     }
@@ -64,7 +67,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
   Future<void> _loadStoria() async {
     final ids = _tappa.storiaIds;
     final code = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = code;
+    _loadedLanguageCode = code + OfflineModeService.instance.reloadKey;
     if (ids.isEmpty) return;
     setState(() => _loadingStoria = true);
     final storia = await ContentService.fetchStoriaByIds(ids, languageCode: code);
@@ -157,7 +160,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Material(
-                    color: Colors.black.withOpacity(0.28),
+                    color: Colors.black.withValues(alpha: 0.28),
                     shape: const CircleBorder(),
                     child: InkWell(
                       customBorder: const CircleBorder(),
@@ -175,7 +178,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
             leading: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Material(
-                color: Colors.black.withOpacity(0.28),
+                color: Colors.black.withValues(alpha: 0.28),
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
@@ -233,7 +236,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10.5,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.8,
                             ),
@@ -329,7 +332,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.tortora.withOpacity(0.18),
+                          color: AppColors.tortora.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -389,7 +392,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.05),
+              color: AppColors.bluNotte.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -513,7 +516,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.05),
+            color: AppColors.bluNotte.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -557,7 +560,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
                         Text(
                           c.displayDate.toUpperCase(),
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
                             color: AppColors.rossoGubbio,
@@ -619,7 +622,7 @@ class _TappaDetailPageState extends State<TappaDetailPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.08),
+            color: AppColors.bluNotte.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, -4),
           ),

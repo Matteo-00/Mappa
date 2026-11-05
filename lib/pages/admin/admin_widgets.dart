@@ -45,7 +45,7 @@ class DeleteIconButton extends StatelessWidget {
       width: 34,
       height: 34,
       child: Material(
-        color: AppColors.rossoGubbio.withOpacity(0.10),
+        color: AppColors.rossoGubbio.withValues(alpha: 0.10),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -70,7 +70,7 @@ class EditIconButton extends StatelessWidget {
       width: 34,
       height: 34,
       child: Material(
-        color: AppColors.bluNotte.withOpacity(0.08),
+        color: AppColors.bluNotte.withValues(alpha: 0.08),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -195,7 +195,7 @@ class _ImagePickerFieldState extends State<ImagePickerField> {
                     children: [
                       Icon(Icons.add_a_photo_outlined,
                           size: 44,
-                          color: AppColors.rossoGubbio.withOpacity(0.7)),
+                          color: AppColors.rossoGubbio.withValues(alpha: 0.7)),
                       const SizedBox(height: 10),
                       const Text(
                         'Tocca per scegliere una foto',
@@ -357,7 +357,7 @@ class _GalleryPickerFieldState extends State<GalleryPickerField> {
                     border: Border.all(color: const Color(0xFFE5E1DB)),
                   ),
                   child: Icon(Icons.add_photo_alternate_outlined,
-                      color: AppColors.rossoGubbio.withOpacity(0.7)),
+                      color: AppColors.rossoGubbio.withValues(alpha: 0.7)),
                 ),
               ),
             ],

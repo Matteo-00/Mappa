@@ -451,7 +451,7 @@ class _AddItinerarioPageState extends State<AddItinerarioPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.bluNotte.withOpacity(0.7),
+                color: AppColors.bluNotte.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 8),

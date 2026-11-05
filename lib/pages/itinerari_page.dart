@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
+import '../widgets/user_rating_badge.dart';
+import '../models/review_model.dart';
+import '../services/review_service.dart';
 import '../models/itinerario_model.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
@@ -15,7 +19,7 @@ import 'admin/admin_widgets.dart';
 import 'admin/edit_itinerario_flow.dart';
 import 'itinerario_detail_page.dart';
 
-enum _ItinerarioSort { predefinito, titolo, tappe }
+enum _ItinerarioSort { predefinito, votati, titolo, tappe }
 
 /// Elenco degli itinerari consigliati per visitare Gubbio: ricerca, filtri
 /// per tema, difficoltà e durata, ordinamento e schede compatte.
@@ -42,6 +46,9 @@ class _ItinerariPageState extends State<ItinerariPage> {
   String? _selectedDurata;
   _ItinerarioSort _sort = _ItinerarioSort.predefinito;
 
+  /// Media delle recensioni degli utenti per ogni itinerario.
+  Map<String, ReviewStats> _userStats = {};
+
   @override
   void initState() {
     super.initState();
@@ -51,7 +58,9 @@ class _ItinerariPageState extends State<ItinerariPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _load();
     }
@@ -66,7 +75,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
   Future<void> _load() async {
     final loadingStart = DateTime.now();
     final languageCode = context.read<LanguageService>().currentLanguageCode;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final items = await ContentService.fetchItinerari(languageCode: languageCode);
     // La crescia resta almeno un secondo, così non "lampeggia".
     if (_loading) await LoadingScreen.waitMinimum(loadingStart);
@@ -83,6 +92,8 @@ class _ItinerariPageState extends State<ItinerariPage> {
         _selectedDurata = null;
       }
     });
+    final stats = await ReviewService.fetchStats(ReviewService.itineraries);
+    if (mounted) setState(() => _userStats = stats);
   }
 
   /// Valori distinti (non vuoti) di un campo, in ordine di comparsa.
@@ -115,6 +126,10 @@ class _ItinerariPageState extends State<ItinerariPage> {
 
     switch (_sort) {
       case _ItinerarioSort.predefinito:
+        break;
+      case _ItinerarioSort.votati:
+        double avg(ItinerarioModel i) => _userStats[i.id]?.average ?? -1;
+        result.sort((a, b) => avg(b).compareTo(avg(a)));
         break;
       case _ItinerarioSort.titolo:
         result.sort(
@@ -347,6 +362,8 @@ class _ItinerariPageState extends State<ItinerariPage> {
         FilterChipsWrap(chips: [
           for (final entry in <(_ItinerarioSort, String)>[
             (_ItinerarioSort.predefinito, _l.t('itSortDefault')),
+            if (_userStats.isNotEmpty)
+              (_ItinerarioSort.votati, _l.t('sortUserRating')),
             (_ItinerarioSort.titolo, _l.t('itSortTitle')),
             (_ItinerarioSort.tappe, _l.t('itSortStops')),
           ])
@@ -374,7 +391,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -423,7 +440,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.8,
                                 color: AppColors.rossoGubbio,
@@ -470,6 +487,10 @@ class _ItinerariPageState extends State<ItinerariPage> {
                               ),
                             ],
                           ),
+                          if (_userStats[it.id] != null) ...[
+                            const SizedBox(height: 6),
+                            UserRatingBadge(stats: _userStats[it.id]!),
+                          ],
                         ],
                       ),
                     ),
@@ -519,7 +540,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
       children: [
         const SizedBox(height: 50),
         Icon(Icons.route_outlined,
-            size: 64, color: AppColors.tortora.withOpacity(0.6)),
+            size: 64, color: AppColors.tortora.withValues(alpha: 0.6)),
         const SizedBox(height: 14),
         Text(
           _itinerari.isEmpty ? _l.t('itNoneYet') : _l.t('itNoneFound'),
@@ -572,7 +593,7 @@ Widget itinerarioImagePlaceholder(String label,
       ),
     ),
     child: Center(
-      child: Icon(icon, size: 40, color: Colors.white.withOpacity(0.55)),
+      child: Icon(icon, size: 40, color: Colors.white.withValues(alpha: 0.55)),
     ),
   );
 }

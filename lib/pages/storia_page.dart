@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/offline_mode_service.dart';
 
 import '../models/storia_model.dart';
 import '../services/auth_service.dart';
@@ -63,7 +64,9 @@ class _StoriaPageState extends State<StoriaPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final languageCode = context.watch<LanguageService>().currentLanguageCode;
+    // Si ricarica anche quando si torna online (modalità offline).
+    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+        context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _load();
     }
@@ -78,7 +81,7 @@ class _StoriaPageState extends State<StoriaPage> {
   Future<void> _load() async {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     final firstLoad = _loadedLanguageCode == null;
-    _loadedLanguageCode = languageCode;
+    _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     if (firstLoad) setState(() => _loading = true);
     final loadingStart = DateTime.now();
     final epoche = await ContentService.fetchStoriaEpoche(languageCode: languageCode);
@@ -401,7 +404,7 @@ class _StoriaPageState extends State<StoriaPage> {
                                   child: Text(
                                     _l.t('stNoEra'),
                                     style: const TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 0.8,
                                       color: AppColors.textMuted,
@@ -475,7 +478,7 @@ class _StoriaPageState extends State<StoriaPage> {
                           _introText(_intro.sottotitolo, StoriaIntro.defaultSottotitolo, 'stHeroSubtitle'),
                           style: TextStyle(
                             fontSize: 13.5,
-                            color: Colors.white.withOpacity(0.92),
+                            color: Colors.white.withValues(alpha: 0.92),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -507,7 +510,7 @@ class _StoriaPageState extends State<StoriaPage> {
     final fallback = DecoratedBox(
       decoration: const BoxDecoration(gradient: AppColors.heroFallback),
       child: Center(
-        child: Icon(Icons.castle, size: 56, color: Colors.white.withOpacity(0.75)),
+        child: Icon(Icons.castle, size: 56, color: Colors.white.withValues(alpha: 0.75)),
       ),
     );
     final url = _intro.imageUrl;
@@ -529,7 +532,7 @@ class _StoriaPageState extends State<StoriaPage> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluNotte.withOpacity(0.06),
+              color: AppColors.bluNotte.withValues(alpha: 0.06),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -662,7 +665,7 @@ class _StoriaPageState extends State<StoriaPage> {
           left: 29,
           top: 0,
           bottom: isLast ? 40 : 0,
-          child: Container(width: 2, color: AppColors.tortora.withOpacity(0.45)),
+          child: Container(width: 2, color: AppColors.tortora.withValues(alpha: 0.45)),
         ),
         // Puntino
         Positioned(
@@ -698,7 +701,7 @@ class _StoriaPageState extends State<StoriaPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.bluNotte.withOpacity(0.06),
+            color: AppColors.bluNotte.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -742,7 +745,7 @@ class _StoriaPageState extends State<StoriaPage> {
                             Text(
                               c.displayDate.toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.6,
                                 color: AppColors.rossoGubbio,
@@ -820,15 +823,15 @@ class _StoriaPageState extends State<StoriaPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(dark ? 0.2 : 0.14),
+        color: color.withValues(alpha: dark ? 0.2 : 0.14),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11.5,
           fontWeight: FontWeight.w700,
-          color: dark ? AppColors.bluNotte : AppColors.bluNotte.withOpacity(0.85),
+          color: dark ? AppColors.bluNotte : AppColors.bluNotte.withValues(alpha: 0.85),
         ),
       ),
     );
@@ -860,7 +863,7 @@ class _StoriaPageState extends State<StoriaPage> {
           colors: [AppColors.grigioChiaro, AppColors.tortora],
         ),
       ),
-      child: Center(child: Icon(icon, size: 30, color: Colors.white.withOpacity(0.9))),
+      child: Center(child: Icon(icon, size: 30, color: Colors.white.withValues(alpha: 0.9))),
     );
   }
 
@@ -870,7 +873,7 @@ class _StoriaPageState extends State<StoriaPage> {
       child: Column(
         children: [
           Icon(Icons.search_off_rounded,
-              size: 52, color: AppColors.tortora.withOpacity(0.7)),
+              size: 52, color: AppColors.tortora.withValues(alpha: 0.7)),
           const SizedBox(height: 14),
           Text(
             _l.t('stNoContent'),
@@ -994,7 +997,7 @@ class _EraIntroState extends State<_EraIntro> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.tortora.withOpacity(0.14),
+          color: AppColors.tortora.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -1034,7 +1037,7 @@ class _EraIntroState extends State<_EraIntro> {
               Text(
                 l10n.t('stRemember'),
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
                   color: AppColors.textMuted,
@@ -1056,7 +1059,7 @@ class _EraIntroState extends State<_EraIntro> {
                       child: Text(
                         ev,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.bluNotte,
                         ),
@@ -1167,13 +1170,13 @@ class _EraHeaderDelegate extends SliverPersistentHeaderDelegate {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.rossoGubbio.withOpacity(0.1),
+                color: AppColors.rossoGubbio.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 epoca.periodo,
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: AppColors.rossoGubbio,
                 ),

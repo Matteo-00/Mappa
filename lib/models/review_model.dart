@@ -58,3 +58,10 @@ class ReportedReview {
     required this.reasons,
   });
 }
+
+/// Media e numero delle recensioni degli utenti di una scheda.
+class ReviewStats {
+  final double average;
+  final int count;
+  const ReviewStats(this.average, this.count);
+}

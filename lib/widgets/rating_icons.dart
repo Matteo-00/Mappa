@@ -268,7 +268,7 @@ class RatingSummary extends StatelessWidget {
             child: Icon(
               Icons.info_outline_rounded,
               size: fontSize + 4,
-              color: AppColors.textMuted.withOpacity(0.8),
+              color: AppColors.textMuted.withValues(alpha: 0.8),
             ),
           ),
         ),
