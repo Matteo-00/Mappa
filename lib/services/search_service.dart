@@ -17,6 +17,7 @@ import 'content_service.dart';
 /// Sezioni dei risultati, nell'ordine in cui compaiono.
 enum SearchSection {
   eventi,
+  notizie,
   ristoranti,
   bar,
   hotel,
@@ -182,14 +183,14 @@ class SearchService {
             normalize(e.title),
             join([e.description, e.location, e.category]),
             (score) => SearchResult(
-              section: SearchSection.eventi,
+              section: e.isNews ? SearchSection.notizie : SearchSection.eventi,
               title: e.title,
               subtitle: [when, if (e.location.trim().isNotEmpty) e.location]
                   .join(' · '),
-              icon: Icons.event_outlined,
+              icon: e.isNews ? Icons.newspaper_outlined : Icons.event_outlined,
               imageUrl: e.imageUrl,
               // Gli eventi già conclusi vengono dopo quelli in programma.
-              score: past ? score - 15 : score,
+              score: past && !e.isNews ? score - 15 : score,
               page: () => EventDetailPage(event: e),
             ),
           ));

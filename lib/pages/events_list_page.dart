@@ -35,9 +35,13 @@ enum EventSource { comune, visitGubbio }
 class EventsListPage extends StatefulWidget {
   final Function(EventModel) onEventTap;
 
+  /// true = si apre sulla scheda "Notizie".
+  final bool openNews;
+
   const EventsListPage({
     super.key,
     required this.onEventTap,
+    this.openNews = false,
   });
 
   @override
@@ -63,6 +67,11 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   /// Solo admin: mostra soltanto gli eventi importati da approvare.
   bool _onlyDrafts = false;
+
+  /// Scheda "Notizie" (le novità del Comune che non sono eventi).
+  late bool _showNews = widget.openNews;
+  List<EventModel> _allNews = [];
+  String? _newsCategory;
   DateTime? _lastImport;
   bool _importing = false;
 
@@ -109,7 +118,14 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
     setState(() {
-      _allEvents = events;
+      // Eventi e notizie del Comune stanno nella stessa tabella (`tipo`).
+      _allEvents = events.where((e) => !e.isNews).toList();
+      _allNews = events.where((e) => e.isNews).toList()
+        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+      if (_newsCategory != null &&
+          !_allNews.any((n) => n.category.trim() == _newsCategory)) {
+        _newsCategory = null;
+      }
       _lastImport = lastImport;
       _loading = false;
       if (!_allEvents.any((e) => e.isDraft)) _onlyDrafts = false;
@@ -263,9 +279,10 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       body: Column(
         children: [
           PremiumHeader(title: l10n.events),
+          _buildTabs(l10n),
           AppSearchField(
             controller: _searchController,
-            hint: l10n.searchEventsHint,
+            hint: _showNews ? l10n.t('newsSearchHint') : l10n.searchEventsHint,
             onChanged: (v) => setState(() => _searchQuery = v),
             onClear: () {
               _searchController.clear();
@@ -273,6 +290,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             },
           ),
           if (context.watch<AuthService>().isAdmin) _buildAdminImportBar(),
+          if (_showNews) ..._buildNewsBody(l10n) else ...[
           _buildTimeChips(),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 12, 2),
@@ -324,7 +342,261 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                           ),
                   ),
           ),
+          ],
         ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------- Schede Eventi / Notizie
+
+  Widget _buildTabs(AppLocalizations l10n) {
+    Widget tab(bool news, IconData icon, String label, int count) {
+      final selected = _showNews == news;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => setState(() => _showNews = news),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.rossoGubbio : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon,
+                    size: 18,
+                    color: selected ? Colors.white : AppColors.bluNotte),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    count > 0 ? '$label ($count)' : label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? Colors.white : AppColors.bluNotte,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.grigioChiaro),
+        ),
+        child: Row(
+          children: [
+            tab(false, Icons.event_outlined, l10n.t('eventsTab'), 0),
+            tab(true, Icons.newspaper_outlined, l10n.t('newsTab'),
+                _allNews.length),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Notizie filtrate: ricerca e categoria, dalla più recente.
+  List<EventModel> get _filteredNews {
+    final q = _searchQuery.trim().toLowerCase();
+    return _allNews.where((n) {
+      if (_newsCategory != null && n.category.trim() != _newsCategory) {
+        return false;
+      }
+      if (q.isEmpty) return true;
+      return n.title.toLowerCase().contains(q) ||
+          n.category.toLowerCase().contains(q) ||
+          n.description.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  List<Widget> _buildNewsBody(AppLocalizations l10n) {
+    final news = _filteredNews;
+    final categories = <String>{
+      for (final n in _allNews)
+        if (n.category.trim().isNotEmpty) n.category.trim()
+    }.toList()
+      ..sort();
+    final months = l10n.list('monthsFull');
+    final rows = <Object>[];
+    String? lastGroup;
+    for (final n in news) {
+      final g = '${months[n.startTime.month - 1]} ${n.startTime.year}';
+      if (g != lastGroup) {
+        rows.add(g);
+        lastGroup = g;
+      }
+      rows.add(n);
+    }
+    return [
+      if (categories.length > 1)
+        HintedChipRow(
+          height: 46,
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+          children: [
+            AppFilterChip(
+              label: l10n.t('fltAllCategories'),
+              selected: _newsCategory == null,
+              icon: Icons.newspaper_outlined,
+              onTap: () => setState(() => _newsCategory = null),
+            ),
+            for (final c in categories) ...[
+              const SizedBox(width: 8),
+              AppFilterChip(
+                label: c,
+                selected: _newsCategory == c,
+                onTap: () => setState(
+                    () => _newsCategory = _newsCategory == c ? null : c),
+              ),
+            ],
+          ],
+        ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 12, 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            l10n.count('newsCount', news.length),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ),
+      ),
+      Expanded(
+        child: RefreshIndicator(
+          color: AppColors.rossoGubbio,
+          onRefresh: _loadEvents,
+          child: news.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(32, 60, 32, 32),
+                  children: [
+                    Icon(Icons.newspaper_outlined,
+                        size: 64,
+                        color: AppColors.tortora.withValues(alpha: 0.6)),
+                    const SizedBox(height: 14),
+                    Text(
+                      l10n.t('newsEmpty'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 15, color: AppColors.textMuted),
+                    ),
+                  ],
+                )
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                  itemCount: rows.length,
+                  itemBuilder: (context, i) {
+                    final row = rows[i];
+                    if (row is String) return _buildGroupHeader(row);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _buildNewsCard(row as EventModel, l10n),
+                    );
+                  },
+                ),
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildNewsCard(EventModel n, AppLocalizations l10n) {
+    final d = n.startTime;
+    final date =
+        '${d.day} ${l10n.list('monthsShort')[d.month - 1]} ${d.year}';
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => widget.onEventTap(n),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 76,
+                  height: 76,
+                  child: n.imageUrl != null
+                      ? FullPhoto(
+                          url: n.imageUrl!,
+                          fallback: const ColoredBox(
+                            color: AppColors.grigioChiaro,
+                            child: Icon(Icons.newspaper_outlined,
+                                color: AppColors.tortora),
+                          ),
+                        )
+                      : const ColoredBox(
+                          color: AppColors.grigioChiaro,
+                          child: Icon(Icons.newspaper_outlined,
+                              color: AppColors.tortora),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.rossoGubbio,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      n.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        color: AppColors.bluNotte,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (n.isDraft)
+                          _pill(_l.t('evDraft'), const Color(0xFFE65100),
+                              strong: true),
+                        if (n.category.trim().isNotEmpty)
+                          _pill(n.category, AppColors.verdeSalvia),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

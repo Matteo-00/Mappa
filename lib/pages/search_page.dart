@@ -84,6 +84,8 @@ class _SearchPageState extends State<SearchPage> {
     switch (s) {
       case SearchSection.eventi:
         return _l.events;
+      case SearchSection.notizie:
+        return _l.t('newsTab');
       case SearchSection.ristoranti:
         return _l.restaurantsNav;
       case SearchSection.bar:
