@@ -167,11 +167,17 @@ function parseItalianDates(raw: string, now: Date): Parsed {
     /\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})\s*(?:al|a|-|–)\s*(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/
       .exec(s);
 
-  if (rangeSameMonth) {
-    const m = MONTHS[rangeSameMonth[3]];
-    const y = rangeSameMonth[4] ? Number(rangeSameMonth[4]) : null;
-    a = { y, m, d: Number(rangeSameMonth[1]) };
-    b = { y, m, d: Number(rangeSameMonth[2]) };
+  // "il 14 e 15 novembre": due giorni dello stesso mese
+  const rangeAnd = new RegExp(
+    `\\b(\\d{1,2})\\s+e\\s+(\\d{1,2})\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`,
+  ).exec(s);
+
+  if (rangeSameMonth || rangeAnd) {
+    const r = (rangeSameMonth ?? rangeAnd)!;
+    const m = MONTHS[r[3]];
+    const y = r[4] ? Number(r[4]) : null;
+    a = { y, m, d: Number(r[1]) };
+    b = { y, m, d: Number(r[2]) };
   } else if (rangeTwoMonths) {
     const y2 = rangeTwoMonths[6] ? Number(rangeTwoMonths[6]) : null;
     const y1 = rangeTwoMonths[3] ? Number(rangeTwoMonths[3]) : null;
@@ -355,6 +361,87 @@ function parseFeed(xml: string, baseUrl: string): FeedItem[] {
   });
 }
 
+// ---------------------------------------------------------------- articoli
+
+/** Notizie che non sono eventi (avvisi, viabilità, bandi...): si saltano. */
+const NOT_EVENT_RE =
+  /\b(circolazione|viabilit|ordinanz|bando|bandi|avviso|censiment|chiusur|sciopero|tribut|graduatori|concors|lavori|allerta|scadenz|elezion)/i;
+
+type Article = { subtitle: string; body: string; image: string };
+
+/**
+ * Pagina completa di una notizia/evento del sito Municipium: nel feed c'è
+ * solo l'inizio del testo (circa 150 caratteri), mentre le date vere
+ * dell'evento sono nel sottotitolo o più avanti nell'articolo.
+ */
+async function fetchArticle(url: string): Promise<Article | null> {
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const pick = (re: RegExp) => htmlToText(re.exec(html)?.[1] ?? "");
+    const subtitle = pick(
+      /data-element="(?:news|event)-description"[^>]*>([\s\S]*?)<\/p>/i,
+    );
+    // Testo: dalla sezione "Descrizione" fino a "A cura di" / contenuti correlati
+    const start = html.search(/<h2[^>]*>\s*Descrizione\s*<\/h2>/i);
+    let body = "";
+    if (start >= 0) {
+      const rest = html.slice(start);
+      const stop = rest.search(
+        /id="(?:a-cura-di|contenuti-correlati|ulteriori-informazioni)"|<h2[^>]*>\s*(?:A cura di|Contenuti correlati)/i,
+      );
+      body = htmlToText(
+        (stop > 0 ? rest.slice(0, stop) : rest.slice(0, 20000))
+          .replace(/<h2[^>]*>\s*Descrizione\s*<\/h2>/i, ""),
+      );
+    }
+    const image = /<meta property="og:image" content="([^"]+)"/i.exec(html)?.[1] ?? "";
+    return { subtitle, body, image };
+  } catch {
+    return null;
+  }
+}
+
+/** Toglie le date che non sono quelle dell'evento: "GUBBIO (04/11/2026) -" e
+ *  "Data : 4 novembre 2026" (data di pubblicazione). */
+function stripPublicationDates(text: string): string {
+  return text
+    .replace(/\b[A-ZÀ-Ù' ]{3,}\s*\(\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*\)\s*[-–—]?\s*/g, "")
+    .replace(/\bData\s*:\s*\d{1,2}\s+\p{L}+\s+\d{4}/giu, "");
+}
+
+/** Quante date diverse ("21 novembre", "6 dicembre"...) cita un testo: un
+ *  programma con tante date va controllato dall'admin. */
+function countDateMentions(text: string): number {
+  const re = new RegExp(`\\b(\\d{1,2})\\s+${MONTH_RE}`, "gi");
+  const seen = new Set<string>();
+  for (const m of stripPublicationDates(text).toLowerCase().matchAll(re)) {
+    seen.add(`${m[1]}-${MONTHS[m[2]]}`);
+  }
+  return seen.size;
+}
+
+/** Prima data dell'evento non ancora passata: prima nel sottotitolo e nel
+ *  titolo, poi frase per frase nel testo. */
+function findEventDates(
+  parts: string[],
+  now: Date,
+): { start: string; end: string } | null {
+  // Frase per frase, nell'ordine: in un testo lungo la prima data "intera"
+  // potrebbe stare in mezzo a un programma (es. "20 e 26 dicembre").
+  const sentences: string[] = [];
+  for (const part of parts) {
+    sentences.push(...stripPublicationDates(part).split(/(?<=[.!?;])\s+|\n+/));
+  }
+  for (const s of sentences) {
+    if (!s.trim()) continue;
+    const p = parseItalianDates(s, now);
+    if (p && new Date(p.end).getTime() >= now.getTime() - 86400000) return p;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- traduzioni
 
 /** Traduce un evento in EN/FR/DE (funzione translate-content). Ritorna il
@@ -518,17 +605,28 @@ Deno.serve(async (req) => {
         result.saltati++;
         continue;
       }
-      const body = htmlToText(it.html);
+      // Avvisi, viabilità, bandi...: notizie che non sono eventi.
+      if (result.tipo_feed === "notizie" && NOT_EVENT_RE.test(it.title)) {
+        result.saltati++;
+        continue;
+      }
+
+      // Pagina completa dal sito del Comune (testo intero, date, foto grande).
+      const article = it.link.startsWith(SITE) ? await fetchArticle(it.link) : null;
+      const feedText = htmlToText(it.html);
+      const body = article?.body || feedText;
+      const subtitle = article?.subtitle ?? "";
 
       let start = it.startIso;
       let end = it.endIso;
       let sure = !!start;
       if (!start) {
-        const p = parseItalianDates(`${it.title}\n${body}`, now);
+        const p = findEventDates([subtitle, it.title, body], now);
         if (p) {
           start = p.start;
           end = p.end;
-          sure = true;
+          // Un programma con tante date (es. il Natale): da controllare.
+          sure = countDateMentions(body) <= 3;
         }
       }
       if (!start) {
@@ -547,9 +645,14 @@ Deno.serve(async (req) => {
       const publish = publishNow && sure && result.tipo_feed === "eventi";
       rows.push({
         titolo: it.title.slice(0, 200),
-        descrizione: `${body.slice(0, 4000)}\n\nFonte: ${SOURCE_LABEL}`.trim(),
+        descrizione: `${[subtitle, stripPublicationDates(body)]
+          .filter((t) => t.trim())
+          .join("\n\n")
+          .slice(0, 4000)}\n\nFonte: ${SOURCE_LABEL}`.trim(),
         luogo: it.location || "Gubbio",
-        image_url: withImages && it.image ? it.image : null,
+        image_url: withImages && (article?.image || it.image)
+          ? (article?.image || it.image)
+          : null,
         sito_web: it.link || null,
         data_inizio: start,
         data_fine: end,
