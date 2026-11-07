@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/itinerario_model.dart';
-import '../models/event_model.dart';
 import 'luoghi_page.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
@@ -51,9 +50,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   final LocationService _locationService = LocationService();
   late AppLocalizations _l10n;
   List<ItinerarioModel> _itinerariConsigliati = [];
-
-  /// Prossimi eventi pubblicati (al massimo 6), dal più vicino.
-  List<EventModel> _prossimiEventi = [];
 
   /// Pannello "Esplora Gubbio": si trascina tra chiuso, metà e aperto.
   final DraggableScrollableController _sheet = DraggableScrollableController();
@@ -109,20 +105,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           .then((_) => UserLocationService.instance.refresh());
     });
     _loadItinerari();
-    _loadEventi();
     _loadReportedCount();
-  }
-
-  Future<void> _loadEventi() async {
-    final languageCode = context.read<LanguageService>().currentLanguageCode;
-    final all = await ContentService.fetchEvents(languageCode: languageCode);
-    final now = DateTime.now();
-    final next = all
-        .where((e) => !e.isDraft && !e.isNews && !e.endTime.isBefore(now))
-        .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    if (!mounted) return;
-    setState(() => _prossimiEventi = next.take(6).toList());
   }
 
   Future<void> _loadReportedCount() async {
@@ -300,9 +283,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     final size = MediaQuery.of(context).size;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     // Posizioni del pannello: chiuso (solo il titolo), metà, aperto.
-    final minExtent = ((84 + bottomInset) / size.height).clamp(0.08, 0.2);
-    // A metà: il 45% dello schermo (video visibile, itinerari non tagliati).
-    final midExtent = 0.45.clamp(minExtent + 0.1, 0.72);
+    // Chiuso: solo l'intestazione ("Esplora Gubbio" + sottotitolo).
+    final minExtent = ((76 + bottomInset) / size.height).clamp(0.07, 0.2);
+    // A metà: intestazione + itinerari della vetrina per intero, e basta.
+    final midExtent =
+        ((318 + bottomInset) / size.height).clamp(minExtent + 0.1, 0.72);
     const maxExtent = 0.88;
     if (_sheetExtent == 0) _sheetExtent = midExtent;
     // Elenco dei punti di aggancio: SEMPRE lo stesso oggetto finché la metà non
@@ -653,49 +638,55 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               ),
             ),
 
-            // Itinerari consigliati: i 3 della vetrina, tutti visibili già
-            // con il pannello a metà.
-            _sectionHeader(
-              _l10n.suggestedItinerariesNav,
-              top: 6,
-              onSeeAll: _openItinerari,
-              extra: isAdmin
-                  ? GestureDetector(
-                      onTap: _chooseVetrina,
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 14),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.edit_outlined,
-                                size: 15, color: AppColors.bluNotte),
-                            SizedBox(width: 4),
-                            Text(
-                              'Scegli',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.bluNotte,
-                              ),
+            // Tutto ciò che sta sotto l'intestazione sfuma quando il pannello
+            // è chiuso: si deve vedere solo "Esplora Gubbio".
+            Opacity(
+              opacity: ((_sheetExtent - minExtent) / 0.06).clamp(0.0, 1.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                // Itinerari consigliati: i 3 della vetrina, tutti visibili già
+                // con il pannello a metà.
+                _sectionHeader(
+                  _l10n.suggestedItinerariesNav,
+                  top: 6,
+                  onSeeAll: _openItinerari,
+                  extra: isAdmin
+                      ? GestureDetector(
+                          onTap: _chooseVetrina,
+                          child: const Padding(
+                            padding: EdgeInsets.only(right: 14),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.edit_outlined,
+                                    size: 15, color: AppColors.bluNotte),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Scegli',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.bluNotte,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            _buildItinerariVetrina(),
+                          ),
+                        )
+                      : null,
+                ),
+                _buildItinerariVetrina(),
 
-            // Accessi rapidi (2 righe da 4)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-              child: _buildQuickGrid(),
+                // Accessi rapidi (2 righe da 4)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+                  child: _buildQuickGrid(),
+                ),
+                ],
+              ),
             ),
 
-            // Prossimi eventi
-            _sectionHeader(_l10n.t('homeUpcomingEvents'),
-                onSeeAll: _openEvents),
-            _buildEventsRow(),
           ],
         ),
         ),
@@ -739,6 +730,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
 
   // -------------------------------------------------- Accessi rapidi
   Widget _buildQuickGrid() {
+    // Tutte le sezioni dell'app, nell'ordine in cui le cerca un turista.
+    (IconData, String, Color, VoidCallback) luogo(LuogoTipo t) =>
+        (t.icon, _l10n.t(t.navKey), t.color, () => _openLuoghi(t));
     final items = <(IconData, String, Color, VoidCallback)>[
       (Icons.map_outlined, _l10n.mapNav, const Color(0xFF2E7D6B), _openMap),
       (Icons.calendar_month_outlined, _l10n.events, AppColors.rossoGubbio,
@@ -747,14 +741,19 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           const Color(0xFF8D6E63), _openStoria),
       (Icons.route_outlined, _l10n.t('mapItinerari'), const Color(0xFF3F51B5),
           _openItinerari),
+      luogo(LuogoTipo.chiesa),
+      luogo(LuogoTipo.museo),
       (Icons.restaurant_menu, _l10n.restaurantsNav, const Color(0xFFD84315),
           _openRestaurants),
       (Icons.local_cafe_outlined, _l10n.barsNav, const Color(0xFF6D4C41),
           _openBars),
       (Icons.hotel_outlined, _l10n.hotelsNav, const Color(0xFF00838F),
           _openHotels),
-      (LuogoTipo.parcheggio.icon, _l10n.t(LuogoTipo.parcheggio.navKey),
-          LuogoTipo.parcheggio.color, _openParcheggi),
+      luogo(LuogoTipo.agriturismo),
+      luogo(LuogoTipo.negozio),
+      luogo(LuogoTipo.parcheggio),
+      luogo(LuogoTipo.ascensore),
+      luogo(LuogoTipo.bagno),
     ];
     return GridView.count(
       crossAxisCount: 4,
@@ -770,10 +769,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     );
   }
 
-  void _openParcheggi() => Navigator.push(
+  void _openLuoghi(LuogoTipo tipo) => Navigator.push(
         context,
-        MaterialPageRoute(
-            builder: (_) => const LuoghiPage(tipo: LuogoTipo.parcheggio)),
+        MaterialPageRoute(builder: (_) => LuoghiPage(tipo: tipo)),
       );
 
   Widget _quickAction(
@@ -982,139 +980,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // -------------------------------------------------- Prossimi eventi
-  Widget _buildEventsRow() {
-    final events = _prossimiEventi;
-    if (events.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Text(
-          _l10n.t('homeNoUpcomingEvents'),
-          style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
-        ),
-      );
-    }
-    return SizedBox(
-      height: 96,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, i) => _buildEventCard(events[i]),
-      ),
-    );
-  }
-
-  Widget _buildEventCard(EventModel e) {
-    final months = _l10n.list('monthsShort');
-    final now = DateTime.now();
-    final live = !e.startTime.isAfter(now) && !e.endTime.isBefore(now);
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => EventDetailPage(event: e)),
-        ),
-        child: Container(
-          width: 250,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.grigioChiaro),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: AppColors.rossoGubbio.withValues(alpha: 0.09),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      months[e.startTime.month - 1],
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.rossoGubbio,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    Text(
-                      '${e.startTime.day}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.bluNotte,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (live)
-                      Text(
-                        _l10n.t('eventNow'),
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.rossoGubbio,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    Text(
-                      e.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.bluNotte,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (e.location.trim().isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(Icons.place_outlined,
-                              size: 13, color: AppColors.textMuted),
-                          const SizedBox(width: 3),
-                          Expanded(
-                            child: Text(
-                              e.location,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 12, color: AppColors.textMuted),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
