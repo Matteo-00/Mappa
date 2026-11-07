@@ -167,11 +167,17 @@ function parseItalianDates(raw: string, now: Date): Parsed {
     /\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})\s*(?:al|a|-|–)\s*(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/
       .exec(s);
 
-  if (rangeSameMonth) {
-    const m = MONTHS[rangeSameMonth[3]];
-    const y = rangeSameMonth[4] ? Number(rangeSameMonth[4]) : null;
-    a = { y, m, d: Number(rangeSameMonth[1]) };
-    b = { y, m, d: Number(rangeSameMonth[2]) };
+  // "il 14 e 15 novembre": due giorni dello stesso mese
+  const rangeAnd = new RegExp(
+    `\\b(\\d{1,2})\\s+e\\s+(\\d{1,2})\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`,
+  ).exec(s);
+
+  if (rangeSameMonth || rangeAnd) {
+    const r = (rangeSameMonth ?? rangeAnd)!;
+    const m = MONTHS[r[3]];
+    const y = r[4] ? Number(r[4]) : null;
+    a = { y, m, d: Number(r[1]) };
+    b = { y, m, d: Number(r[2]) };
   } else if (rangeTwoMonths) {
     const y2 = rangeTwoMonths[6] ? Number(rangeTwoMonths[6]) : null;
     const y1 = rangeTwoMonths[3] ? Number(rangeTwoMonths[3]) : null;
@@ -286,6 +292,8 @@ type FeedItem = {
   location: string;
   startIso: string | null;
   endIso: string | null;
+  /** Data di pubblicazione (pubDate / dc:date). */
+  published: string | null;
 };
 
 function parseFeed(xml: string, baseUrl: string): FeedItem[] {
@@ -351,8 +359,162 @@ function parseFeed(xml: string, baseUrl: string): FeedItem[] {
       location: htmlToText(text(it["ev:location"]) || text(it["location"])),
       startIso: start ? parseIsoDate(start) : null,
       endIso: end ? parseIsoDate(end) : null,
+      published: parseIsoDate(text(it.pubDate) || text(it["dc:date"]) ||
+        text(it.published) || text(it.updated) || "x"),
     };
   });
+}
+
+// ---------------------------------------------------------------- articoli
+
+/** Notizie che non sono eventi (avvisi, viabilità, bandi...): si saltano. */
+const NOT_EVENT_RE =
+  /\b(circolazione|viabilit|ordinanz|bando|bandi|avviso|censiment|chiusur|sciopero|tribut|graduatori|concors|lavori|allerta|scadenz|elezion|indagin|customer|questionari|sondagg|convocazion|mobilit)/i;
+
+type Article = {
+  title: string;
+  subtitle: string;
+  body: string;
+  image: string;
+  /** "Notizie", "Comunicati", "Avvisi"... (dal percorso Home > Novità > ...) */
+  pageType: string;
+  categories: string[];
+  /** "Data : 5 novembre 2026" in ISO, se c'è. */
+  published: string | null;
+};
+
+/** Categorie del Comune che non sono eventi (avvisi, uffici...). */
+const NOT_EVENT_CATEGORY_RE =
+  /^(viabilit|urp|notizie urp|tribut|personale|concors|bandi|avvisi|polizia|anagrafe)/i;
+
+/**
+ * Pagina completa di una notizia/evento del sito Municipium: nel feed c'è
+ * solo l'inizio del testo (circa 150 caratteri), mentre le date vere
+ * dell'evento sono nel sottotitolo o più avanti nell'articolo.
+ */
+async function fetchArticle(url: string): Promise<Article | null> {
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const pick = (re: RegExp) => htmlToText(re.exec(html)?.[1] ?? "");
+    const subtitle = pick(
+      /data-element="(?:news|event)-description"[^>]*>([\s\S]*?)<\/p>/i,
+    );
+    // Testo: dalla sezione "Descrizione" fino a "A cura di" / contenuti correlati
+    const start = html.search(/<h2[^>]*>\s*Descrizione\s*<\/h2>/i);
+    let body = "";
+    if (start >= 0) {
+      const rest = html.slice(start);
+      const stop = rest.search(
+        /id="(?:a-cura-di|contenuti-correlati|ulteriori-informazioni)"|<h2[^>]*>\s*(?:A cura di|Contenuti correlati)/i,
+      );
+      body = htmlToText(
+        (stop > 0 ? rest.slice(0, stop) : rest.slice(0, 20000))
+          .replace(/<h2[^>]*>\s*Descrizione\s*<\/h2>/i, ""),
+      );
+    }
+    const image = /<meta property="og:image" content="([^"]+)"/i.exec(html)?.[1] ?? "";
+    const title = pick(/data-element="(?:news|event)-title"[^>]*>([\s\S]*?)<\/h1>/i);
+    // Testo semplice (tag -> spazi) per "Data : ..." e il resto.
+    const plain = decodeEntities(
+      html.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "").replace(/<[^>]+>/g, " "),
+    ).replace(/\s+/g, " ");
+    // Tipo di pagina dal percorso: Home > Novità > Comunicati / Notizie / Avvisi
+    const pageType = decodeEntities(
+      /\/news\?type=\d+"[^>]*>\s*([^<]+?)\s*</i.exec(html)?.[1] ?? "",
+    );
+    // Categorie: le etichette dei link "news-category" (Comune, Cultura...)
+    const categories = [...new Set([...html.matchAll(
+      /href="[^"]*\/news-category\/\d+"[\s\S]*?chip-label[^>]*>\s*([^<]+?)\s*</gi,
+    )].map((m) => decodeEntities(m[1]).trim()))];
+    const pub = /Data\s*:\s*(\d{1,2})\s+(\p{L}+)\s+(\d{4})/u.exec(plain);
+    const published = pub && MONTHS[pub[2].toLowerCase()]
+      ? romeToUtcIso(Number(pub[3]), MONTHS[pub[2].toLowerCase()], Number(pub[1]), 12, 0)
+      : null;
+    return { title, subtitle, body, image, pageType, categories, published };
+  } catch {
+    return null;
+  }
+}
+
+/** Ultime notizie elencate nella pagina /it/news del sito (circa 15): il
+ *  feed ne contiene solo 5, così non se ne perde nessuna. */
+async function listNewsLinks(): Promise<string[]> {
+  try {
+    const res = await fetch(`${SITE}/it/news`, { headers: { "User-Agent": USER_AGENT } });
+    if (!res.ok) return [];
+    const html = await res.text();
+    const links: string[] = [];
+    for (const m of html.matchAll(/href="((?:https:\/\/www\.comune\.gubbio\.pg\.it)?\/it\/news\/[a-z0-9][^"#?]*)"/gi)) {
+      const url = absoluteUrl(m[1], SITE);
+      if (!url.endsWith("/feed") && !links.includes(url)) links.push(url);
+    }
+    return links.slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+/** Toglie le date che non sono quelle dell'evento: "GUBBIO (04/11/2026) -" e
+ *  "Data : 4 novembre 2026" (data di pubblicazione). */
+function stripPublicationDates(text: string): string {
+  return text
+    .replace(/\b[A-ZÀ-Ù' ]{3,}\s*\(\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*\)\s*[-–—]?\s*/g, "")
+    .replace(/\bData\s*:\s*\d{1,2}\s+\p{L}+\s+\d{4}/giu, "");
+}
+
+/** Quante date diverse ("21 novembre", "6 dicembre"...) cita un testo: un
+ *  programma con tante date va controllato dall'admin. */
+function countDateMentions(text: string): number {
+  const re = new RegExp(`\\b(\\d{1,2})\\s+${MONTH_RE}`, "gi");
+  const seen = new Set<string>();
+  for (const m of stripPublicationDates(text).toLowerCase().matchAll(re)) {
+    seen.add(`${m[1]}-${MONTHS[m[2]]}`);
+  }
+  return seen.size;
+}
+
+/** Ultima data citata nel testo dopo [startIso] (entro 120 giorni): per un
+ *  programma lungo (es. il Natale fino al 6 gennaio) è la fine dell'evento. */
+function lastMentionedDate(text: string, startIso: string): string | null {
+  const start = new Date(startIso);
+  const re = new RegExp(`\\b(\\d{1,2})\\s+${MONTH_RE}(?:\\s+(\\d{4}))?`, "gi");
+  let best: Date | null = null;
+  for (const m of stripPublicationDates(text).toLowerCase().matchAll(re)) {
+    const d = Number(m[1]);
+    const mo = MONTHS[m[2]];
+    if (!validDay(d, mo)) continue;
+    let y = m[3] ? Number(m[3]) : start.getUTCFullYear();
+    // Senza anno: un mese "prima" di quello d'inizio è dell'anno dopo.
+    if (!m[3] && mo < start.getUTCMonth() + 1) y++;
+    const date = new Date(romeToUtcIso(y, mo, d, 23, 59));
+    if (date <= start || date.getTime() - start.getTime() > 120 * 86400000) {
+      continue;
+    }
+    if (!best || date > best) best = date;
+  }
+  return best ? best.toISOString() : null;
+}
+
+/** Prima data dell'evento non ancora passata: prima nel sottotitolo e nel
+ *  titolo, poi frase per frase nel testo. */
+function findEventDates(
+  parts: string[],
+  now: Date,
+): { start: string; end: string } | null {
+  // Frase per frase, nell'ordine: in un testo lungo la prima data "intera"
+  // potrebbe stare in mezzo a un programma (es. "20 e 26 dicembre").
+  const sentences: string[] = [];
+  for (const part of parts) {
+    sentences.push(...stripPublicationDates(part).split(/(?<=[.!?;])\s+|\n+/));
+  }
+  for (const s of sentences) {
+    if (!s.trim()) continue;
+    const p = parseItalianDates(s, now);
+    if (p && new Date(p.end).getTime() >= now.getTime() - 86400000) return p;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------- traduzioni
@@ -477,6 +639,8 @@ Deno.serve(async (req) => {
     pubblicati: 0,
     bozze: 0,
     tradotti: 0,
+    eventi: 0,
+    notizie: 0,
     saltati: 0,
     errori: [] as string[],
   };
@@ -502,7 +666,21 @@ Deno.serve(async (req) => {
         result.errori.push(`${f.url}: ${e}`);
       }
     }
-    if (!result.feed) throw new Error("Nessun feed del Comune trovato");
+    // Più l'elenco delle ultime notizie del sito (il feed ne ha solo 5).
+    const known = new Set(items.map((i) => i.link));
+    for (const url of await listNewsLinks()) {
+      if (known.has(url)) continue;
+      known.add(url);
+      items.push({
+        guid: url, title: "", link: url, html: "", image: "", categories: [],
+        location: "", startIso: null, endIso: null, published: null,
+      });
+    }
+    if (!result.feed && items.length > 0) {
+      result.feed = `${SITE}/it/news`;
+      result.tipo_feed = "notizie";
+    }
+    if (items.length === 0) throw new Error("Nessun feed del Comune trovato");
     result.trovati = items.length;
 
     // ---------------------------------------------- solo quelli nuovi
@@ -514,52 +692,84 @@ Deno.serve(async (req) => {
     const now = new Date();
     const rows: Record<string, unknown>[] = [];
     for (const it of items) {
-      if (!it.guid || !it.title || already.has(it.guid)) {
+      if (!it.guid || already.has(it.guid)) {
         result.saltati++;
         continue;
       }
-      const body = htmlToText(it.html);
 
+      // Pagina completa dal sito del Comune (testo intero, date, foto grande,
+      // tipo di pagina e categorie).
+      const article = it.link.startsWith(SITE) ? await fetchArticle(it.link) : null;
+      const title = it.title || article?.title || "";
+      if (!title) {
+        result.saltati++;
+        continue;
+      }
+      const feedText = htmlToText(it.html);
+      const body = article?.body || feedText;
+      const subtitle = article?.subtitle ?? "";
+      const categories = (article?.categories.length
+        ? article.categories
+        : it.categories).filter((c) => !/^(comune|notizie)$/i.test(c));
+
+      // È un evento? Sì se ha una data futura e non è un avviso (viabilità,
+      // uffici, bandi...). Altrimenti è una notizia: si importa lo stesso.
       let start = it.startIso;
       let end = it.endIso;
       let sure = !!start;
       if (!start) {
-        const p = parseItalianDates(`${it.title}\n${body}`, now);
+        const p = findEventDates([subtitle, title, body], now);
         if (p) {
           start = p.start;
           end = p.end;
-          sure = true;
+          // Un programma con tante date (es. il Natale): da controllare, e la
+          // fine è l'ultima data citata.
+          sure = countDateMentions(body) <= 3;
+          if (!sure) end = lastMentionedDate(body, start) ?? end;
         }
       }
-      if (!start) {
-        // Una notizia senza date non è un evento: si salta.
-        result.saltati++;
-        continue;
-      }
-      if (!end || new Date(end) < new Date(start)) {
-        end = new Date(new Date(start).getTime() + 2 * 3600000).toISOString();
-      }
-      if (new Date(end).getTime() < now.getTime() - 86400000) {
-        result.saltati++; // già finito
-        continue;
+      const notAnEvent = NOT_EVENT_RE.test(title) ||
+        categories.some((c) => NOT_EVENT_CATEGORY_RE.test(c)) ||
+        /^avvisi$/i.test(article?.pageType ?? "");
+      const isEvent = !!start && (result.tipo_feed === "eventi" || !notAnEvent);
+
+      if (isEvent) {
+        if (!end || new Date(end) < new Date(start!)) {
+          end = new Date(new Date(start!).getTime() + 2 * 3600000).toISOString();
+        }
+        if (new Date(end).getTime() < now.getTime() - 86400000) {
+          result.saltati++; // evento già finito
+          continue;
+        }
+      } else {
+        // Notizia: la data è quella di pubblicazione.
+        start = article?.published || it.published || now.toISOString();
+        end = start;
+        sure = true;
       }
 
       const publish = publishNow && sure && result.tipo_feed === "eventi";
       rows.push({
-        titolo: it.title.slice(0, 200),
-        descrizione: `${body.slice(0, 4000)}\n\nFonte: ${SOURCE_LABEL}`.trim(),
+        tipo: isEvent ? "evento" : "notizia",
+        titolo: title.slice(0, 200),
+        descrizione: `${[subtitle, stripPublicationDates(body)]
+          .filter((t) => t.trim())
+          .join("\n\n")
+          .slice(0, 4000)}\n\nFonte: ${SOURCE_LABEL}`.trim(),
         luogo: it.location || "Gubbio",
-        image_url: withImages && it.image ? it.image : null,
+        image_url: withImages && (article?.image || it.image)
+          ? (article?.image || it.image)
+          : null,
         sito_web: it.link || null,
         data_inizio: start,
         data_fine: end,
-        categoria: it.categories[0] || SOURCE_LABEL,
-        tags: it.categories.slice(0, 5),
+        categoria: categories[0] || SOURCE_LABEL,
+        tags: categories.slice(0, 5),
         stato: publish ? "pubblicato" : "bozza",
         fonte: SOURCE,
         fonte_id: it.guid,
         fonte_url: it.link || null,
-        date_da_verificare: !sure,
+        date_da_verificare: isEvent && !sure,
       });
     }
 
@@ -572,6 +782,10 @@ Deno.serve(async (req) => {
       for (const ev of inserted ?? []) {
         if (ev.stato === "pubblicato") result.pubblicati++;
         else result.bozze++;
+      }
+      for (const r of rows) {
+        if (r.tipo === "notizia") result.notizie++;
+        else result.eventi++;
       }
       // Traduzione in inglese, francese e tedesco SUBITO, anche per le bozze:
       // quando vengono pubblicate sono già nelle 4 lingue. Se l'admin le

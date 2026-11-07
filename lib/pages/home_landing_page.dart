@@ -118,7 +118,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     final all = await ContentService.fetchEvents(languageCode: languageCode);
     final now = DateTime.now();
     final next = all
-        .where((e) => !e.isDraft && !e.endTime.isBefore(now))
+        .where((e) => !e.isDraft && !e.isNews && !e.endTime.isBefore(now))
         .toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
     if (!mounted) return;

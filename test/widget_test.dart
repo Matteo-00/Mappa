@@ -69,4 +69,17 @@ void main() {
     expect(SearchService.normalize("Sant'Ubaldo"), 'sant ubaldo');
     expect(SearchService.normalize('  Basilica   di  SAN  '), 'basilica di san');
   });
+
+  test('una notizia del Comune non è un evento', () {
+    final n = EventModel.fromJson({
+      'id': 'abc-3',
+      'titolo': 'Modifiche alla circolazione',
+      'data_inizio': '2026-11-03T11:00:00Z',
+      'data_fine': '2026-11-03T11:00:00Z',
+      'tipo': 'notizia',
+      'fonte': 'comune_gubbio',
+    });
+    expect(n.isNews, isTrue);
+    expect(n.isFromComune, isTrue);
+  });
 }

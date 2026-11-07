@@ -246,7 +246,8 @@ class _MapPageState extends State<MapPage> {
       _bars = bars;
       _hotels = hotels;
       _luoghi = luoghi;
-      _events = events;
+      // Le notizie del Comune non hanno un luogo: sulla mappa solo gli eventi.
+      _events = events.where((e) => !e.isNews).toList();
       _itinerari = itinerari;
       _selected = null;
       _dataLoaded = true;

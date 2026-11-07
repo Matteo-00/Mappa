@@ -35,6 +35,10 @@ class EventModel {
   /// Le date non sono state lette con sicurezza dal sito: da controllare.
   final bool datesToVerify;
 
+  /// Notizia del Comune (non un evento): [startTime] è la data di
+  /// pubblicazione. Colonna `tipo` = 'notizia'.
+  final bool isNews;
+
   const EventModel({
     required this.id,
     required this.time,
@@ -52,6 +56,7 @@ class EventModel {
     this.source,
     this.sourceUrl,
     this.datesToVerify = false,
+    this.isNews = false,
   });
 
   /// Evento importato dal sito del Comune di Gubbio.
@@ -83,6 +88,7 @@ class EventModel {
       source: json['fonte'] as String?,
       sourceUrl: json['fonte_url'] as String?,
       datesToVerify: json['date_da_verificare'] == true,
+      isNews: json['tipo'] == 'notizia',
     );
   }
 

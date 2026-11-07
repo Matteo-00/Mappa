@@ -32,7 +32,7 @@ class EventDetailPage extends StatelessWidget {
       body: Column(
         children: [
           PremiumHeader(
-            title: l10n.eventHeaderTitle,
+            title: event.isNews ? l10n.t('newsTab') : l10n.eventHeaderTitle,
             trailing: ContentService.isRemoteId(event.id)
                 ? FavoriteButton(kind: MapKind.event, id: event.id)
                 : null,
@@ -60,7 +60,10 @@ class EventDetailPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Data e orario
-                        _buildTimeSection(l10n),
+                        // Notizia: data di pubblicazione; evento: data e orario.
+                        event.isNews
+                            ? _buildPublishedSection(l10n)
+                            : _buildTimeSection(l10n),
                         const SizedBox(height: 12),
                         _buildActions(l10n),
                         const SizedBox(height: 16),
@@ -94,9 +97,11 @@ class EventDetailPage extends StatelessWidget {
                           const SizedBox(height: 24),
                         ],
 
-                        // Luogo
-                        _buildLocationSection(context, l10n),
-                        const SizedBox(height: 24),
+                        // Luogo (non per le notizie)
+                        if (!event.isNews) ...[
+                          _buildLocationSection(context, l10n),
+                          const SizedBox(height: 24),
+                        ],
                       ],
                     ),
                   ),
@@ -177,6 +182,53 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
+  /// Notizia del Comune: "Pubblicata il 5 novembre 2026" e la categoria.
+  Widget _buildPublishedSection(AppLocalizations l10n) {
+    final d = event.startTime;
+    final months = l10n.list('monthsFull');
+    final upper = l10n.languageCode == 'en' || l10n.languageCode == 'de';
+    final m = months[d.month - 1];
+    final month = upper ? m[0] + m.substring(1).toLowerCase() : m.toLowerCase();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.bluNotte.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.newspaper_outlined,
+              color: AppColors.bluNotte, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.fmt('newsPublishedOn', {'date': '${d.day} $month ${d.year}'}),
+                  style: const TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.bluNotte,
+                  ),
+                ),
+                if (event.category.trim().isNotEmpty)
+                  Text(
+                    event.category,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.rossoGubbio,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// "Aggiungi al calendario" e "Condividi".
   Widget _buildActions(AppLocalizations l10n) {
     Widget button(IconData icon, String label, VoidCallback onTap) {
@@ -201,9 +253,11 @@ class EventDetailPage extends StatelessWidget {
 
     return Row(
       children: [
-        button(Icons.edit_calendar_outlined, l10n.t('evAddCalendar'),
-            _addToCalendar),
-        const SizedBox(width: 10),
+        if (!event.isNews) ...[
+          button(Icons.edit_calendar_outlined, l10n.t('evAddCalendar'),
+              _addToCalendar),
+          const SizedBox(width: 10),
+        ],
         button(Icons.share_outlined, l10n.t('evShare'), () => _share(l10n)),
       ],
     );
