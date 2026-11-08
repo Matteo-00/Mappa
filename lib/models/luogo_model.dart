@@ -8,6 +8,7 @@ enum LuogoTipo {
   chiesa,
   museo,
   negozio,
+  sport,
   parcheggio,
   agriturismo,
   ascensore,
@@ -34,6 +35,8 @@ extension LuogoTipoInfo on LuogoTipo {
         return Icons.museum_outlined;
       case LuogoTipo.negozio:
         return Icons.storefront_outlined;
+      case LuogoTipo.sport:
+        return Icons.sports_soccer_outlined;
       case LuogoTipo.parcheggio:
         return Icons.local_parking_rounded;
       case LuogoTipo.agriturismo:
@@ -54,6 +57,8 @@ extension LuogoTipoInfo on LuogoTipo {
         return const Color(0xFF00897B);
       case LuogoTipo.negozio:
         return const Color(0xFFC2185B);
+      case LuogoTipo.sport:
+        return const Color(0xFF2E7D32);
       case LuogoTipo.parcheggio:
         return const Color(0xFF546E7A);
       case LuogoTipo.agriturismo:
@@ -74,6 +79,8 @@ extension LuogoTipoInfo on LuogoTipo {
         return BitmapDescriptor.hueCyan;
       case LuogoTipo.negozio:
         return BitmapDescriptor.hueMagenta;
+      case LuogoTipo.sport:
+        return BitmapDescriptor.hueGreen;
       case LuogoTipo.parcheggio:
         return BitmapDescriptor.hueAzure;
       case LuogoTipo.agriturismo:
@@ -85,9 +92,11 @@ extension LuogoTipoInfo on LuogoTipo {
     }
   }
 
-  /// Negozi e agriturismi hanno la valutazione in stelle.
+  /// Negozi, impianti sportivi e agriturismi hanno la valutazione in stelle.
   bool get hasRating =>
-      this == LuogoTipo.negozio || this == LuogoTipo.agriturismo;
+      this == LuogoTipo.negozio ||
+      this == LuogoTipo.sport ||
+      this == LuogoTipo.agriturismo;
 
   /// Chiese e musei si collegano ai contenuti di "Storia di Gubbio".
   bool get hasStoria =>

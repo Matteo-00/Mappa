@@ -271,7 +271,9 @@ class RestaurantDetailPage extends StatelessWidget {
       ? RatingKind.amaro
       : mapKind == MapKind.hotel
           ? RatingKind.palazzo
-          : (mapKind == MapKind.negozio || mapKind == MapKind.agriturismo)
+          : (mapKind == MapKind.negozio ||
+                  mapKind == MapKind.sport ||
+                  mapKind == MapKind.agriturismo)
               ? RatingKind.stelle
               : RatingKind.crescia;
 
