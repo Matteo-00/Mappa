@@ -27,15 +27,17 @@ class HomeVideoBackground extends StatefulWidget {
   static const String asset = 'assets/videohome/clip_visit_gubbio.mp4';
 
   /// Proporzioni (larghezza / altezza) dell'immagine vera dentro al file,
-  /// centrata. La clip attuale è un video verticale 9:16 salvato in un file
-  /// 1920×1080 con bande nere ai lati: si usa solo la fascia centrale.
-  /// Per un video senza bande basta metterci le proporzioni del file (es.
-  /// 16 / 9): si usa tutto il fotogramma.
+  /// centrata. La clip attuale (volo del drone sul Palazzo dei Consoli) è un
+  /// video verticale 1080×1920 senza bande: si usa tutto il fotogramma.
+  /// Per un video con bande nere ai lati qui vanno le proporzioni della sola
+  /// parte con l'immagine (es. 9 / 16 dentro un file 16:9).
   static const double contentAspect = 9 / 16;
 
-  /// Dove si trova il Palazzo dei Consoli nell'ultimo fotogramma, in frazioni
-  /// (0-1) della parte con l'immagine. Se cambia il video va aggiornato.
-  static const Rect finalFocus = Rect.fromLTRB(0.07, 0.21, 0.92, 0.77);
+  /// Parte del Palazzo dei Consoli che a video finito deve stare sopra il
+  /// pannello, in frazioni (0-1) dell'ultimo fotogramma: dai merli al portale.
+  /// Nell'ultimo fotogramma la facciata riempie tutta la larghezza, così resta
+  /// a tutto schermo senza bande ai lati. Se cambia il video va aggiornato.
+  static const Rect finalFocus = Rect.fromLTRB(0.03, 0.04, 1.0, 0.58);
 
   /// Margine in pixel attorno al palazzo a video finito.
   static const double focusMargin = 12;
