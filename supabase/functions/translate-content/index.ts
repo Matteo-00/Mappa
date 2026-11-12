@@ -72,7 +72,7 @@ const ENTITY_CONFIG: Record<
     fieldsByTipo: {
       chiesa: ["nome"],
       museo: ["nome"],
-      parcheggio: ["nome"],
+      parcheggio: ["nome", "link_titolo"],
       ascensore: ["nome"],
       bagno: ["nome"],
     },

@@ -140,6 +140,11 @@ class LuogoModel {
   /// Contenuti di "Storia di Gubbio" collegati (solo chiese e musei).
   final List<String> storiaIds;
 
+  /// Solo parcheggi: titolo e indirizzo di un link facoltativo (es. "Prenota
+  /// il posto"). Se mancano entrambi non si vede nulla.
+  final String? linkTitle;
+  final String? linkUrl;
+
   const LuogoModel({
     required this.id,
     required this.tipo,
@@ -153,6 +158,8 @@ class LuogoModel {
     this.tags = const [],
     this.rating,
     this.storiaIds = const [],
+    this.linkTitle,
+    this.linkUrl,
   });
 
   factory LuogoModel.fromJson(Map<String, dynamic> json) {
@@ -176,6 +183,8 @@ class LuogoModel {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      linkTitle: json['link_titolo'] as String?,
+      linkUrl: json['link_url'] as String?,
     );
   }
 
@@ -194,6 +203,12 @@ class LuogoModel {
       'tags': tags,
       'rating': rating,
       'storia_ids': storiaIds,
+      // Solo i parcheggi hanno il link (le colonne le crea
+      // supabase_parcheggi_link.sql): per gli altri tipi non si scrive nulla.
+      if (tipo == LuogoTipo.parcheggio) ...{
+        'link_titolo': linkTitle,
+        'link_url': linkUrl,
+      },
     };
   }
 

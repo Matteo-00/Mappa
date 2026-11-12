@@ -34,6 +34,8 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
   final _address = TextEditingController();
   final _phone = TextEditingController();
   final _website = TextEditingController();
+  final _linkTitle = TextEditingController();
+  final _linkUrl = TextEditingController();
   final _tags = TextEditingController();
   final _lat = TextEditingController(text: '43.3519');
   final _lng = TextEditingController(text: '12.5773');
@@ -91,6 +93,8 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
       _address.text = l.address;
       _phone.text = l.phoneNumber ?? '';
       _website.text = l.website ?? '';
+      _linkTitle.text = l.linkTitle ?? '';
+      _linkUrl.text = l.linkUrl ?? '';
       _tags.text = l.tags.join(', ');
       _lat.text = l.coordinates.latitude.toString();
       _lng.text = l.coordinates.longitude.toString();
@@ -108,6 +112,8 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
     _address.dispose();
     _phone.dispose();
     _website.dispose();
+    _linkTitle.dispose();
+    _linkUrl.dispose();
     _tags.dispose();
     _lat.dispose();
     _lng.dispose();
@@ -224,6 +230,14 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
         tags: contacts ? _parseTags() : const [],
         rating: _tipo.hasRating ? _parseRating() : null,
         storiaIds: _tipo.hasStoria ? _storiaIds : const [],
+        linkTitle: _tipo == LuogoTipo.parcheggio &&
+                _linkTitle.text.trim().isNotEmpty
+            ? _linkTitle.text.trim()
+            : null,
+        linkUrl:
+            _tipo == LuogoTipo.parcheggio && _linkUrl.text.trim().isNotEmpty
+                ? _linkUrl.text.trim()
+                : null,
       );
 
       if (_isEditing) {
@@ -313,6 +327,25 @@ class _AddLuogoPageState extends State<AddLuogoPage> {
                 keyboardType: TextInputType.url,
                 decoration: adminInputDecoration('Sito web',
                     icon: Icons.language_outlined),
+              ),
+            ],
+            if (_tipo == LuogoTipo.parcheggio) ...[
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _linkTitle,
+                decoration: adminInputDecoration(
+                  'Titolo del link (facoltativo)',
+                  icon: Icons.title,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _linkUrl,
+                keyboardType: TextInputType.url,
+                decoration: adminInputDecoration(
+                  'Link (facoltativo)',
+                  icon: Icons.link,
+                ),
               ),
             ],
             if (_tipo.hasRating) ...[
