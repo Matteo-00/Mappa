@@ -45,6 +45,7 @@ class MapKind {
   static const chiesa = 'chiesa';
   static const museo = 'museo';
   static const negozio = 'negozio';
+  static const sport = 'sport';
   static const parcheggio = 'parcheggio';
   static const agriturismo = 'agriturismo';
   static const ascensore = 'ascensore';
@@ -69,6 +70,7 @@ class MapKind {
       case chiesa:
       case museo:
       case negozio:
+      case sport:
       case parcheggio:
       case agriturismo:
       case ascensore:
@@ -507,6 +509,7 @@ class _MapPageState extends State<MapPage> {
       case MapKind.chiesa:
       case MapKind.museo:
       case MapKind.negozio:
+      case MapKind.sport:
       case MapKind.parcheggio:
       case MapKind.agriturismo:
       case MapKind.ascensore:
@@ -534,6 +537,7 @@ class _MapPageState extends State<MapPage> {
       case MapKind.chiesa:
       case MapKind.museo:
       case MapKind.negozio:
+      case MapKind.sport:
       case MapKind.parcheggio:
       case MapKind.agriturismo:
       case MapKind.ascensore:
@@ -1132,7 +1136,10 @@ class _MapPageState extends State<MapPage> {
     MapKind.museo,
     MapKind.itinerary,
     MapKind.negozio,
+    MapKind.sport,
     MapKind.parcheggio,
+    MapKind.ascensore,
+    MapKind.bagno,
     MapKind.event,
   ];
 
@@ -1210,9 +1217,18 @@ class _MapPageState extends State<MapPage> {
       (_l.t('mapGroupVisit'), Icons.account_balance_outlined,
           [MapKind.chiesa, MapKind.museo, MapKind.itinerary]),
       (_l.t('mapGroupExplore'), Icons.explore_outlined,
-          [MapKind.negozio, MapKind.parcheggio]),
+          [
+            MapKind.negozio,
+            MapKind.sport,
+            MapKind.parcheggio,
+            MapKind.ascensore,
+            MapKind.bagno,
+          ]),
       (_l.t('mapGroupToday'), Icons.event, [MapKind.event]),
     ];
+    // Ridisegna tutto il pannello: serve anche al pulsante "Nascondi tutto",
+    // che sta fuori dall'elenco dei filtri.
+    VoidCallback? rebuildSheet;
     showFilterSheet(
       context,
       title: _l.t('mapFiltersTitle'),
@@ -1225,6 +1241,7 @@ class _MapPageState extends State<MapPage> {
             onPressed: () {
               _setAllKinds(_hiddenKindsCount == _allKinds.length);
               setHeader(() {});
+              rebuildSheet?.call();
             },
             icon: Icon(
               _hiddenKindsCount == _allKinds.length
@@ -1243,7 +1260,9 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
       ),
-      content: (ctx, rebuild) => [
+      content: (ctx, rebuild) {
+        rebuildSheet = rebuild;
+        return [
         for (final g in groups) ...[
           FilterGroupTitle(icon: g.$2, text: g.$1),
           FilterChipsWrap(chips: [
@@ -1265,7 +1284,8 @@ class _MapPageState extends State<MapPage> {
           ]),
         ],
         const SizedBox(height: 8),
-      ],
+        ];
+      },
     );
   }
 

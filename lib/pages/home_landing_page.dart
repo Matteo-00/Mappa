@@ -306,7 +306,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
         fit: StackFit.expand,
         children: [
           // Sfondo video/hero a tutto schermo
-          _buildVideoBackground(),
+          _buildVideoBackground(midExtent),
 
           // Barra superiore + titolo
           SafeArea(
@@ -416,7 +416,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   }
 
   // -------------------------------------------------- Sfondo video
-  Widget _buildVideoBackground() {
+  Widget _buildVideoBackground(double midExtent) {
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -425,6 +425,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           muted: _videoMuted,
           finished: _videoFinished,
           replay: _videoReplay,
+          // Se il pannello sale oltre la metà il video resta dov'è.
+          visibleFraction:
+              1 - (_sheetExtent < midExtent ? _sheetExtent : midExtent),
           fallback: Image.asset(
             'assets/geo/hero.jpg',
             fit: BoxFit.cover,
