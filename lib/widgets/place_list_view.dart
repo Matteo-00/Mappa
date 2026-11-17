@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -301,67 +299,6 @@ class _PlaceListViewState extends State<PlaceListView> {
           border: InputBorder.none,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================ barra in alto
-
-/// Barra in alto in "vetro chiaro" (come il pannello della home): il
-/// contenuto che scorre sotto si intravede sfocato. Va messa in uno Stack
-/// sopra una lista che lascia spazio in alto.
-class GlassHeader extends StatelessWidget {
-  final String title;
-  final Widget? trailing;
-
-  const GlassHeader({super.key, required this.title, this.trailing});
-
-  @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
-    final canGoBack = showBackButton(context);
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(16, top + 10, 12, 10),
-          decoration: BoxDecoration(
-            color: AppColors.avorio.withValues(alpha: 0.8),
-            border: Border(
-              bottom: BorderSide(
-                  color: AppColors.bluNotte.withValues(alpha: 0.06)),
-            ),
-          ),
-          child: Row(
-            children: [
-              if (canGoBack) ...[
-                const BackCircleButton(),
-                const SizedBox(width: 8),
-              ],
-              const HomeButton(),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'serif',
-                      fontSize: 23,
-                      fontWeight: FontWeight.w700,
-                      height: 1.1,
-                      color: AppColors.bluNotte,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ),
-              ),
-              if (trailing != null) trailing!,
-            ],
-          ),
         ),
       ),
     );

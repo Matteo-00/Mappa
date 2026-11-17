@@ -1,5 +1,6 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../widgets/distance_label.dart';
+import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -56,12 +57,7 @@ class _StoriaDetailPageState extends State<StoriaDetailPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Errore: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

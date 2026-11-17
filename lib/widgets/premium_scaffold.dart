@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../utils/route_observer.dart';
@@ -106,45 +108,74 @@ class PremiumHeader extends StatelessWidget {
     this.trailing,
   });
 
+  /// Stesso aspetto della barra in vetro chiaro delle liste ([GlassHeader]).
+  @override
+  Widget build(BuildContext context) => GlassHeader(
+        title: title,
+        maxLines: 2,
+        trailing: trailing == null
+            ? null
+            : SizedBox(width: 48, height: 48, child: Center(child: trailing)),
+      );
+}
+
+// ============================================================ barra in alto
+
+/// Barra in alto in "vetro chiaro" (come il pannello della home): il
+/// contenuto che scorre sotto si intravede sfocato. Va messa in uno Stack
+/// sopra una lista che lascia spazio in alto.
+class GlassHeader extends StatelessWidget {
+  final String title;
+  final Widget? trailing;
+  final int maxLines;
+
+  const GlassHeader(
+      {super.key, required this.title, this.trailing, this.maxLines = 1});
+
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
     final canGoBack = showBackButton(context);
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Row(
-          children: [
-            if (canGoBack) ...[
-              const BackCircleButton(),
-              const SizedBox(width: 8),
-            ],
-            const HomeButton(),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'serif',
-                    fontSize: canGoBack ? 21 : 24,
-                    fontWeight: FontWeight.w700,
-                    height: 1.1,
-                    color: AppColors.bluNotte,
-                    letterSpacing: -0.3,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(16, top + 10, 12, 10),
+          decoration: BoxDecoration(
+            color: AppColors.avorio.withValues(alpha: 0.8),
+            border: Border(
+              bottom: BorderSide(
+                  color: AppColors.bluNotte.withValues(alpha: 0.06)),
+            ),
+          ),
+          child: Row(
+            children: [
+              if (canGoBack) ...[
+                const BackCircleButton(),
+                const SizedBox(width: 8),
+              ],
+              const HomeButton(),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    title,
+                    maxLines: maxLines,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'serif',
+                      fontSize: 23,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                      color: AppColors.bluNotte,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (trailing != null)
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: Center(child: trailing),
-              ),
-          ],
+              if (trailing != null) trailing!,
+            ],
+          ),
         ),
       ),
     );

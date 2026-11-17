@@ -1,3 +1,4 @@
+import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 import '../widgets/place_list_view.dart';
 import 'map_page.dart' show MapKind;
@@ -263,12 +264,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${l10n.errorPrefix}: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

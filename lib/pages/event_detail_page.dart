@@ -1,5 +1,6 @@
 import '../widgets/distance_label.dart';
 import '../widgets/full_photo.dart';
+import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/event_model.dart';
@@ -503,12 +504,7 @@ class _DraftAdminBarState extends State<_DraftAdminBar> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Errore: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

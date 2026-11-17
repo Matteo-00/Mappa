@@ -1,3 +1,4 @@
+import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/offline_mode_service.dart';
@@ -177,12 +178,7 @@ class _StoriaPageState extends State<StoriaPage> {
       _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${l10n.errorPrefix}: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 
@@ -239,12 +235,7 @@ class _StoriaPageState extends State<StoriaPage> {
       _load();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Errore: $err'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, err);
     }
   }
 
