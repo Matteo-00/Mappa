@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import '../widgets/place_list_view.dart';
+import 'map_page.dart' show MapKind;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/offline_mode_service.dart';
 import '../models/hotel_model.dart';
-import '../data/gubbio_boundary.dart';
 import '../theme/app_colors.dart';
 import '../services/user_location_service.dart';
-import '../widgets/distance_label.dart';
 import '../services/content_service.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
@@ -14,13 +14,10 @@ import '../l10n/app_localizations.dart';
 import 'admin/admin_widgets.dart';
 import 'admin/add_place_page.dart';
 import 'hotel_detail_page.dart';
-import '../widgets/premium_scaffold.dart';
 import '../widgets/place_filters.dart';
-import '../widgets/user_rating_badge.dart';
 import '../models/review_model.dart';
 import '../services/review_service.dart';
 import '../widgets/loading_screen.dart';
-import '../widgets/full_photo.dart';
 import '../widgets/rating_icons.dart';
 
 /// Pagina hotel con mappa integrata e lista
@@ -45,7 +42,6 @@ class _HotelsPageState extends State<HotelsPage> {
   String _searchQuery = '';
   String? _loadedLanguageCode;
   
-  static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
 
   AppLocalizations get _l10n => AppLocalizations.of(
       context.read<LanguageService>().currentLanguageCode);
@@ -198,48 +194,21 @@ class _HotelsPageState extends State<HotelsPage> {
     if (_loading) return LoadingScreen(onRetry: _loadHotels);
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
-    return Scaffold(
-      backgroundColor: AppColors.avorio,
-      body: Column(
-        children: [
-          PremiumHeader(title: l10n.hotelsNav),
-          // Mappa
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: SizedBox(
-                height: 205,
-                child: GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: _centerGubbio,
-                    zoom: 15,
-                  ),
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                  },
-                  markers: _markers,
-                  polygons: {
-                    Polygon(
-                      polygonId: const PolygonId('gubbio_municipal_boundary'),
-                      points: gubbioMunicipalBoundary,
-                      strokeWidth: 4,
-                      strokeColor: Colors.red,
-                      fillColor: Colors.red.withValues(alpha: 0.05),
-                      geodesic: true,
-                    ),
-                  },
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  mapType: MapType.normal,
-                  zoomControlsEnabled: false,
-                ),
-              ),
-            ),
-          ),
-          // Barra di ricerca
-          _buildSearchBar(),
-          PlaceFilterBar(
+    final isAdmin = context.watch<AuthService>().isAdmin;
+    return PlaceListView(
+      title: l10n.hotelsNav,
+      fallbackIcon: Icons.hotel_outlined,
+      ratingKind: RatingKind.palazzo,
+      markers: _markers,
+      onMapCreated: (c) => _mapController = c,
+      searchController: _searchController,
+      searchHint: _l10n.t('searchHotelHint'),
+      searchQuery: _searchQuery,
+      onSearchChanged: (value) {
+        setState(() => _searchQuery = value);
+        _applyFilters();
+      },
+      filterBar: PlaceFilterBar(
             ratingKind: RatingKind.palazzo,
             state: _filters,
             availableTags: PlaceFilters.tagsByFrequency(
@@ -249,67 +218,32 @@ class _HotelsPageState extends State<HotelsPage> {
             onChanged: _applyFilters,
             showUserRating: _userStats.isNotEmpty,
           ),
-          // Lista hotel
-          Expanded(
-            child: _filteredHotels.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    itemCount: _filteredHotels.length,
-                    itemBuilder: (context, index) {
-                      return _buildHotelCard(_filteredHotels[index]);
-                    },
-                  ),
+      locationAvailable: _currentLocation != null,
+      emptyState: _buildEmptyState(),
+      items: [
+        for (final hotel in _filteredHotels)
+          PlaceCardData(
+            id: hotel.id,
+            name: hotel.name,
+            description: hotel.description,
+            address: hotel.address,
+            coordinates: hotel.coordinates,
+            imageUrl: hotel.imageUrl,
+            phone: hotel.phoneNumber,
+            tags: hotel.cuisineTypes,
+            rating: hotel.rating,
+            userStats: _userStats[hotel.id],
+            favoriteKind:
+                ContentService.isRemoteId(hotel.id) ? MapKind.hotel : null,
+            onTap: () => _openHotelDetail(hotel),
+            onEdit: isAdmin && ContentService.isRemoteId(hotel.id)
+                ? () => _editHotel(hotel)
+                : null,
+            onDelete: isAdmin && ContentService.isRemoteId(hotel.id)
+                ? () => _deleteHotel(hotel)
+                : null,
           ),
-        ],
-      ),
-    );
-  }
-  
-  /// Barra di ricerca
-  Widget _buildSearchBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-          _applyFilters();
-        },
-        decoration: InputDecoration(
-          hintText: _l10n.t('searchHotelHint'),
-          hintStyle: const TextStyle(color: AppColors.textMuted),
-          prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: AppColors.tortora),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                    _applyFilters();
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-      ),
+      ],
     );
   }
   
@@ -339,132 +273,6 @@ class _HotelsPageState extends State<HotelsPage> {
     }
   }
 
-  /// Card singolo hotel
-  Widget _buildHotelCard(HotelModel hotel) {
-    final canDelete = context.watch<AuthService>().isAdmin &&
-        ContentService.isRemoteId(hotel.id);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _openHotelDetail(hotel),
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Immagine/icona
-              Container(
-                width: 84,
-                height: 84,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.tortora.withValues(alpha: 0.45),
-                      AppColors.avorio,
-                    ],
-                  ),
-                ),
-                child: hotel.imageUrl != null
-                    ? FullPhoto(
-                        url: hotel.imageUrl!,
-                        fallback: const Icon(
-                          Icons.hotel,
-                          size: 38,
-                          color: AppColors.rossoGubbio,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.hotel,
-                        size: 38,
-                        color: AppColors.rossoGubbio,
-                      ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Informazioni
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            hotel.name,
-                            style: const TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.bluNotte,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (canDelete)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              EditIconButton(
-                                onPressed: () => _editHotel(hotel),
-                              ),
-                              const SizedBox(width: 6),
-                              DeleteIconButton(
-                                onPressed: () => _deleteHotel(hotel),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      hotel.description,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    if (hotel.rating != null)
-                      _buildMiniRating(hotel.rating!),
-                    if (_userStats[hotel.id] != null) ...[
-                      const SizedBox(height: 4),
-                      UserRatingBadge(stats: _userStats[hotel.id]!),
-                    ],
-                    const SizedBox(height: 6),
-                    DistanceLabel(target: hotel.coordinates),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildMiniRating(double rating) => RatingSummary(rating: rating, kind: RatingKind.palazzo);
-
-  /// Stato vuoto
   Widget _buildEmptyState() {
     return Center(
       child: Column(

@@ -12,11 +12,10 @@ import 'premium_scaffold.dart';
 /// Schermata di caricamento dell'app, mostrata mentre si aspettano i dati dal
 /// database.
 ///
-/// Al centro il logo di Visit Gubbio in un cerchio (bordo marroncino) che
-/// "respira", cioè si ingrandisce e rimpicciolisce appena; intorno ruotano in
-/// senso orario cinque piccole icone tonde (bordo rosso) dei simboli di Gubbio:
-/// San Francesco e il lupo, il teatro romano, il Palazzo dei Consoli, lo
-/// stemma e l'albero di Natale più grande del mondo.
+/// "Giostra 3D": al centro il logo di Visit Gubbio in un cerchio (bordo
+/// marroncino) che fluttua sopra la sua ombra; intorno, su un'orbita
+/// inclinata, girano le piccole icone tonde (bordo rosso) dei simboli di
+/// Gubbio, passando davanti e dietro al logo.
 ///
 /// Tempi:
 /// - resta a schermo almeno [minDuration] (vedi [waitMinimum]), così non
@@ -82,15 +81,8 @@ enum _Wait { normal, slow, verySlow }
 
 class _LoadingScreenState extends State<LoadingScreen>
     with SingleTickerProviderStateMixin {
-  /// Un giro completo delle icone.
+  /// Durata del ciclo dell'animazione (2 giri delle icone, 6 respiri).
   static const Duration _orbitPeriod = Duration(seconds: 18);
-
-  /// Battiti del logo per ogni giro (6 su 18 s = un respiro ogni 3 s).
-  static const int _pulsesPerOrbit = 6;
-
-  /// Larghezza dell'area (logo + giro delle icone) in rapporto al logo, senza
-  /// i margini: 2 * (0,9367 + 1/6).
-  static const double _areaToLogo = 2.2068;
 
   late final AnimationController _controller =
       AnimationController(vsync: this, duration: _orbitPeriod)..repeat();
@@ -258,169 +250,160 @@ class _LoadingScreenState extends State<LoadingScreen>
     );
   }
 
-  /// Misura lo spazio disponibile e sceglie la dimensione del logo.
+  /// Misura lo spazio disponibile e sceglie la dimensione dell'animazione.
   Widget _buildAnimation() {
     return LayoutBuilder(
       builder: (context, constraints) {
         final available =
             constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
-        // Sugli schermi stretti il logo si rimpicciolisce quel tanto che basta
-        // per restare dentro (8 px di margine nell'area + 12 px per lato).
-        final fitLogo = (available - 8 - 16) / _areaToLogo;
-        return _buildOrbit(math.min(widget.logoSize, fitLogo));
+        // L'animazione è disegnata su 320x320 e poi scalata: con il logo da
+        // 162 occupa ~345 px, sugli schermi stretti si rimpicciolisce.
+        final side = math.min(widget.logoSize * 320 / 150, available - 24);
+        return SizedBox(
+          width: side,
+          height: side,
+          child: FittedBox(
+            child: SizedBox(
+              width: 320,
+              height: 320,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) => _buildCarousel(),
+              ),
+            ),
+          ),
+        );
       },
     );
   }
 
-  /// Logo che pulsa + icone che girano in senso orario.
-  Widget _buildOrbit(double logo) {
-    final k = logo / 112; // fattore di scala di bordi, ombre e tratteggio
-    final icon = logo / 3; // le icone sono 1/3 del logo
-    final radius = logo / 2 + icon / 2 + logo * 0.27; // distanza dal centro
-    final area = (radius + icon / 2) * 2 + 8;
+  /// "Giostra 3D": le icone girano su un'orbita inclinata passando davanti e
+  /// dietro al logo, che fluttua sopra la sua ombra. Le icone dietro sono più
+  /// piccole e sbiadite: così si vede la profondità.
+  Widget _buildCarousel() {
+    final s = _controller.value * _orbitPeriod.inMilliseconds / 1000;
     const icons = LoadingScreen._orbitIcons;
-
-    return SizedBox(
-      width: area,
-      height: area,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final t = _controller.value; // 0..1 = un giro completo
-          // Respiro armonico: si ingrandisce e rimpicciolisce di pochissimo.
-          final pulse = math.sin(2 * math.pi * _pulsesPerOrbit * t);
-          final scale = 1 + 0.045 * pulse;
-          final glow = 0.5 + 0.5 * pulse; // 0..1, segue il respiro
-
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              // Traccia sottile del percorso delle icone.
-              CustomPaint(
-                size: Size.square(area),
-                painter: _OrbitPathPainter(radius: radius, scale: k),
-              ),
-              // Icone: l'angolo cresce nel tempo; con l'asse y verso il basso
-              // questo significa senso ORARIO. Restano dritte (non ruotano).
-              for (var i = 0; i < icons.length; i++)
-                _orbitIcon(
-                  asset: icons[i],
-                  angle: -math.pi / 2 + 2 * math.pi * (t + i / icons.length),
-                  radius: radius,
-                  area: area,
-                  size: icon,
-                  scale: k,
-                ),
-              // Logo al centro che pulsa.
-              Transform.scale(
-                scale: scale,
-                child: Container(
-                  width: logo,
-                  height: logo,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(
-                        color: LoadingScreen.logoRingColor, width: 4 * k),
-                    boxShadow: [
-                      BoxShadow(
-                        color: LoadingScreen.logoRingColor
-                            .withValues(alpha: 0.18 + 0.14 * glow),
-                        blurRadius: (14 + 10 * glow) * k,
-                        spreadRadius: (1 + 2 * glow) * k,
-                      ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  // Un filo di ingrandimento: il logo ha molto bianco intorno.
-                  child: Transform.scale(
-                    scale: 1.12,
-                    child: Image.asset(
-                      LoadingScreen._logo,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.medium,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _orbitIcon({
-    required String asset,
-    required double angle,
-    required double radius,
-    required double area,
-    required double size,
-    required double scale,
-  }) {
-    final cx = area / 2 + radius * math.cos(angle);
-    final cy = area / 2 + radius * math.sin(angle);
-    return Positioned(
-      left: cx - size / 2,
-      top: cy - size / 2,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
-          border: Border.all(
-              color: LoadingScreen.orbitRingColor, width: 2.2 * scale),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 6 * scale,
-              offset: Offset(0, 2 * scale),
-            ),
-          ],
+    final items = <(double, Widget)>[];
+    for (var i = 0; i < icons.length; i++) {
+      // Un giro ogni 9 secondi.
+      final a = 2 * math.pi * (s / 9 + i / icons.length);
+      final depth = math.sin(a); // -1 dietro, +1 davanti
+      final scale = 0.72 + 0.34 * (depth + 1) / 2;
+      items.add((
+        depth,
+        Positioned(
+          left: 160 + 148 * math.cos(a) - 29 * scale,
+          top: 182 + 56 * depth - 29 * scale,
+          child: Opacity(
+            opacity: 0.55 + 0.45 * (depth + 1) / 2,
+            child: _orbitIcon(icons[i], 58 * scale),
+          ),
         ),
-        child: ClipOval(
-          child: Padding(
-            padding: EdgeInsets.all(size * 0.09),
-            child: Image.asset(
-              asset,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.medium,
+      ));
+    }
+    items.sort((a, b) => a.$1.compareTo(b.$1));
+    // Il logo sale e scende piano (un respiro ogni 3 secondi).
+    final float = 6 * math.sin(2 * math.pi * s / 3);
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Ombra a terra del logo: più chiara quando il logo sale.
+        Positioned(
+          left: 110,
+          top: 200,
+          child: Container(
+            width: 100,
+            height: 14,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(50),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black
+                      .withValues(alpha: 0.16 - 0.05 * (float / 6)),
+                  blurRadius: 14,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
           ),
         ),
+        // Orbita inclinata.
+        Positioned(
+          left: 12,
+          top: 126,
+          child: Container(
+            width: 296,
+            height: 112,
+            decoration: BoxDecoration(
+              borderRadius:
+                  const BorderRadius.all(Radius.elliptical(148, 56)),
+              border: Border.all(
+                  color: AppColors.tortora.withValues(alpha: 0.45),
+                  width: 1.4),
+            ),
+          ),
+        ),
+        for (final it in items.where((e) => e.$1 < 0)) it.$2,
+        Positioned(
+          left: 85,
+          top: 40 + float,
+          child: _logo(150),
+        ),
+        for (final it in items.where((e) => e.$1 >= 0)) it.$2,
+      ],
+    );
+  }
+
+  Widget _logo(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(color: LoadingScreen.logoRingColor, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: LoadingScreen.logoRingColor.withValues(alpha: 0.3),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      // Un filo di ingrandimento: il logo ha molto bianco intorno.
+      child: Transform.scale(
+        scale: 1.12,
+        child: Image.asset(LoadingScreen._logo,
+            fit: BoxFit.cover, filterQuality: FilterQuality.medium),
       ),
     );
   }
-}
 
-/// Cerchio tratteggiato e leggerissimo lungo il quale girano le icone.
-class _OrbitPathPainter extends CustomPainter {
-  final double radius;
-  final double scale;
-  _OrbitPathPainter({required this.radius, this.scale = 1});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.tortora.withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2 * scale;
-    final center = size.center(Offset.zero);
-    const dashes = 72;
-    const sweep = 2 * math.pi / dashes;
-    for (var i = 0; i < dashes; i++) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        i * sweep,
-        sweep * 0.45,
-        false,
-        paint,
-      );
-    }
+  Widget _orbitIcon(String asset, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(color: LoadingScreen.orbitRingColor, width: 2.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.09),
+          child: Image.asset(asset,
+              fit: BoxFit.contain, filterQuality: FilterQuality.medium),
+        ),
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant _OrbitPathPainter old) =>
-      old.radius != radius || old.scale != scale;
 }

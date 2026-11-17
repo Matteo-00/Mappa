@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mappa/models/event_model.dart';
 import 'package:mappa/services/search_service.dart';
+import 'package:mappa/utils/text_match.dart';
+import 'package:mappa/widgets/place_filters.dart';
 
 /// Chiavi definite per ogni lingua in lib/l10n/app_localizations.dart.
 Map<String, Set<String>> _keysByLanguage() {
@@ -81,5 +83,30 @@ void main() {
     });
     expect(n.isNews, isTrue);
     expect(n.isFromComune, isTrue);
+  });
+
+  test('le ricerche nelle liste ignorano gli accenti', () {
+    expect(textMatches('citta', ['Visita alla Città']), isTrue);
+    expect(textMatches('sant ubaldo basilica', ["Basilica di Sant'Ubaldo"]), isTrue);
+    expect(textMatches('pizza', ['Osteria', 'Cucina tipica']), isFalse);
+    expect(textMatches('', ['qualsiasi']), isTrue);
+  });
+
+  test('il filtro 4+ vale anche per il voto degli utenti', () {
+    final items = ['a', 'b', 'c'];
+    final vg = {'a': 4.5, 'b': 3.0, 'c': null};
+    final users = {'a': null, 'b': 4.2, 'c': 3.5};
+    final res = PlaceFilters.apply<String>(
+      items,
+      state: PlaceFilterState()..topRatedOnly = true,
+      query: '',
+      name: (p) => p,
+      description: (p) => '',
+      tags: (p) => const [],
+      rating: (p) => vg[p],
+      distance: (p) => null,
+      userRating: (p) => users[p],
+    );
+    expect(res.toSet(), {'a', 'b'});
   });
 }
