@@ -1,3 +1,4 @@
+import '../utils/text_match.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
@@ -54,15 +55,17 @@ class PlaceFilters {
     double? Function(T)? userRating,
     int Function(T)? userCount,
   }) {
-    final q = query.trim().toLowerCase();
+    final q = query;
 
     final result = items.where((p) {
       if (state.tag != null && !tags(p).contains(state.tag)) return false;
-      if (state.topRatedOnly && (rating(p) ?? 0) < 4) return false;
-      if (q.isEmpty) return true;
-      return name(p).toLowerCase().contains(q) ||
-          description(p).toLowerCase().contains(q) ||
-          tags(p).any((t) => t.toLowerCase().contains(q));
+      // "4+": basta il voto di Visit Gubbio OPPURE la media degli utenti.
+      if (state.topRatedOnly &&
+          (rating(p) ?? 0) < 4 &&
+          (userRating?.call(p) ?? 0) < 4) {
+        return false;
+      }
+      return textMatches(q, [name(p), description(p), ...tags(p)]);
     }).toList();
 
     // Senza posizione "più vicini" non è calcolabile: si ordina per stelle.
@@ -168,9 +171,9 @@ class PlaceFilterBar extends StatelessWidget {
     required this.onChanged,
   });
 
-  /// "Più vicini a me": ordina dal più vicino al più lontano. Se la posizione
-  /// non è attiva la chiede; se era già attivo torna all'ordine per stelle.
-  Future<void> _toggleNearest(BuildContext context) async {
+  /// "Più vicini a me" scelto dal menu dell'ordinamento: se la posizione non
+  /// è attiva la chiede (se l'utente non la concede l'ordine non cambia).
+  Future<void> _chooseNearest(BuildContext context) async {
     if (!locationAvailable) {
       // Serve la posizione: chiede il permesso / apre le impostazioni.
       await UserLocationService.instance.enable(context);
@@ -185,9 +188,7 @@ class PlaceFilterBar extends StatelessWidget {
         return;
       }
     }
-    state.sort = state.sort == PlaceSort.nearest
-        ? (showRating ? PlaceSort.ratingDesc : PlaceSort.name)
-        : PlaceSort.nearest;
+    state.sort = PlaceSort.nearest;
     onChanged();
   }
 
@@ -200,15 +201,6 @@ class PlaceFilterBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
           children: [
             _sortChip(context),
-            const SizedBox(width: 8),
-            AppFilterChip(
-              label: _l10n(context).t('nearestToMe'),
-              icon: locationAvailable
-                  ? Icons.near_me_rounded
-                  : Icons.location_off_outlined,
-              selected: locationAvailable && state.sort == PlaceSort.nearest,
-              onTap: () => _toggleNearest(context),
-            ),
             const SizedBox(width: 8),
             if (showRating)
               AppFilterChip(
@@ -267,23 +259,42 @@ class PlaceFilterBar extends StatelessWidget {
     );
   }
 
+  /// Ordine davvero usato: "più vicini" senza posizione diventa per stelle
+  /// (o per nome), come in [PlaceFilters.apply].
+  PlaceSort get effectiveSort => state.sort == PlaceSort.nearest &&
+          !locationAvailable
+      ? (showRating ? PlaceSort.ratingDesc : PlaceSort.name)
+      : state.sort;
+
   /// Chip che apre il menu degli ordinamenti.
   Widget _sortChip(BuildContext context) {
     return PopupMenuButton<PlaceSort>(
       tooltip: _l10n(context).t('sortLabel'),
-      initialValue: state.sort,
+      initialValue: effectiveSort,
       onSelected: (v) {
+        if (v == PlaceSort.nearest) {
+          _chooseNearest(context);
+          return;
+        }
         state.sort = v;
         onChanged();
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       itemBuilder: (_) => [
+        // Sempre selezionabile: senza posizione la chiede.
         PopupMenuItem(
           value: PlaceSort.nearest,
-          enabled: locationAvailable,
-          child: Text(locationAvailable
-              ? _l10n(context).t('nearestToMe')
-              : _l10n(context).t('sortMenuNearestNoLoc')),
+          child: Row(children: [
+            Icon(
+              locationAvailable
+                  ? Icons.near_me_rounded
+                  : Icons.location_off_outlined,
+              size: 18,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Text(_l10n(context).t('nearestToMe')),
+          ]),
         ),
         if (showRating)
           PopupMenuItem(
@@ -317,7 +328,7 @@ class PlaceFilterBar extends StatelessWidget {
             const Icon(Icons.swap_vert_rounded, size: 17, color: Colors.white),
             const SizedBox(width: 5),
             Text(
-              _sortLabel(_l10n(context), state.sort),
+              _sortLabel(_l10n(context), effectiveSort),
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

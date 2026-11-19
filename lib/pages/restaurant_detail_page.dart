@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/restaurant_model.dart';
 import '../services/language_service.dart';
@@ -19,6 +20,7 @@ import 'map_page.dart';
 /// Pagina dettaglio ristorante
 class RestaurantDetailPage extends StatelessWidget {
   final RestaurantModel restaurant;
+
   /// Icona mostrata quando manca la foto (ristorante di default).
   final IconData fallbackIcon;
 
@@ -53,13 +55,14 @@ class RestaurantDetailPage extends StatelessWidget {
     }
   }
 
-  AppLocalizations _l10n(BuildContext context) => AppLocalizations.of(
-      context.read<LanguageService>().currentLanguageCode);
+  AppLocalizations _l10n(BuildContext context) =>
+      AppLocalizations.of(context.read<LanguageService>().currentLanguageCode);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(
-        context.watch<LanguageService>().currentLanguageCode);
+      context.watch<LanguageService>().currentLanguageCode,
+    );
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: CustomScrollView(
@@ -85,13 +88,110 @@ class RestaurantDetailPage extends StatelessWidget {
                   child: FavoriteButton(kind: mapKind, id: restaurant.id),
                 ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: restaurant.imageUrl != null
-                  ? _buildHeroImage(restaurant.imageUrl!)
-                  : _buildImagePlaceholder(),
+            // Foto grande con il nome sopra: scorrendo si restringe e il
+            // nome passa nella barra in alto.
+            flexibleSpace: LayoutBuilder(
+              builder: (context, c) {
+                final top = MediaQuery.of(context).padding.top;
+                final t =
+                    ((c.maxHeight - kToolbarHeight - top) /
+                            (300 - kToolbarHeight))
+                        .clamp(0.0, 1.0);
+                final navWidth = NavButtons.widthFor(context) + 16;
+                // ClipRect: la sfocatura della foto resta dentro la barra.
+                return ClipRect(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Opacity(
+                        opacity: t,
+                        child: restaurant.imageUrl != null
+                            ? _buildHeroImage(restaurant.imageUrl!)
+                            : _buildImagePlaceholder(),
+                      ),
+                      Opacity(
+                        opacity: t,
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0x55000000),
+                                Color(0x00000000),
+                                Color(0xCC000000),
+                              ],
+                              stops: [0, 0.4, 1],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 20 + (1 - t) * (navWidth - 20),
+                        right: 70,
+                        bottom: 12 + t * 8,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (t > 0.5 && restaurant.cuisineTypes.isNotEmpty)
+                              Opacity(
+                                opacity: (t - 0.5) * 2,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.rossoGubbio,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    restaurant.cuisineTypes.first.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      letterSpacing: 0.9,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            Text(
+                              restaurant.name,
+                              maxLines: t > 0.5 ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'serif',
+                                fontSize: 19 + 9 * t,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15,
+                                color: Color.lerp(
+                                  AppColors.bluNotte,
+                                  Colors.white,
+                                  t,
+                                ),
+                                shadows: t > 0.5
+                                    ? const [
+                                        Shadow(
+                                          color: Colors.black45,
+                                          blurRadius: 10,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
-          
+
           // Contenuto
           SliverToBoxAdapter(
             child: Container(
@@ -100,17 +200,6 @@ class RestaurantDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nome
-                  Text(
-                    restaurant.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.bluNotte,
-                      height: 1.2,
-                    ),
-                  ),
-
                   if (restaurant.rating != null) ...[
                     const SizedBox(height: 10),
                     // Con le recensioni si distingue il voto della redazione
@@ -127,6 +216,9 @@ class RestaurantDetailPage extends StatelessWidget {
                     _buildRatingRow(context, restaurant.rating!),
                   ],
 
+                  const SizedBox(height: 18),
+                  _buildQuickActions(context),
+
                   if (restaurant.cuisineTypes.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Wrap(
@@ -139,10 +231,14 @@ class RestaurantDetailPage extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.rossoGubbio.withValues(alpha: 0.08),
+                            color: AppColors.rossoGubbio.withValues(
+                              alpha: 0.08,
+                            ),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: AppColors.rossoGubbio.withValues(alpha: 0.25),
+                              color: AppColors.rossoGubbio.withValues(
+                                alpha: 0.25,
+                              ),
                             ),
                           ),
                           child: Text(
@@ -260,9 +356,6 @@ class RestaurantDetailPage extends StatelessWidget {
           ),
         ],
       ),
-      
-      // Pulsanti azione fissi in basso
-      bottomNavigationBar: _buildActionButtons(context),
     );
   }
 
@@ -270,28 +363,29 @@ class RestaurantDetailPage extends StatelessWidget {
   RatingKind get _ratingKind => mapKind == MapKind.bar
       ? RatingKind.amaro
       : mapKind == MapKind.hotel
-          ? RatingKind.palazzo
-          : (mapKind == MapKind.negozio ||
-                  mapKind == MapKind.sport ||
-                  mapKind == MapKind.agriturismo)
-              ? RatingKind.stelle
-              : RatingKind.crescia;
+      ? RatingKind.palazzo
+      : (mapKind == MapKind.negozio ||
+            mapKind == MapKind.sport ||
+            mapKind == MapKind.agriturismo)
+      ? RatingKind.stelle
+      : RatingKind.crescia;
 
   Widget _buildRatingRow(BuildContext context, double rating) {
     return RatingSummary(
-        rating: rating, kind: _ratingKind, iconSize: 22, fontSize: 15);
+      rating: rating,
+      kind: _ratingKind,
+      iconSize: 22,
+      fontSize: 15,
+    );
   }
-  
+
   Widget _buildImagePlaceholder() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.tortora.withValues(alpha: 0.6),
-            AppColors.avorio,
-          ],
+          colors: [AppColors.tortora.withValues(alpha: 0.6), AppColors.avorio],
         ),
       ),
       child: Center(
@@ -329,7 +423,7 @@ class RestaurantDetailPage extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildContactRow(IconData icon, String text, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -360,122 +454,103 @@ class RestaurantDetailPage extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildActionButtons(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, -4),
+
+  /// Pulsanti rapidi tondi: Chiama, Indicazioni, Mappa, Sito, Condividi
+  /// (Chiama e Sito solo se ci sono).
+  Widget _buildQuickActions(BuildContext context) {
+    final l = _l10n(context);
+    final phone = restaurant.phoneNumber?.trim() ?? '';
+    final site = restaurant.website?.trim() ?? '';
+    final actions = <(IconData, String, VoidCallback)>[
+      if (phone.isNotEmpty)
+        (Icons.call_outlined, l.t('actCall'), () => _makePhoneCall(phone)),
+      (Icons.directions_outlined, l.t('actDirections'), _openWalkingDirections),
+      (
+        Icons.map_outlined,
+        l.t('actMap'),
+        () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MapPage(
+              focus: MapFocus(
+                kind: mapKind,
+                id: restaurant.id,
+                position: restaurant.coordinates,
+              ),
+            ),
           ),
-        ],
+        ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Mostra sulla mappa
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MapPage(
-                        focus: MapFocus(
-                          kind: mapKind,
-                          id: restaurant.id,
-                          position: restaurant.coordinates,
-                        ),
+      if (site.isNotEmpty)
+        (Icons.language_rounded, l.t('actWebsite'), () => _openWebsite(site)),
+      (Icons.share_outlined, l.t('evShare'), () => _share(context)),
+    ];
+    return Row(
+      children: [
+        for (final (icon, label, onTap) in actions)
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.avorio,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.grigioChiaro),
+                      ),
+                      child: Icon(icon, color: AppColors.rossoGubbio),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.bluNotte,
                       ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.map_outlined),
-                label: Text(_l10n(context).t('showOnMapBtn')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.rossoGubbio,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  ],
                 ),
               ),
             ),
-            
-            const SizedBox(height: 12),
-            
-            // Pulsanti navigazione
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openWalkingDirections(),
-                    icon: const Icon(Icons.directions_walk, size: 20),
-                    label: Text(_l10n(context).t('walkBtn')),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.rossoGubbio,
-                      side: const BorderSide(color: AppColors.rossoGubbio),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openDrivingDirections(),
-                    icon: const Icon(Icons.directions_car, size: 20),
-                    label: Text(_l10n(context).t('carBtn')),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.rossoGubbio,
-                      side: const BorderSide(color: AppColors.rossoGubbio),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
-  
+
+  void _share(BuildContext context) {
+    final p = restaurant.coordinates;
+    final text = [
+      restaurant.name,
+      if (restaurant.address.trim().isNotEmpty) restaurant.address.trim(),
+      'https://www.google.com/maps/search/?api=1&query=${p.latitude},${p.longitude}',
+    ].join('\n');
+    SharePlus.instance.share(ShareParams(text: text, subject: restaurant.name));
+  }
+
   void _openWalkingDirections() async {
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=${restaurant.coordinates.latitude},${restaurant.coordinates.longitude}&travelmode=walking';
+    final url =
+        'https://www.google.com/maps/dir/?api=1&destination=${restaurant.coordinates.latitude},${restaurant.coordinates.longitude}&travelmode=walking';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
   }
-  
-  void _openDrivingDirections() async {
-    final url = 'https://www.google.com/maps/dir/?api=1&destination=${restaurant.coordinates.latitude},${restaurant.coordinates.longitude}&travelmode=driving';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    }
-  }
-  
+
   void _makePhoneCall(String phoneNumber) async {
     final url = 'tel:$phoneNumber';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     }
   }
-  
+
   void _openWebsite(String website) async {
     if (await canLaunchUrl(Uri.parse(website))) {
       await launchUrl(Uri.parse(website), mode: LaunchMode.externalApplication);

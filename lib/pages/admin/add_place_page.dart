@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -243,12 +244,7 @@ class _AddPlacePageState extends State<AddPlacePage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Errore: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

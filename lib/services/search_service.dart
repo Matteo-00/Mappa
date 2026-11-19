@@ -13,6 +13,7 @@ import '../pages/restaurant_detail_page.dart';
 import '../pages/storia_detail_page.dart';
 import '../pages/tappa_detail_page.dart';
 import 'content_service.dart';
+import '../utils/text_match.dart';
 
 /// Sezioni dei risultati, nell'ordine in cui compaiono.
 enum SearchSection {
@@ -71,21 +72,7 @@ class SearchService {
   static List<_Entry> _entries = [];
 
   /// Toglie maiuscole, accenti e apostrofi: "Città" e "citta" sono uguali.
-  static String normalize(String s) {
-    const from = 'àáâäãåèéêëìíîïòóôöõùúûüçñ';
-    const to = 'aaaaaaeeeeiiiiooooouuuucn';
-    final lower = s.toLowerCase();
-    final buf = StringBuffer();
-    for (final ch in lower.split('')) {
-      final i = from.indexOf(ch);
-      buf.write(i >= 0 ? to[i] : ch);
-    }
-    return buf
-        .toString()
-        .replaceAll(RegExp(r"[’'`´]"), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
+  static String normalize(String s) => normalizeText(s);
 
   /// Carica (o ricarica, se è cambiata la lingua) tutti i contenuti.
   static Future<void> load(String languageCode, AppLocalizations l,

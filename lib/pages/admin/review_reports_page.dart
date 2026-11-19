@@ -1,3 +1,4 @@
+import '../../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/review_model.dart';
@@ -61,12 +62,7 @@ class _ReviewReportsPageState extends State<ReviewReportsPage> {
       _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Errore: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

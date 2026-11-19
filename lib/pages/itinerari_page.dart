@@ -1,3 +1,5 @@
+import '../utils/text_match.dart';
+import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/offline_mode_service.dart';
@@ -117,11 +119,13 @@ class _ItinerariPageState extends State<ItinerariPage> {
       if (_selectedDurata != null && it.durata.trim() != _selectedDurata) {
         return false;
       }
-      if (q.isEmpty) return true;
-      return it.titolo.toLowerCase().contains(q) ||
-          it.sottotitolo.toLowerCase().contains(q) ||
-          it.descrizione.toLowerCase().contains(q) ||
-          it.tappe.any((t) => t.nome.toLowerCase().contains(q));
+      return textMatches(q, [
+        it.titolo,
+        it.sottotitolo,
+        it.descrizione,
+        it.tema,
+        ...it.tappe.map((t) => t.nome),
+      ]);
     }).toList();
 
     switch (_sort) {
@@ -191,12 +195,7 @@ class _ItinerariPageState extends State<ItinerariPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${l10n.errorPrefix}: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

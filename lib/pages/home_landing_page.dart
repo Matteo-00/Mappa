@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/itinerario_model.dart';
+import '../models/event_model.dart';
 import 'luoghi_page.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
@@ -32,6 +33,9 @@ import 'user_profile_page.dart';
 import 'search_page.dart';
 import 'itinerari_page.dart' show ItinerariPage, itinerarioImagePlaceholder;
 import 'itinerario_detail_page.dart';
+import 'dart:ui' show ImageFilter;
+
+part 'home_explore_panel.dart';
 
 /// Home page landing di Visit Gubbio.
 /// Video/hero a tutto schermo sullo sfondo; in basso il pannello "Esplora
@@ -46,10 +50,19 @@ class HomeLandingPage extends StatefulWidget {
 }
 
 class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
+  /// Scheda scelta nel pannello (0 Itinerari, 1 Eventi, 2 Servizi).
+  final ValueNotifier<int> _panelTab = ValueNotifier<int>(0);
+
+  /// Posizioni del pannello chiuso / aperto (per la freccia).
+  double _minE = 0.1, _maxE = 0.88;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final LocationService _locationService = LocationService();
   late AppLocalizations _l10n;
   List<ItinerarioModel> _itinerariConsigliati = [];
+
+  /// Prossimi eventi pubblicati (al massimo 6), dal più vicino.
+  List<EventModel> _prossimiEventi = [];
 
   /// Pannello "Esplora Gubbio": si trascina tra chiuso, metà e aperto.
   final DraggableScrollableController _sheet = DraggableScrollableController();
@@ -89,6 +102,7 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     _videoMuted.dispose();
     _videoFinished.dispose();
     _videoReplay.dispose();
+    _panelTab.dispose();
     _sheet.dispose();
     super.dispose();
   }
@@ -105,7 +119,20 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           .then((_) => UserLocationService.instance.refresh());
     });
     _loadItinerari();
+    _loadEventi();
     _loadReportedCount();
+  }
+
+  Future<void> _loadEventi() async {
+    final languageCode = context.read<LanguageService>().currentLanguageCode;
+    final all = await ContentService.fetchEvents(languageCode: languageCode);
+    final now = DateTime.now();
+    final next = all
+        .where((e) => !e.isDraft && !e.isNews && !e.endTime.isBefore(now))
+        .toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    if (!mounted) return;
+    setState(() => _prossimiEventi = next.take(6).toList());
   }
 
   Future<void> _loadReportedCount() async {
@@ -283,12 +310,15 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     final size = MediaQuery.of(context).size;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     // Posizioni del pannello: chiuso (solo il titolo), metà, aperto.
-    // Chiuso: solo l'intestazione ("Esplora Gubbio" + sottotitolo).
-    final minExtent = ((76 + bottomInset) / size.height).clamp(0.07, 0.2);
-    // A metà: intestazione + itinerari della vetrina per intero, e basta.
-    final midExtent =
-        ((318 + bottomInset) / size.height).clamp(minExtent + 0.1, 0.72);
+    // Posizioni del pannello: chiuso (solo la ricerca), metà (ricerca, schede
+    // e i 3 itinerari della vetrina), aperto.
+    final minExtent =
+        ((_panelClosedPx + bottomInset) / size.height).clamp(0.08, 0.3);
+    final midExtent = ((_panelMidPx + bottomInset) / size.height)
+        .clamp(minExtent + 0.1, 0.72);
     const maxExtent = 0.88;
+    _minE = minExtent;
+    _maxE = maxExtent;
     if (_sheetExtent == 0) _sheetExtent = midExtent;
     // Elenco dei punti di aggancio: SEMPRE lo stesso oggetto finché la metà non
     // cambia. Se fosse un elenco nuovo a ogni ricostruzione, Flutter riaggancia
@@ -402,12 +432,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               maxChildSize: maxExtent,
               snap: true,
               snapSizes: _snapSizes,
-              builder: (context, scrollController) => _buildPanel(
-                scrollController,
-                minExtent: minExtent,
-                midExtent: midExtent,
-                maxExtent: maxExtent,
-              ),
+              builder: (context, scrollController) =>
+                  _buildExplorePanel(scrollController),
             ),
           ),
         ],
@@ -531,212 +557,13 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     );
   }
 
-  Widget _buildPanel(
-    ScrollController scrollController, {
-    required double minExtent,
-    required double midExtent,
-    required double maxExtent,
-  }) {
-    final isAdmin = context.watch<AuthService>().isAdmin;
-    final isOpen = _sheetExtent > maxExtent - 0.04;
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.avorio,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 26,
-            offset: const Offset(0, -6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        // Il pannello si trascina anche con il mouse (versione web).
-        child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(
-            dragDevices: PointerDeviceKind.values.toSet(),
-          ),
-          child: ListView(
-          controller: scrollController,
-          padding: EdgeInsets.only(
-              bottom: 24 + MediaQuery.of(context).padding.bottom),
-          children: [
-            // Intestazione: si trascina, e un tocco la apre/chiude.
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _toggleSheet(minExtent, maxExtent),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 14, 6),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: AppColors.tortora.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _l10n.exploreGubbioTitle,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.rossoGubbio,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _l10n.t('homeExploreSubtitle'),
-                                style: const TextStyle(
-                                  fontFamily: 'serif',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.bluNotte,
-                                  height: 1.15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Material(
-                          color: AppColors.rossoGubbio,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => _toggleSheet(minExtent, maxExtent),
-                            child: Tooltip(
-                              message: _l10n
-                                  .t(isOpen ? 'homeCollapse' : 'homeExpand'),
-                              child: SizedBox(
-                                width: 40,
-                                height: 40,
-                                child: AnimatedRotation(
-                                  turns: isOpen ? 0.5 : 0,
-                                  duration: const Duration(milliseconds: 300),
-                                  child: const Icon(
-                                    Icons.keyboard_arrow_up_rounded,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tutto ciò che sta sotto l'intestazione sfuma quando il pannello
-            // è chiuso: si deve vedere solo "Esplora Gubbio".
-            Opacity(
-              opacity: ((_sheetExtent - minExtent) / 0.06).clamp(0.0, 1.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                // Itinerari consigliati: i 3 della vetrina, tutti visibili già
-                // con il pannello a metà.
-                _sectionHeader(
-                  _l10n.suggestedItinerariesNav,
-                  top: 6,
-                  onSeeAll: _openItinerari,
-                  extra: isAdmin
-                      ? GestureDetector(
-                          onTap: _chooseVetrina,
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 14),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.edit_outlined,
-                                    size: 15, color: AppColors.bluNotte),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Scegli',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.bluNotte,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : null,
-                ),
-                _buildItinerariVetrina(),
-
-                // Accessi rapidi (2 righe da 4)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-                  child: _buildQuickGrid(),
-                ),
-                ],
-              ),
-            ),
-
-          ],
-        ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title,
-      {required VoidCallback onSeeAll, Widget? extra, double top = 22}) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, top, 20, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontFamily: 'serif',
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.bluNotte,
-              ),
-            ),
-          ),
-          if (extra != null) extra,
-          GestureDetector(
-            onTap: onSeeAll,
-            child: Text(
-              _l10n.seeAllLabel,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.rossoGubbio,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // -------------------------------------------------- Accessi rapidi
-  Widget _buildQuickGrid() {
-    // Tutte le sezioni dell'app, nell'ordine in cui le cerca un turista.
+  /// Tutte le sezioni dell'app (scheda "Servizi" del pannello), nell'ordine
+  /// in cui le cerca un turista.
+  List<(IconData, String, Color, VoidCallback)> _quickItems() {
     (IconData, String, Color, VoidCallback) luogo(LuogoTipo t) =>
         (t.icon, _l10n.t(t.navKey), t.color, () => _openLuoghi(t));
-    final items = <(IconData, String, Color, VoidCallback)>[
+    return <(IconData, String, Color, VoidCallback)>[
       (Icons.map_outlined, _l10n.mapNav, const Color(0xFF2E7D6B), _openMap),
       (Icons.calendar_month_outlined, _l10n.events, AppColors.rossoGubbio,
           _openEvents),
@@ -754,238 +581,17 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           _openHotels),
       luogo(LuogoTipo.agriturismo),
       luogo(LuogoTipo.negozio),
+      luogo(LuogoTipo.sport),
       luogo(LuogoTipo.parcheggio),
       luogo(LuogoTipo.ascensore),
       luogo(LuogoTipo.bagno),
     ];
-    return GridView.count(
-      crossAxisCount: 4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 6,
-      crossAxisSpacing: 4,
-      childAspectRatio: 0.92,
-      children: [
-        for (final (icon, label, color, onTap) in items)
-          _quickAction(icon, label, color, onTap),
-      ],
-    );
   }
 
   void _openLuoghi(LuogoTipo tipo) => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => LuoghiPage(tipo: tipo)),
       );
-
-  Widget _quickAction(
-      IconData icon, String label, Color color, VoidCallback onTap) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(icon, color: color, size: 26),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.bluNotte,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // -------------------------------------------------- Itinerari (vetrina)
-  /// I 3 itinerari scelti per la vetrina, affiancati e tutti visibili.
-  Widget _buildItinerariVetrina() {
-    final items = _itinerariConsigliati.take(3).toList();
-    if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: GestureDetector(
-          onTap: _openItinerari,
-          child: SizedBox(
-            height: 150,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: itinerarioImagePlaceholder('',
-                  icon: Icons.route_outlined),
-            ),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: SizedBox(
-        height: 180,
-        child: Row(
-          children: [
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(width: 10),
-              Expanded(child: _buildItinerarioCard(items[i])),
-            ],
-            // Con meno di 3 itinerari le schede restano della stessa larghezza.
-            for (var i = items.length; i < 3; i++) ...[
-              const SizedBox(width: 10),
-              const Expanded(child: SizedBox()),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildItinerarioCard(ItinerarioModel it) {
-    final placeholder = itinerarioImagePlaceholder('', icon: it.icona);
-    final meta = [
-      if (it.durata.trim().isNotEmpty) it.durata.trim(),
-      if (it.tappe.isNotEmpty) _l10n.count('homeStops', it.tappe.length),
-    ].join(' · ');
-    return GestureDetector(
-      onTap: () => _openItinerario(it),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.bluNotte.withValues(alpha: 0.16),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (it.imageUrl != null)
-                Image.network(
-                  it.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => placeholder,
-                )
-              else
-                placeholder,
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x26000000),
-                      Color(0x00000000),
-                      Color(0xE6000000),
-                    ],
-                    stops: [0.0, 0.3, 1.0],
-                  ),
-                ),
-              ),
-              if (it.tema.trim().isNotEmpty)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  right: 8,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _glassChip(it.tema.toUpperCase(), strong: true),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      it.titolo,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'serif',
-                        color: Colors.white,
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w700,
-                        height: 1.12,
-                      ),
-                    ),
-                    if (meta.isNotEmpty) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        meta,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.88),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _glassChip(String text, {IconData? icon, bool strong = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: strong
-            ? AppColors.rossoGubbio.withValues(alpha: 0.92)
-            : Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: strong
-            ? null
-            : Border.all(color: Colors.white.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: Colors.white),
-            const SizedBox(width: 4),
-          ],
-          Flexible(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: strong ? 10.5 : 11.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: strong ? 0.8 : 0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Pallino rosso con il numero in alto a destra (nascosto se 0).
   Widget _withBadge(Widget child, int count) {

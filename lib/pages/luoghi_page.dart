@@ -1,9 +1,11 @@
+import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
+import '../widgets/place_list_view.dart';
+import 'admin/admin_widgets.dart' show confirmDelete;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/offline_mode_service.dart';
 
-import '../data/gubbio_boundary.dart';
 import '../l10n/app_localizations.dart';
 import '../models/luogo_model.dart';
 import '../services/auth_service.dart';
@@ -11,14 +13,10 @@ import '../services/content_service.dart';
 import '../services/language_service.dart';
 import '../services/user_location_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/distance_label.dart';
-import '../widgets/full_photo.dart';
 import '../widgets/loading_screen.dart';
 import '../widgets/place_filters.dart';
-import '../widgets/premium_scaffold.dart';
 import '../widgets/rating_icons.dart';
 import 'admin/add_luogo_page.dart';
-import 'admin/admin_widgets.dart';
 import 'luogo_detail_page.dart';
 
 /// Elenco di un tipo di luogo (chiese, musei, negozi o parcheggi) con mappa
@@ -47,7 +45,6 @@ class _LuoghiPageState extends State<LuoghiPage> {
   String _searchQuery = '';
   String? _loadedLanguageCode;
 
-  static const LatLng _centerGubbio = LatLng(43.35190, 12.57730);
 
   LuogoTipo get _tipo => widget.tipo;
 
@@ -194,12 +191,7 @@ class _LuoghiPageState extends State<LuoghiPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${l10n.errorPrefix}: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 
@@ -210,55 +202,30 @@ class _LuoghiPageState extends State<LuoghiPage> {
     final l10n = AppLocalizations.of(
         context.watch<LanguageService>().currentLanguageCode);
     final isAdmin = context.watch<AuthService>().isAdmin;
-    return Scaffold(
-      backgroundColor: AppColors.avorio,
-      body: Column(
-        children: [
-          PremiumHeader(
-            title: l10n.t(_tipo.navKey),
-            trailing: isAdmin
-                ? IconButton(
-                    onPressed: _add,
-                    tooltip: l10n.t('luogoAddTooltip'),
-                    icon: const Icon(Icons.add_circle_outline,
-                        color: AppColors.rossoGubbio, size: 28),
-                  )
-                : null,
-          ),
-          // Mappa
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: SizedBox(
-                height: 205,
-                child: GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: _centerGubbio,
-                    zoom: 15,
-                  ),
-                  onMapCreated: (controller) => _mapController = controller,
-                  markers: _markers,
-                  polygons: {
-                    Polygon(
-                      polygonId: const PolygonId('gubbio_municipal_boundary'),
-                      points: gubbioMunicipalBoundary,
-                      strokeWidth: 4,
-                      strokeColor: Colors.red,
-                      fillColor: Colors.red.withValues(alpha: 0.05),
-                      geodesic: true,
-                    ),
-                  },
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  mapType: MapType.normal,
-                  zoomControlsEnabled: false,
-                ),
-              ),
-            ),
-          ),
-          _buildSearchBar(l10n),
-          PlaceFilterBar(
+    return PlaceListView(
+      title: l10n.t(_tipo.navKey),
+      fallbackIcon: _tipo.icon,
+      ratingKind: RatingKind.stelle,
+      showRating: _tipo.hasRating,
+      compactCards: _tipo.isUsefulInfo,
+      headerAction: isAdmin
+          ? IconButton(
+              onPressed: _add,
+              tooltip: l10n.t('luogoAddTooltip'),
+              icon: const Icon(Icons.add_circle_outline,
+                  color: AppColors.rossoGubbio, size: 28),
+            )
+          : null,
+      markers: _markers,
+      onMapCreated: (c) => _mapController = c,
+      searchController: _searchController,
+      searchHint: l10n.t(_tipo.searchKey),
+      searchQuery: _searchQuery,
+      onSearchChanged: (value) {
+        setState(() => _searchQuery = value);
+        _applyFilters();
+      },
+      filterBar: PlaceFilterBar(
             ratingKind: RatingKind.stelle,
             showRating: _tipo.hasRating,
             state: _filters,
@@ -269,194 +236,31 @@ class _LuoghiPageState extends State<LuoghiPage> {
             resultCount: _filtered.length,
             onChanged: _applyFilters,
           ),
-          Expanded(
-            child: _filtered.isEmpty
-                ? _buildEmptyState(l10n)
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    itemCount: _filtered.length,
-                    itemBuilder: (context, index) =>
-                        _buildCard(_filtered[index], isAdmin),
-                  ),
+      locationAvailable: _currentLocation != null,
+      emptyState: _buildEmptyState(l10n),
+      items: [
+        for (final luogo in _filtered)
+          PlaceCardData(
+            id: luogo.id,
+            name: luogo.name,
+            description: luogo.description,
+            address: luogo.address,
+            coordinates: luogo.coordinates,
+            imageUrl: luogo.imageUrl,
+            phone: _tipo.hasContacts ? luogo.phoneNumber : null,
+            tags: _tipo.hasContacts ? luogo.tags : const [],
+            rating: luogo.rating,
+            favoriteKind:
+                ContentService.isRemoteId(luogo.id) ? _tipo.db : null,
+            onTap: () => _openDetail(luogo),
+            onEdit: isAdmin && ContentService.isRemoteId(luogo.id)
+                ? () => _edit(luogo)
+                : null,
+            onDelete: isAdmin && ContentService.isRemoteId(luogo.id)
+                ? () => _delete(luogo)
+                : null,
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar(AppLocalizations l10n) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          setState(() => _searchQuery = value);
-          _applyFilters();
-        },
-        decoration: InputDecoration(
-          hintText: l10n.t(_tipo.searchKey),
-          hintStyle: const TextStyle(color: AppColors.textMuted),
-          prefixIcon: const Icon(Icons.search, color: AppColors.rossoGubbio),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: AppColors.tortora),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                    _applyFilters();
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCard(LuogoModel luogo, bool isAdmin) {
-    final canEdit = isAdmin && ContentService.isRemoteId(luogo.id);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluNotte.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _openDetail(luogo),
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Immagine / icona
-              Container(
-                width: 84,
-                height: 84,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.tortora.withValues(alpha: 0.45),
-                      AppColors.avorio,
-                    ],
-                  ),
-                ),
-                child: luogo.imageUrl != null
-                    ? FullPhoto(
-                        url: luogo.imageUrl!,
-                        fallback: Icon(_tipo.icon,
-                            size: 38, color: AppColors.rossoGubbio),
-                      )
-                    : Icon(_tipo.icon, size: 38, color: AppColors.rossoGubbio),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            luogo.name,
-                            style: const TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.bluNotte,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (canEdit)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              EditIconButton(onPressed: () => _edit(luogo)),
-                              const SizedBox(width: 6),
-                              DeleteIconButton(
-                                  onPressed: () => _delete(luogo)),
-                            ],
-                          ),
-                      ],
-                    ),
-                    if (luogo.description.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        luogo.description,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          height: 1.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (luogo.address.trim().isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 1),
-                            child: Icon(Icons.place_outlined,
-                                size: 15, color: AppColors.tortora),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              luogo.address,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.bluNotte,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (_tipo.hasRating && luogo.rating != null) ...[
-                      const SizedBox(height: 8),
-                      RatingSummary(
-                          rating: luogo.rating!, kind: RatingKind.stelle),
-                    ],
-                    const SizedBox(height: 6),
-                    DistanceLabel(target: luogo.coordinates),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 

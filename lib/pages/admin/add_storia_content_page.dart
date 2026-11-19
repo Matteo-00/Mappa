@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/storia_model.dart';
@@ -205,12 +206,7 @@ class _AddStoriaContentPageState extends State<AddStoriaContentPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Errore: $e'),
-          backgroundColor: const Color(0xFFB71C1C),
-        ),
-      );
+      showErrorSnackBar(context, e);
     }
   }
 

@@ -21,11 +21,16 @@ class DistanceLabel extends StatefulWidget {
   /// Se true, anche quando la posizione è disponibile aggiunge "da te".
   final bool suffix;
 
+  /// false = senza posizione non mostra nulla (l'invito ad abilitarla è già
+  /// altrove, es. una volta sola in cima a una lista).
+  final bool showPrompt;
+
   const DistanceLabel({
     super.key,
     required this.target,
     this.fontSize = 12.5,
     this.suffix = false,
+    this.showPrompt = true,
   });
 
   @override
@@ -76,6 +81,7 @@ class _DistanceLabelState extends State<DistanceLabel> {
           );
         }
 
+        if (!widget.showPrompt) return const SizedBox.shrink();
         return InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: () => service.enable(context),

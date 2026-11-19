@@ -1,3 +1,4 @@
+import '../../utils/text_match.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/storia_model.dart';
@@ -51,10 +52,7 @@ class _StoriaPickerSheetState extends State<_StoriaPickerSheet> {
   List<StoriaContenuto> get _visible {
     final q = _query.trim().toLowerCase();
     final list = widget.all.where((c) {
-      if (q.isEmpty) return true;
-      return c.title.toLowerCase().contains(q) ||
-          c.displayDate.toLowerCase().contains(q) ||
-          c.category.toLowerCase().contains(q);
+      return textMatches(q, [c.title, c.displayDate, c.category]);
     }).toList();
     // Prima i già scelti, poi in ordine di timeline.
     list.sort((a, b) {
