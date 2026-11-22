@@ -62,6 +62,12 @@ class EventModel {
   /// Evento importato dal sito del Comune di Gubbio.
   bool get isFromComune => source == 'comune_gubbio';
 
+  /// Evento importato da iLike Gubbio, il portale turistico del Comune.
+  bool get isFromIlikeGubbio => source == 'ilikegubbio';
+
+  /// Evento importato da un sito esterno (Comune o iLike Gubbio).
+  bool get isImported => isFromComune || isFromIlikeGubbio;
+
   /// Crea un evento dai dati di Supabase
   factory EventModel.fromJson(Map<String, dynamic> json) {
     final start = DateTime.parse(json['data_inizio'] as String).toLocal();
@@ -112,7 +118,7 @@ class EventModel {
   /// Determina lo stato dell'evento in base all'orario attuale
   EventStatus getStatus() {
     final now = DateTime.now();
-    
+
     if (now.isAfter(endTime)) {
       return EventStatus.past;
     } else if (now.isAfter(startTime) && now.isBefore(endTime)) {

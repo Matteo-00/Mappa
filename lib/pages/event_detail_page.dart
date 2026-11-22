@@ -19,15 +19,13 @@ import '../services/content_service.dart';
 class EventDetailPage extends StatelessWidget {
   final EventModel event;
 
-  const EventDetailPage({
-    super.key,
-    required this.event,
-  });
+  const EventDetailPage({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(
-        context.watch<LanguageService>().currentLanguageCode);
+      context.watch<LanguageService>().currentLanguageCode,
+    );
     return Scaffold(
       backgroundColor: AppColors.avorio,
       body: Column(
@@ -50,7 +48,9 @@ class EventDetailPage extends StatelessWidget {
                       height: 220,
                       child: FullPhoto(
                         url: event.imageUrl!,
-                        fallback: const ColoredBox(color: AppColors.grigioChiaro),
+                        fallback: const ColoredBox(
+                          color: AppColors.grigioChiaro,
+                        ),
                       ),
                     ),
 
@@ -92,8 +92,8 @@ class EventDetailPage extends StatelessWidget {
                         _buildDescriptionSection(l10n),
                         const SizedBox(height: 24),
 
-                        // Fonte (eventi importati dal sito del Comune)
-                        if (event.isFromComune) ...[
+                        // Fonte (eventi importati dal Comune o da iLike Gubbio)
+                        if (event.isImported) ...[
                           _buildSourceSection(l10n),
                           const SizedBox(height: 24),
                         ],
@@ -134,7 +134,8 @@ class EventDetailPage extends StatelessWidget {
     String hm(DateTime d) =>
         '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     final sameDay = s.year == e.year && s.month == e.month && s.day == e.day;
-    final allDay = s.hour == 0 && s.minute == 0 && e.hour == 23 && e.minute == 59;
+    final allDay =
+        s.hour == 0 && s.minute == 0 && e.hour == 23 && e.minute == 59;
 
     final dateText = sameDay || !e.isAfter(s)
         ? longDate(s)
@@ -151,8 +152,11 @@ class EventDetailPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.event_rounded,
-              color: AppColors.rossoGubbio, size: 24),
+          const Icon(
+            Icons.event_rounded,
+            color: AppColors.rossoGubbio,
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -198,15 +202,20 @@ class EventDetailPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.newspaper_outlined,
-              color: AppColors.bluNotte, size: 24),
+          const Icon(
+            Icons.newspaper_outlined,
+            color: AppColors.bluNotte,
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.fmt('newsPublishedOn', {'date': '${d.day} $month ${d.year}'}),
+                  l10n.fmt('newsPublishedOn', {
+                    'date': '${d.day} $month ${d.year}',
+                  }),
                   style: const TextStyle(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w800,
@@ -242,8 +251,10 @@ class EventDetailPage extends StatelessWidget {
             foregroundColor: AppColors.rossoGubbio,
             side: const BorderSide(color: AppColors.rossoGubbio),
             padding: const EdgeInsets.symmetric(vertical: 12),
-            textStyle:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -255,8 +266,11 @@ class EventDetailPage extends StatelessWidget {
     return Row(
       children: [
         if (!event.isNews) ...[
-          button(Icons.edit_calendar_outlined, l10n.t('evAddCalendar'),
-              _addToCalendar),
+          button(
+            Icons.edit_calendar_outlined,
+            l10n.t('evAddCalendar'),
+            _addToCalendar,
+          ),
           const SizedBox(width: 10),
         ],
         button(Icons.share_outlined, l10n.t('evShare'), () => _share(l10n)),
@@ -329,9 +343,11 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  /// Fonte dell'evento con il link alla pagina originale del Comune.
+  /// Fonte dell'evento con il link alla pagina originale (sito del Comune o
+  /// pagina dell'evento su iLike Gubbio).
   Widget _buildSourceSection(AppLocalizations l10n) {
     final url = event.sourceUrl ?? event.website;
+    final ilike = event.isFromIlikeGubbio;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -344,11 +360,17 @@ class EventDetailPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_balance_outlined,
-                  size: 20, color: AppColors.bluNotte),
+              Icon(
+                ilike
+                    ? Icons.travel_explore_rounded
+                    : Icons.account_balance_outlined,
+                size: 20,
+                color: AppColors.bluNotte,
+              ),
               const SizedBox(width: 8),
               Text(
-                '${l10n.t('evSourceTitle')}: ${l10n.t('srcComune')}',
+                '${l10n.t('evSourceTitle')}: '
+                '${l10n.t(ilike ? 'srcIlike' : 'srcComune')}',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -359,17 +381,22 @@ class EventDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            l10n.t('evSourceText'),
+            l10n.t(ilike ? 'evSourceTextIlike' : 'evSourceText'),
             style: const TextStyle(
-                fontSize: 13.5, height: 1.45, color: AppColors.textMuted),
+              fontSize: 13.5,
+              height: 1.45,
+              color: AppColors.textMuted,
+            ),
           ),
           if (url != null && url.isNotEmpty) ...[
             const SizedBox(height: 10),
             OutlinedButton.icon(
-              onPressed: () => launchUrl(Uri.parse(url),
-                  mode: LaunchMode.externalApplication),
+              onPressed: () => launchUrl(
+                Uri.parse(url),
+                mode: LaunchMode.externalApplication,
+              ),
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
-              label: Text(l10n.t('evOpenSource')),
+              label: Text(l10n.t(ilike ? 'evOpenSourceIlike' : 'evOpenSource')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.rossoGubbio,
                 side: const BorderSide(color: AppColors.rossoGubbio),
@@ -498,8 +525,7 @@ class _DraftAdminBarState extends State<_DraftAdminBar> {
     try {
       await action();
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(done)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(done)));
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -533,12 +559,15 @@ class _DraftAdminBarState extends State<_DraftAdminBar> {
           Text(
             e.datesToVerify
                 ? 'Le date non erano scritte in modo chiaro: controllale (e '
-                    'correggile con la matita nella lista eventi) prima di '
-                    'pubblicare. Gli utenti non vedono questo evento.'
+                      'correggile con la matita nella lista eventi) prima di '
+                      'pubblicare. Gli utenti non vedono questo evento.'
                 : 'Controlla testo, date e foto. Gli utenti non vedono '
-                    'questo evento finché non lo pubblichi.',
+                      'questo evento finché non lo pubblichi.',
             style: const TextStyle(
-                fontSize: 13, height: 1.4, color: AppColors.bluNotte),
+              fontSize: 13,
+              height: 1.4,
+              color: AppColors.bluNotte,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -547,8 +576,10 @@ class _DraftAdminBarState extends State<_DraftAdminBar> {
                 child: OutlinedButton(
                   onPressed: _busy
                       ? null
-                      : () => _run(() => ContentService.deleteEvent(e.id),
-                          'Evento eliminato'),
+                      : () => _run(
+                          () => ContentService.deleteEvent(e.id),
+                          'Evento eliminato',
+                        ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFB71C1C),
                     side: const BorderSide(color: Color(0xFFB71C1C)),
@@ -561,8 +592,10 @@ class _DraftAdminBarState extends State<_DraftAdminBar> {
                 child: ElevatedButton(
                   onPressed: _busy
                       ? null
-                      : () => _run(() => ContentService.publishEvent(e.id),
-                          'Evento pubblicato'),
+                      : () => _run(
+                          () => ContentService.publishEvent(e.id),
+                          'Evento pubblicato',
+                        ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.rossoGubbio,
                     foregroundColor: Colors.white,
@@ -573,7 +606,9 @@ class _DraftAdminBarState extends State<_DraftAdminBar> {
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Pubblica'),
                 ),

@@ -13,6 +13,10 @@
 //   Con "pubblica_subito" attivo quelli con date sicure sono pubblicati
 //   subito; gli altri restano BOZZE che l'admin controlla e pubblica.
 // - Ogni evento indica la fonte e il link alla pagina originale del Comune.
+// - Importa anche gli eventi di iLike Gubbio (www.ilikegubbio.com/eventi/),
+//   il portale turistico del Comune: titolo, data, categorie, locandina e
+//   link alla pagina dell'evento (lì non c'è una descrizione da importare).
+//   Arrivano come BOZZE e alle 13:00 vengono pubblicati come quelli del Comune.
 //
 // Impostazioni nella tabella "import_eventi_stato" (riga id = 1):
 //   feed_url          indirizzo del feed; se vuoto lo cerca da sola
@@ -28,6 +32,9 @@ import { XMLParser } from "npm:fast-xml-parser@4.4.1";
 const SITE = "https://www.comune.gubbio.pg.it";
 const SOURCE = "comune_gubbio";
 const SOURCE_LABEL = "Comune di Gubbio";
+const ILG_SITE = "https://www.ilikegubbio.com";
+const ILG_SOURCE = "ilikegubbio";
+const ILG_LABEL = "iLike Gubbio";
 const USER_AGENT = "VisitGubbioApp/1.0 (+https://visitgubbio.eu)";
 const MAX_ITEMS = 100;
 
@@ -565,6 +572,52 @@ async function translateEvents(
 
 // ---------------------------------------------------------------- server
 
+// ------------------------------------------------ iLike Gubbio
+interface IlgEvent {
+  link: string;
+  title: string;
+  image: string;
+  categories: string[];
+  /** Giorno dell'evento (data di inizio indicata sul sito). */
+  day: { y: number; m: number; d: number };
+}
+
+/** Legge le schede della pagina "eventi" di iLike Gubbio. Ogni scheda ha:
+ *  link alla pagina dell'evento, locandina, categorie, titolo e data
+ *  (gg/mm/aaaa). */
+async function fetchIlikeGubbioEvents(): Promise<IlgEvent[]> {
+  const res = await fetch(`${ILG_SITE}/eventi/`, {
+    headers: {
+      "User-Agent": `Mozilla/5.0 (compatible; ${USER_AGENT})`,
+      "Accept": "text/html",
+    },
+  });
+  if (!res.ok) throw new Error(`iLike Gubbio: HTTP ${res.status}`);
+  const html = await res.text();
+  const out: IlgEvent[] = [];
+  const seen = new Set<string>();
+  const cardRe =
+    /<a href="(https:\/\/www\.ilikegubbio\.com\/evento-post\/[^"]+)"[^>]*>[\s\S]*?alt-event-card ([^"]*)"[\s\S]*?<img[^>]*src="([^"]+)"[\s\S]*?alt-event-title">\s*([^<]+)<[\s\S]*?alt-event-day">\s*([^<]+)</g;
+  for (const m of html.matchAll(cardRe)) {
+    const link = m[1].trim();
+    if (seen.has(link)) continue;
+    const date = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(m[5]);
+    if (!date) continue;
+    seen.add(link);
+    const categories = m[2].replace(/\.\.\./g, " ").split(/\s+/)
+      .map((c) => c.trim()).filter((c) => c && /^[a-zàèéìòù-]+$/i.test(c))
+      .map((c) => c[0].toUpperCase() + c.slice(1));
+    out.push({
+      link,
+      title: decodeEntities(m[4]).replace(/\s+/g, " ").trim(),
+      image: absoluteUrl(m[3].trim(), ILG_SITE),
+      categories,
+      day: { y: +date[3], m: +date[2], d: +date[1] },
+    });
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -602,7 +655,7 @@ Deno.serve(async (req) => {
     const out = { pubblicati: 0, errori: [] as string[] };
     const { data: drafts, error } = await db.from("eventi")
       .update({ stato: "pubblicato" })
-      .eq("stato", "bozza").eq("fonte", SOURCE).select("id");
+      .eq("stato", "bozza").in("fonte", [SOURCE, ILG_SOURCE]).select("id");
     if (error) {
       out.errori.push(error.message);
     } else {
@@ -642,6 +695,8 @@ Deno.serve(async (req) => {
     eventi: 0,
     notizie: 0,
     saltati: 0,
+    ilikegubbio_trovati: 0,
+    ilikegubbio_nuovi: 0,
     errori: [] as string[],
   };
 
@@ -801,10 +856,72 @@ Deno.serve(async (req) => {
     result.errori.push(String((e as Error)?.message ?? e));
   }
 
+  // ---------------------------------------------- iLike Gubbio
+  // A parte: se il sito del Comune non risponde, questi si importano lo
+  // stesso (e viceversa).
+  try {
+    const ilg = await fetchIlikeGubbioEvents();
+    result.ilikegubbio_trovati = ilg.length;
+    const links = ilg.map((e) => e.link);
+    const { data: existing } = links.length
+      ? await db.from("eventi").select("fonte_id").in("fonte_id", links)
+      : { data: [] };
+    const already = new Set((existing ?? []).map((r) => r.fonte_id));
+    const now = new Date();
+    const rows: Record<string, unknown>[] = [];
+    for (const e of ilg) {
+      if (already.has(e.link) || !e.title) continue;
+      const start = romeToUtcIso(e.day.y, e.day.m, e.day.d, 0, 0);
+      const end = romeToUtcIso(e.day.y, e.day.m, e.day.d, 23, 59);
+      // Sul sito c'è solo il giorno d'inizio: se è già passato l'evento è in
+      // corso (es. una mostra o una stagione teatrale) e la fine va
+      // controllata dall'admin.
+      const started = new Date(end).getTime() < now.getTime();
+      rows.push({
+        tipo: "evento",
+        titolo: e.title.slice(0, 200),
+        descrizione:
+          `${e.title}.\n\nProgramma, orari e dettagli sulla pagina dell'evento.\n\nFonte: ${ILG_LABEL}`,
+        luogo: "Gubbio",
+        image_url: withImages && e.image ? e.image : null,
+        sito_web: e.link,
+        data_inizio: start,
+        data_fine: end,
+        categoria: e.categories[0] || ILG_LABEL,
+        tags: e.categories.slice(0, 5),
+        stato: "bozza",
+        fonte: ILG_SOURCE,
+        fonte_id: e.link,
+        fonte_url: e.link,
+        date_da_verificare: started,
+      });
+    }
+    if (rows.length > 0) {
+      const { data: inserted, error } = await db.from("eventi")
+        .insert(rows).select("id, stato");
+      if (error) throw error;
+      result.ilikegubbio_nuovi = inserted?.length ?? 0;
+      result.nuovi += result.ilikegubbio_nuovi;
+      result.bozze += result.ilikegubbio_nuovi;
+      result.eventi += result.ilikegubbio_nuovi;
+      result.tradotti += await translateEvents(
+        supabaseUrl,
+        serviceRoleKey,
+        (inserted ?? []).map((ev) => ev.id as string),
+        result.errori,
+      );
+    }
+  } catch (e) {
+    result.errori.push(`iLike Gubbio: ${(e as Error)?.message ?? e}`);
+  }
+
   await db.from("import_eventi_stato").update({
     ultimo_avvio: new Date().toISOString(),
     ultimo_esito: result,
   }).eq("id", 1);
 
-  return jsonResponse(result, result.feed ? 200 : 502);
+  return jsonResponse(
+    result,
+    result.feed || result.ilikegubbio_trovati > 0 ? 200 : 502,
+  );
 });
