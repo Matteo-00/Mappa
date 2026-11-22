@@ -79,5 +79,13 @@
 		<string>L'app ha bisogno della tua posizione per mostrarti la distanza dagli eventi e fornirti indicazioni durante la Festa dei Ceri.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
-	</dict>
+		<!-- Siti web, telefono ed email aperti dall'app (url_launcher) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tel</string>
+		<string>mailto</string>
+	</array>
+</dict>
 </plist>

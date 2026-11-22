@@ -58,6 +58,12 @@ class HomeVideoBackground extends StatefulWidget {
   /// (0-1): a video finito il palazzo viene inquadrato qui dentro.
   final double visibleFraction;
 
+  /// Parte dello schermo (0-1), dal basso, coperta ADESSO dal pannello. Il
+  /// video sale della metà di questa parte: sopra il pannello si vede il
+  /// centro della scena. Segue il pannello, così quando lo si abbassa il
+  /// video torna giù e non resta scoperto niente sotto.
+  final double coveredFraction;
+
   const HomeVideoBackground({
     super.key,
     required this.muted,
@@ -65,6 +71,7 @@ class HomeVideoBackground extends StatefulWidget {
     this.finished,
     this.replay,
     this.visibleFraction = 1,
+    this.coveredFraction = 0,
   });
 
   @override
@@ -166,7 +173,7 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
     if (_ended) return;
     final appActive =
         WidgetsBinding.instance.lifecycleState == null ||
-            WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     if (_pageVisible && appActive) {
       c.play();
     } else {
@@ -263,8 +270,10 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
     // pannello: così sopra il pannello si vede il CENTRO di ogni scena (dove
     // sta il soggetto) e non solo la parte alta. Segue il pannello quando lo
     // si trascina. Sotto, una copia a tutto schermo riempie lo spazio dietro
-    // al pannello (che è di vetro sfocato), così non si vede mai il nero.
-    final covered = h * (1 - widget.visibleFraction);
+    // al pannello (che è di vetro sfocato), così non si vede mai il nero: resta
+    // sempre sotto il pannello perché il video sale solo di metà della parte
+    // coperta.
+    final covered = h * widget.coveredFraction.clamp(0.0, 1.0);
     final startTop = coverTop - covered / 2;
 
     // Fine: il palazzo deve stare interamente nell'area visibile.

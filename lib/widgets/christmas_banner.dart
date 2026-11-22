@@ -18,10 +18,10 @@ class ChristmasBanner extends StatefulWidget {
 
   const ChristmasBanner({super.key});
 
-  /// Periodo in cui mostrare il banner: dal 1° novembre al 6 gennaio.
+  /// Periodo in cui mostrare il banner: dal 1° novembre al 15 gennaio.
   static bool isSeason([DateTime? now]) {
     final d = now ?? DateTime.now();
-    return d.month == 11 || d.month == 12 || (d.month == 1 && d.day <= 6);
+    return d.month == 11 || d.month == 12 || (d.month == 1 && d.day <= 15);
   }
 
   @override
@@ -46,10 +46,21 @@ class _ChristmasBannerState extends State<ChristmasBanner>
     super.dispose();
   }
 
+  /// Apre gubbionatale.it nel browser. Non si controlla prima se "si può
+  /// aprire" (su Android 11+ quel controllo può dire di no anche quando il
+  /// browser c'è): si prova direttamente, e in caso di errore si riprova con
+  /// la modalità predefinita del sistema.
   Future<void> _open() async {
     final uri = Uri.parse(ChristmasBanner.url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) await launchUrl(uri);
+    } catch (_) {
+      try {
+        await launchUrl(uri);
+      } catch (e) {
+        debugPrint('ChristmasBanner: impossibile aprire il sito ($e)');
+      }
     }
   }
 
@@ -67,7 +78,6 @@ class _ChristmasBannerState extends State<ChristmasBanner>
           onTap: _open,
           borderRadius: BorderRadius.circular(22),
           child: Ink(
-            height: 160,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               gradient: const LinearGradient(
@@ -97,74 +107,79 @@ class _ChristmasBannerState extends State<ChristmasBanner>
                     ),
                   ),
                   // Testo a sinistra
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 124, 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l.t('xmasOver'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.8,
-                            color: _gold,
+                  ConstrainedBox(
+                    // Altezza minima; se il testo è più grande (caratteri del
+                    // telefono ingranditi) il banner cresce invece di tagliarsi.
+                    constraints: const BoxConstraints(minHeight: 160),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 124, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l.t('xmasOver'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.8,
+                              color: _gold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l.t('xmasTitle'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'serif',
-                            fontSize: 20,
-                            height: 1.1,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                          const SizedBox(height: 4),
+                          Text(
+                            l.t('xmasTitle'),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'serif',
+                              fontSize: 20,
+                              height: 1.1,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          l.t('xmasSub'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.25,
-                            color: Colors.white.withValues(alpha: 0.78),
+                          const SizedBox(height: 3),
+                          Text(
+                            l.t('xmasSub'),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.25,
+                              color: Colors.white.withValues(alpha: 0.78),
+                            ),
                           ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(12, 5, 8, 5),
-                          decoration: BoxDecoration(
-                            color: _gold,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                l.t('xmasCta'),
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(12, 5, 8, 5),
+                            decoration: BoxDecoration(
+                              color: _gold,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  l.t('xmasCta'),
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: _greenDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 15,
                                   color: _greenDark,
                                 ),
-                              ),
-                              const SizedBox(width: 3),
-                              const Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 15,
-                                color: _greenDark,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],

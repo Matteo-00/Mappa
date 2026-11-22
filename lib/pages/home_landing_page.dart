@@ -77,8 +77,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   /// Solo admin: recensioni segnalate ancora da controllare (numero rosso).
   int _reportedCount = 0;
 
-  /// Audio del video di sfondo: parte muto, il pulsante lo attiva.
-  final ValueNotifier<bool> _videoMuted = ValueNotifier<bool>(true);
+  /// Audio del video di sfondo (la musica): parte attivo, il pulsante lo
+  /// toglie e lo rimette.
+  final ValueNotifier<bool> _videoMuted = ValueNotifier<bool>(false);
 
   /// Il video va una volta sola: a fine corsa [_videoFinished] diventa true e
   /// compare il pulsante "play"; premendolo [_videoReplay] fa ripartire il video.
@@ -135,10 +136,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     final all = await ContentService.fetchEvents(languageCode: languageCode);
     final now = DateTime.now();
-    final next = all
-        .where((e) => !e.isDraft && !e.isNews && !e.endTime.isBefore(now))
-        .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final next =
+        all
+            .where((e) => !e.isDraft && !e.isNews && !e.endTime.isBefore(now))
+            .toList()
+          ..sort((a, b) => a.startTime.compareTo(b.startTime));
     if (!mounted) return;
     setState(() => _prossimiEventi = next.take(6).toList());
   }
@@ -161,8 +163,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   Future<void> _loadItinerari() async {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     // Vetrina: i 3 itinerari scelti dall'admin (o i primi 3 se non ne ha scelti).
-    final items =
-        await ContentService.fetchItinerariVetrina(languageCode: languageCode);
+    final items = await ContentService.fetchItinerariVetrina(
+      languageCode: languageCode,
+    );
     if (!mounted) return;
     setState(() => _itinerariConsigliati = items);
   }
@@ -184,29 +187,29 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   }
 
   void _openRestaurants() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const RestaurantsPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const RestaurantsPage()),
+  );
 
   void _openBars() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const BarsPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const BarsPage()),
+  );
 
   void _openHotels() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const HotelsPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const HotelsPage()),
+  );
 
   void _openMap() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const MapPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const MapPage()),
+  );
 
   void _openStoria() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const StoriaPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const StoriaPage()),
+  );
 
   /// Solo admin: sceglie quali itinerari mostrare in vetrina.
   Future<void> _chooseVetrina() async {
@@ -218,19 +221,19 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   }
 
   void _openSearch() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const SearchPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const SearchPage()),
+  );
 
   void _openItinerari() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ItinerariPage()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const ItinerariPage()),
+  );
 
   void _openItinerario(ItinerarioModel it) => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ItinerarioDetailPage(itinerario: it)),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => ItinerarioDetailPage(itinerario: it)),
+  );
 
   /// Menu amministratore: aggiungi contenuti.
   void _showAdminMenu() {
@@ -247,16 +250,17 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               backgroundColor: AppColors.rossoGubbio.withValues(alpha: 0.12),
               child: Icon(icon, color: AppColors.rossoGubbio),
             ),
-            title: Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: AppColors.bluNotte)),
+            title: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.bluNotte,
+              ),
+            ),
             trailing: const Icon(Icons.chevron_right, color: AppColors.tortora),
             onTap: () {
               Navigator.pop(sheetContext);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => page),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => page));
             },
           );
         }
@@ -265,46 +269,57 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
         return SafeArea(
           child: SingleChildScrollView(
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.grigioChiaro,
-                  borderRadius: BorderRadius.circular(4),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.grigioChiaro,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _l10n.addContentTitle,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.bluNotte,
-                      letterSpacing: 0.8,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _l10n.addContentTitle,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.bluNotte,
+                        letterSpacing: 0.8,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              tile(Icons.restaurant_menu, _l10n.addRestaurantMenuItem,
-                  const AddPlacePage(isBar: false)),
-              tile(Icons.local_cafe_outlined, _l10n.addBarMenuItem,
-                  const AddPlacePage(isBar: true)),
-              tile(Icons.hotel_outlined, _l10n.addHotelMenuItem,
-                  const AddPlacePage(isBar: false, isHotel: true)),
-              for (final t in LuogoTipo.values)
-                tile(t.icon, _l10n.t('add_${t.name}'),
-                    AddLuogoPage(tipo: t)),
-              tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
-              tile(Icons.route, _l10n.addItinerarioMenuItem,
-                  const AddItinerarioPage()),
-              const SizedBox(height: 12),
-            ],
-          ),
+                tile(
+                  Icons.restaurant_menu,
+                  _l10n.addRestaurantMenuItem,
+                  const AddPlacePage(isBar: false),
+                ),
+                tile(
+                  Icons.local_cafe_outlined,
+                  _l10n.addBarMenuItem,
+                  const AddPlacePage(isBar: true),
+                ),
+                tile(
+                  Icons.hotel_outlined,
+                  _l10n.addHotelMenuItem,
+                  const AddPlacePage(isBar: false, isHotel: true),
+                ),
+                for (final t in LuogoTipo.values)
+                  tile(t.icon, _l10n.t('add_${t.name}'), AddLuogoPage(tipo: t)),
+                tile(Icons.event, _l10n.addEventMenuItem, const AddEventPage()),
+                tile(
+                  Icons.route,
+                  _l10n.addItinerarioMenuItem,
+                  const AddItinerarioPage(),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         );
       },
@@ -314,21 +329,23 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     _l10n = AppLocalizations.of(
-        context.watch<LanguageService>().currentLanguageCode);
+      context.watch<LanguageService>().currentLanguageCode,
+    );
     final size = MediaQuery.of(context).size;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     // Posizioni del pannello: chiuso (solo il titolo), metà, aperto.
     // Posizioni del pannello: chiuso (solo la ricerca), metà (ricerca, schede
     // e i 3 itinerari della vetrina), aperto.
-    final minExtent =
-        ((_panelClosedPx + bottomInset) / size.height).clamp(0.08, 0.3);
+    final minExtent = ((_panelClosedPx + bottomInset) / size.height).clamp(
+      0.08,
+      0.3,
+    );
     // Di base il pannello mostra ricerca, schede, i 3 itinerari e il pulsante
     // "Tutti gli itinerari" (circa 1/3-0,4 dello schermo).
     // Uguale per tutti (anche per gli admin): la riga "Scegli gli itinerari in
     // vetrina" si vede tirando su il pannello.
-    final midExtent =
-        ((_midPxFor(_panelTab.value) + bottomInset) / size.height)
-            .clamp(minExtent + 0.1, 0.72);
+    final midExtent = ((_midPxFor(_panelTab.value) + bottomInset) / size.height)
+        .clamp(minExtent + 0.1, 0.72);
     const maxExtent = 0.88;
     _minE = minExtent;
     _maxE = maxExtent;
@@ -398,7 +415,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const UserProfilePage()),
+                                builder: (_) => const UserProfilePage(),
+                              ),
                             ),
                           ),
                         ],
@@ -428,6 +446,24 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
               child: IgnorePointer(
                 ignoring: _sheetExtent > 0.75,
                 child: _buildSoundButton(),
+              ),
+            ),
+          ),
+
+          // A video finito: grande "play" al centro della parte di video
+          // visibile sopra il pannello, per rivederlo dall'inizio.
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: _sheetExtent * size.height,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _videoFinished,
+              builder: (context, finished, _) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: finished && _sheetExtent <= 0.75
+                    ? Center(child: _buildBigPlayButton())
+                    : const SizedBox.shrink(),
               ),
             ),
           ),
@@ -467,6 +503,8 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           // Il video non si muove quando si tira il pannello: l'inquadratura
           // è sempre quella con il pannello nella posizione di base.
           visibleFraction: 1 - midExtent,
+          // Il video sale con il pannello fino alla posizione di base.
+          coveredFraction: _sheetExtent < midExtent ? _sheetExtent : midExtent,
           fallback: Image.asset(
             'assets/geo/hero.jpg',
             fit: BoxFit.cover,
@@ -507,7 +545,11 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             fontWeight: FontWeight.w500,
             letterSpacing: 5,
             shadows: const [
-              Shadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 2)),
+              Shadow(
+                color: Colors.black45,
+                blurRadius: 10,
+                offset: Offset(0, 2),
+              ),
             ],
           ),
         ),
@@ -521,11 +563,45 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             height: 1.0,
             letterSpacing: 1,
             shadows: [
-              Shadow(color: Colors.black54, blurRadius: 16, offset: Offset(0, 2)),
+              Shadow(
+                color: Colors.black54,
+                blurRadius: 16,
+                offset: Offset(0, 2),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  /// Pulsante grande per rivedere il video quando è finito.
+  Widget _buildBigPlayButton() {
+    return Semantics(
+      button: true,
+      label: _l10n.t('homeReplayVideo'),
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.32),
+        shape: CircleBorder(
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.75),
+            width: 2,
+          ),
+        ),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => _videoReplay.value++,
+          child: const SizedBox(
+            width: 84,
+            height: 84,
+            child: Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 54,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -540,19 +616,6 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
             icon: muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
             onTap: () => _videoMuted.value = !muted,
           ),
-        ),
-        // A video finito: "play" per rivederlo.
-        ValueListenableBuilder<bool>(
-          valueListenable: _videoFinished,
-          builder: (context, finished, _) => finished
-              ? Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: _glassIconButton(
-                    icon: Icons.play_arrow_rounded,
-                    onTap: () => _videoReplay.value++,
-                  ),
-                )
-              : const SizedBox.shrink(),
         ),
       ],
     );
@@ -578,20 +641,44 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
         (t.icon, _l10n.t(t.navKey), t.color, () => _openLuoghi(t));
     return <(IconData, String, Color, VoidCallback)>[
       (Icons.map_outlined, _l10n.mapNav, const Color(0xFF2E7D6B), _openMap),
-      (Icons.calendar_month_outlined, _l10n.events, AppColors.rossoGubbio,
-          _openEvents),
-      (Icons.auto_stories_outlined, _l10n.storiaShortLabel,
-          const Color(0xFF8D6E63), _openStoria),
-      (Icons.route_outlined, _l10n.t('mapItinerari'), const Color(0xFF3F51B5),
-          _openItinerari),
+      (
+        Icons.calendar_month_outlined,
+        _l10n.events,
+        AppColors.rossoGubbio,
+        _openEvents,
+      ),
+      (
+        Icons.auto_stories_outlined,
+        _l10n.storiaShortLabel,
+        const Color(0xFF8D6E63),
+        _openStoria,
+      ),
+      (
+        Icons.route_outlined,
+        _l10n.t('mapItinerari'),
+        const Color(0xFF3F51B5),
+        _openItinerari,
+      ),
       luogo(LuogoTipo.chiesa),
       luogo(LuogoTipo.museo),
-      (Icons.restaurant_menu, _l10n.restaurantsNav, const Color(0xFFD84315),
-          _openRestaurants),
-      (Icons.local_cafe_outlined, _l10n.barsNav, const Color(0xFF6D4C41),
-          _openBars),
-      (Icons.hotel_outlined, _l10n.hotelsNav, const Color(0xFF00838F),
-          _openHotels),
+      (
+        Icons.restaurant_menu,
+        _l10n.restaurantsNav,
+        const Color(0xFFD84315),
+        _openRestaurants,
+      ),
+      (
+        Icons.local_cafe_outlined,
+        _l10n.barsNav,
+        const Color(0xFF6D4C41),
+        _openBars,
+      ),
+      (
+        Icons.hotel_outlined,
+        _l10n.hotelsNav,
+        const Color(0xFF00838F),
+        _openHotels,
+      ),
       luogo(LuogoTipo.agriturismo),
       luogo(LuogoTipo.negozio),
       luogo(LuogoTipo.sport),
@@ -602,9 +689,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
   }
 
   void _openLuoghi(LuogoTipo tipo) => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => LuoghiPage(tipo: tipo)),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => LuoghiPage(tipo: tipo)),
+  );
 
   /// Pallino rosso con il numero in alto a destra (nascosto se 0).
   Widget _withBadge(Widget child, int count) {
@@ -643,8 +730,10 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     );
   }
 
-  Widget _glassIconButton(
-      {required IconData icon, required VoidCallback onTap}) {
+  Widget _glassIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Material(
       color: Colors.black.withValues(alpha: 0.22),
       shape: const CircleBorder(),
