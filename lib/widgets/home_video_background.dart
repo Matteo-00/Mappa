@@ -135,9 +135,11 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
     if (v.duration > Duration.zero &&
         !v.isPlaying &&
         v.position >= v.duration - const Duration(milliseconds: 150)) {
-      _ended = true;
+      if (!mounted) return;
+      setState(() => _ended = true);
       widget.finished?.value = true;
-      _fitController.forward();
+      // L'immagine resta a tutto schermo: niente rimpicciolimento, così non si
+      // vede mai lo sfondo dietro.
     }
   }
 
@@ -145,7 +147,7 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
   Future<void> _replay() async {
     final c = _controller;
     if (c == null || !_ready) return;
-    _ended = false;
+    setState(() => _ended = false);
     widget.finished?.value = false;
     _fitController.reverse();
     await c.seekTo(Duration.zero);
