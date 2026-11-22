@@ -31,7 +31,7 @@ enum EventFilter {
 }
 
 /// Da dove arriva un evento (filtro "fonte").
-enum EventSource { comune, visitGubbio }
+enum EventSource { comune, ilikeGubbio, visitGubbio }
 
 /// Pagina lista eventi: ricerca, filtro temporale, filtro per categoria e
 /// luogo, eventi raggruppati per mese in schede compatte.
@@ -52,8 +52,8 @@ class EventsListPage extends StatefulWidget {
 }
 
 class _EventsListPageState extends State<EventsListPage> with RouteAware {
-  AppLocalizations get _l => AppLocalizations.of(
-      context.read<LanguageService>().currentLanguageCode);
+  AppLocalizations get _l =>
+      AppLocalizations.of(context.read<LanguageService>().currentLanguageCode);
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -92,7 +92,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     final route = ModalRoute.of(context);
     if (route is PageRoute) appRouteObserver.subscribe(this, route);
     // Si ricarica anche quando si torna online (modalità offline).
-    final languageCode = context.watch<LanguageService>().currentLanguageCode +
+    final languageCode =
+        context.watch<LanguageService>().currentLanguageCode +
         context.watch<OfflineModeService>().reloadKey;
     if (_loadedLanguageCode != null && _loadedLanguageCode != languageCode) {
       _loadEvents();
@@ -115,8 +116,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     final languageCode = context.read<LanguageService>().currentLanguageCode;
     _loadedLanguageCode = languageCode + OfflineModeService.instance.reloadKey;
     final events = await ContentService.fetchEvents(languageCode: languageCode);
-    final lastImport =
-        _isAdmin ? await ContentService.lastEventsImport() : null;
+    final lastImport = _isAdmin
+        ? await ContentService.lastEventsImport()
+        : null;
     // La crescia resta almeno un secondo, così non "lampeggia".
     if (_loading) await LoadingScreen.waitMinimum(loadingStart);
     if (!mounted) return;
@@ -132,7 +134,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       _lastImport = lastImport;
       _loading = false;
       if (!_allEvents.any((e) => e.isDraft)) _onlyDrafts = false;
-      if (_selectedCategory != null && !_categories.contains(_selectedCategory)) {
+      if (_selectedCategory != null &&
+          !_categories.contains(_selectedCategory)) {
         _selectedCategory = null;
       }
       if (_selectedPlace != null && !_places.contains(_selectedPlace)) {
@@ -154,10 +157,27 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
   List<String> get _categories => _distinct((e) => e.category);
   List<String> get _places => _distinct((e) => e.location);
 
-  /// Fonti presenti negli eventi (il filtro compare solo se sono due).
-  bool get _hasBothSources =>
-      _allEvents.any((e) => e.isFromComune) &&
-      _allEvents.any((e) => !e.isFromComune);
+  /// Fonte di un evento.
+  static EventSource _sourceOf(EventModel e) => e.isFromComune
+      ? EventSource.comune
+      : e.isFromIlikeGubbio
+      ? EventSource.ilikeGubbio
+      : EventSource.visitGubbio;
+
+  /// Fonti presenti negli eventi, nell'ordine del filtro.
+  List<EventSource> get _sources {
+    final present = _allEvents.map(_sourceOf).toSet();
+    return EventSource.values.where(present.contains).toList();
+  }
+
+  /// Il filtro per fonte compare solo se ce ne sono almeno due.
+  bool get _hasBothSources => _sources.length > 1;
+
+  static String _sourceKey(EventSource s) => switch (s) {
+    EventSource.comune => 'srcComune',
+    EventSource.ilikeGubbio => 'srcIlike',
+    EventSource.visitGubbio => 'srcVisit',
+  };
 
   int get _draftCount => _allEvents.where((e) => e.isDraft).length;
 
@@ -185,13 +205,11 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
     final filtered = _allEvents.where((event) {
       if (_onlyDrafts && !event.isDraft) return false;
-      if (_selectedSource == EventSource.comune && !event.isFromComune) {
+      if (_selectedSource != null && _sourceOf(event) != _selectedSource) {
         return false;
       }
-      if (_selectedSource == EventSource.visitGubbio && event.isFromComune) {
-        return false;
-      }
-      if (_selectedCategory != null && event.category.trim() != _selectedCategory) {
+      if (_selectedCategory != null &&
+          event.category.trim() != _selectedCategory) {
         return false;
       }
       if (_selectedPlace != null && event.location.trim() != _selectedPlace) {
@@ -274,7 +292,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     // Finché i dati non arrivano: schermata di caricamento a pagina intera.
     if (_loading) return LoadingScreen(onRetry: _loadEvents);
     final l10n = AppLocalizations.of(
-        context.watch<LanguageService>().currentLanguageCode);
+      context.watch<LanguageService>().currentLanguageCode,
+    );
     final events = _filteredEvents;
     final rows = _buildRows(events);
     final showXmas = ChristmasBanner.isSeason();
@@ -295,73 +314,80 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             },
           ),
           if (context.watch<AuthService>().isAdmin) _buildAdminImportBar(),
-          if (_showNews) ..._buildNewsBody(l10n) else ...[
-          _buildTimeChips(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 12, 2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _l.count('eventsCount', events.length),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
+          if (_showNews)
+            ..._buildNewsBody(l10n)
+          else ...[
+            _buildTimeChips(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 12, 2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _l.count('eventsCount', events.length),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
-                ),
-                if (_hasExtraFilters || _hasBothSources)
-                  _buildFiltersButton(),
-                if (_hasActiveFilters)
-                  TextButton(
-                    onPressed: _resetFilters,
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.rossoGubbio,
-                      visualDensity: VisualDensity.compact,
+                  if (_hasExtraFilters || _hasBothSources)
+                    _buildFiltersButton(),
+                  if (_hasActiveFilters)
+                    TextButton(
+                      onPressed: _resetFilters,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.rossoGubbio,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text(
+                        _l.t('fltReset'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
-                    child: Text(_l.t('fltReset'),
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-                    color: AppColors.rossoGubbio,
-                    onRefresh: _loadEvents,
-                    child: events.isEmpty && !showXmas
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-                            itemCount: rows.length +
-                                (showXmas ? 1 : 0) +
-                                (events.isEmpty ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              // In cima, nel periodo natalizio: il banner di
-                              // Gubbio a Natale (scorre via con la lista).
-                              if (showXmas && index == 0) {
-                                return const Padding(
-                                  padding: EdgeInsets.fromLTRB(0, 6, 0, 8),
-                                  child: ChristmasBanner(),
-                                );
-                              }
-                              final i = index - (showXmas ? 1 : 0);
-                              if (events.isEmpty) {
-                                return SizedBox(
-                                    height: 340, child: _buildEmptyState());
-                              }
-                              final row = rows[i];
-                              if (row is String) return _buildGroupHeader(row);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _buildEventCard(row as EventModel),
-                              );
-                            },
-                          ),
-                  ),
-          ),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.rossoGubbio,
+                onRefresh: _loadEvents,
+                child: events.isEmpty && !showXmas
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                        itemCount:
+                            rows.length +
+                            (showXmas ? 1 : 0) +
+                            (events.isEmpty ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // In cima, nel periodo natalizio: il banner di
+                          // Gubbio a Natale (scorre via con la lista).
+                          if (showXmas && index == 0) {
+                            return const Padding(
+                              padding: EdgeInsets.fromLTRB(0, 6, 0, 8),
+                              child: ChristmasBanner(),
+                            );
+                          }
+                          final i = index - (showXmas ? 1 : 0);
+                          if (events.isEmpty) {
+                            return SizedBox(
+                              height: 340,
+                              child: _buildEmptyState(),
+                            );
+                          }
+                          final row = rows[i];
+                          if (row is String) return _buildGroupHeader(row);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _buildEventCard(row as EventModel),
+                          );
+                        },
+                      ),
+              ),
+            ),
           ],
         ],
       ),
@@ -386,9 +412,11 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon,
-                    size: 18,
-                    color: selected ? Colors.white : AppColors.bluNotte),
+                Icon(
+                  icon,
+                  size: 18,
+                  color: selected ? Colors.white : AppColors.bluNotte,
+                ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
@@ -421,8 +449,12 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
         child: Row(
           children: [
             tab(false, Icons.event_outlined, l10n.t('eventsTab'), 0),
-            tab(true, Icons.newspaper_outlined, l10n.t('newsTab'),
-                _allNews.length),
+            tab(
+              true,
+              Icons.newspaper_outlined,
+              l10n.t('newsTab'),
+              _allNews.length,
+            ),
           ],
         ),
       ),
@@ -444,9 +476,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     final news = _filteredNews;
     final categories = <String>{
       for (final n in _allNews)
-        if (n.category.trim().isNotEmpty) n.category.trim()
-    }.toList()
-      ..sort();
+        if (n.category.trim().isNotEmpty) n.category.trim(),
+    }.toList()..sort();
     final months = l10n.list('monthsFull');
     final rows = <Object>[];
     String? lastGroup;
@@ -476,7 +507,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                 label: c,
                 selected: _newsCategory == c,
                 onTap: () => setState(
-                    () => _newsCategory = _newsCategory == c ? null : c),
+                  () => _newsCategory = _newsCategory == c ? null : c,
+                ),
               ),
             ],
           ],
@@ -504,15 +536,19 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(32, 60, 32, 32),
                   children: [
-                    Icon(Icons.newspaper_outlined,
-                        size: 64,
-                        color: AppColors.tortora.withValues(alpha: 0.6)),
+                    Icon(
+                      Icons.newspaper_outlined,
+                      size: 64,
+                      color: AppColors.tortora.withValues(alpha: 0.6),
+                    ),
                     const SizedBox(height: 14),
                     Text(
                       l10n.t('newsEmpty'),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          fontSize: 15, color: AppColors.textMuted),
+                        fontSize: 15,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 )
@@ -536,8 +572,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   Widget _buildNewsCard(EventModel n, AppLocalizations l10n) {
     final d = n.startTime;
-    final date =
-        '${d.day} ${l10n.list('monthsShort')[d.month - 1]} ${d.year}';
+    final date = '${d.day} ${l10n.list('monthsShort')[d.month - 1]} ${d.year}';
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
@@ -559,14 +594,18 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                           url: n.imageUrl!,
                           fallback: const ColoredBox(
                             color: AppColors.grigioChiaro,
-                            child: Icon(Icons.newspaper_outlined,
-                                color: AppColors.tortora),
+                            child: Icon(
+                              Icons.newspaper_outlined,
+                              color: AppColors.tortora,
+                            ),
                           ),
                         )
                       : const ColoredBox(
                           color: AppColors.grigioChiaro,
-                          child: Icon(Icons.newspaper_outlined,
-                              color: AppColors.tortora),
+                          child: Icon(
+                            Icons.newspaper_outlined,
+                            color: AppColors.tortora,
+                          ),
                         ),
                 ),
               ),
@@ -602,8 +641,11 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                       runSpacing: 4,
                       children: [
                         if (n.isDraft)
-                          _pill(_l.t('evDraft'), const Color(0xFFE65100),
-                              strong: true),
+                          _pill(
+                            _l.t('evDraft'),
+                            const Color(0xFFE65100),
+                            strong: true,
+                          ),
                         if (n.category.trim().isNotEmpty)
                           _pill(n.category, AppColors.verdeSalvia),
                       ],
@@ -633,15 +675,15 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       height: 46,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
       children: [
-          for (final entry in labels.entries) ...[
-            AppFilterChip(
-              label: entry.value,
-              selected: _currentFilter == entry.key,
-              icon: entry.key == EventFilter.all ? Icons.event_available : null,
-              onTap: () => setState(() => _currentFilter = entry.key),
-            ),
-            const SizedBox(width: 8),
-          ],
+        for (final entry in labels.entries) ...[
+          AppFilterChip(
+            label: entry.value,
+            selected: _currentFilter == entry.key,
+            icon: entry.key == EventFilter.all ? Icons.event_available : null,
+            onTap: () => setState(() => _currentFilter = entry.key),
+          ),
+          const SizedBox(width: 8),
+        ],
       ],
     );
   }
@@ -666,13 +708,17 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             color: n > 0 ? AppColors.rossoGubbio : Colors.white,
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-                color: n > 0 ? AppColors.rossoGubbio : AppColors.grigioChiaro),
+              color: n > 0 ? AppColors.rossoGubbio : AppColors.grigioChiaro,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.tune_rounded,
-                  size: 16, color: n > 0 ? Colors.white : AppColors.bluNotte),
+              Icon(
+                Icons.tune_rounded,
+                size: 16,
+                color: n > 0 ? Colors.white : AppColors.bluNotte,
+              ),
               const SizedBox(width: 6),
               Text(
                 n > 0 ? '${_l.t('fltFilters')} ($n)' : _l.t('fltFilters'),
@@ -705,46 +751,52 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
           }
 
           Widget section(String title, List<Widget> chips) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(title,
-                          style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textMuted)),
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textMuted,
                     ),
-                    Wrap(spacing: 8, runSpacing: 8, children: chips),
-                  ],
-                ),
-              );
-
-          List<Widget> stringChips(List<String> values, String? selected,
-                  String allLabel, void Function(String?) onChanged) =>
-              [
-                AppFilterChip(
-                  label: allLabel,
-                  selected: selected == null,
-                  compact: true,
-                  onTap: () => change(() => onChanged(null)),
-                ),
-                for (final v in values)
-                  AppFilterChip(
-                    label: v,
-                    selected: selected == v,
-                    compact: true,
-                    onTap: () =>
-                        change(() => onChanged(selected == v ? null : v)),
                   ),
-              ];
+                ),
+                Wrap(spacing: 8, runSpacing: 8, children: chips),
+              ],
+            ),
+          );
+
+          List<Widget> stringChips(
+            List<String> values,
+            String? selected,
+            String allLabel,
+            void Function(String?) onChanged,
+          ) => [
+            AppFilterChip(
+              label: allLabel,
+              selected: selected == null,
+              compact: true,
+              onTap: () => change(() => onChanged(null)),
+            ),
+            for (final v in values)
+              AppFilterChip(
+                label: v,
+                selected: selected == v,
+                compact: true,
+                onTap: () => change(() => onChanged(selected == v ? null : v)),
+              ),
+          ];
 
           return SafeArea(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.8),
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
                 child: Column(
@@ -754,9 +806,13 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(_l.t('fltFilters'),
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w800)),
+                          child: Text(
+                            _l.t('fltFilters'),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                         if (_extraFiltersCount > 0)
                           TextButton(
@@ -782,29 +838,37 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                           compact: true,
                           onTap: () => change(() => _selectedSource = null),
                         ),
-                        for (final src in EventSource.values)
+                        for (final src in _sources)
                           AppFilterChip(
-                            label: _l.t(src == EventSource.comune
-                                ? 'srcComune'
-                                : 'srcVisit'),
+                            label: _l.t(_sourceKey(src)),
                             selected: _selectedSource == src,
                             compact: true,
-                            onTap: () => change(() => _selectedSource =
-                                _selectedSource == src ? null : src),
+                            onTap: () => change(
+                              () => _selectedSource = _selectedSource == src
+                                  ? null
+                                  : src,
+                            ),
                           ),
                       ]),
                     if (_categories.length > 1)
                       section(
                         _l.t('fltAllCategories'),
-                        stringChips(_categories, _selectedCategory,
-                            _l.t('fltAllCategories'),
-                            (v) => _selectedCategory = v),
+                        stringChips(
+                          _categories,
+                          _selectedCategory,
+                          _l.t('fltAllCategories'),
+                          (v) => _selectedCategory = v,
+                        ),
                       ),
                     if (_places.length > 1)
                       section(
                         _l.t('fltAllPlaces'),
-                        stringChips(_places, _selectedPlace,
-                            _l.t('fltAllPlaces'), (v) => _selectedPlace = v),
+                        stringChips(
+                          _places,
+                          _selectedPlace,
+                          _l.t('fltAllPlaces'),
+                          (v) => _selectedPlace = v,
+                        ),
                       ),
                   ],
                 ),
@@ -823,9 +887,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     final lastText = last == null
         ? 'mai'
         : '${last.day.toString().padLeft(2, '0')}/'
-            '${last.month.toString().padLeft(2, '0')} '
-            '${last.hour.toString().padLeft(2, '0')}:'
-            '${last.minute.toString().padLeft(2, '0')}';
+              '${last.month.toString().padLeft(2, '0')} '
+              '${last.hour.toString().padLeft(2, '0')}:'
+              '${last.minute.toString().padLeft(2, '0')}';
     final drafts = _draftCount;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 2, 20, 6),
@@ -838,8 +902,11 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
         ),
         child: Row(
           children: [
-            const Icon(Icons.cloud_download_outlined,
-                size: 20, color: AppColors.bluNotte),
+            const Icon(
+              Icons.cloud_download_outlined,
+              size: 20,
+              color: AppColors.bluNotte,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -848,7 +915,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                   Text(
                     'Eventi dal sito del Comune · ultimo controllo: $lastText',
                     style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMuted),
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   if (drafts > 0)
                     GestureDetector(
@@ -881,10 +950,14 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.rossoGubbio),
+                        strokeWidth: 2,
+                        color: AppColors.rossoGubbio,
+                      ),
                     )
-                  : const Text('Importa ora',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  : const Text(
+                      'Importa ora',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
             ),
           ],
         ),
@@ -902,7 +975,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       message = nuovi == 0
           ? 'Nessun evento nuovo sul sito del Comune'
           : '$nuovi eventi nuovi importati'
-              '${bozze > 0 ? ' ($bozze da approvare)' : ''}';
+                '${bozze > 0 ? ' ($bozze da approvare)' : ''}';
       final errori = r['errori'];
       if (errori is List && errori.isNotEmpty) {
         message += '\nAttenzione: ${errori.first}';
@@ -912,8 +985,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     }
     if (!mounted) return;
     setState(() => _importing = false);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
     _loadEvents();
   }
 
@@ -944,7 +1018,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   Future<void> _deleteEvent(EventModel event) async {
     final l10n = AppLocalizations.of(
-        context.read<LanguageService>().currentLanguageCode);
+      context.read<LanguageService>().currentLanguageCode,
+    );
     final ok = await confirmDelete(context, event.title);
     if (!ok) return;
     try {
@@ -965,7 +1040,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   /// Scheda compatta: data a sinistra, testi al centro, miniatura a destra.
   Widget _buildEventCard(EventModel event) {
-    final canEdit = context.watch<AuthService>().isAdmin &&
+    final canEdit =
+        context.watch<AuthService>().isAdmin &&
         ContentService.isRemoteId(event.id);
     final status = event.getStatus();
     final isPast = status == EventStatus.past;
@@ -1021,26 +1097,39 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                               _metaRow(Icons.place_outlined, event.location),
                             ],
                             const SizedBox(height: 2),
-                            DistanceLabel(target: event.coordinates, fontSize: 12),
+                            DistanceLabel(
+                              target: event.coordinates,
+                              fontSize: 12,
+                            ),
                             const SizedBox(height: 6),
                             Wrap(
                               spacing: 6,
                               runSpacing: 4,
                               children: [
                                 if (event.isDraft)
-                                  _pill(_l.t('evDraft'), const Color(0xFFE65100),
-                                      strong: true),
+                                  _pill(
+                                    _l.t('evDraft'),
+                                    const Color(0xFFE65100),
+                                    strong: true,
+                                  ),
                                 if (event.isDraft && event.datesToVerify)
-                                  _pill(_l.t('evDatesCheck'),
-                                      const Color(0xFFE65100)),
+                                  _pill(
+                                    _l.t('evDatesCheck'),
+                                    const Color(0xFFE65100),
+                                  ),
                                 if (event.category.trim().isNotEmpty)
                                   _pill(event.category, AppColors.verdeSalvia),
                                 if (event.isFromComune &&
                                     event.category.trim() != _l.t('srcComune'))
                                   _pill(_l.t('srcComune'), AppColors.bluNotte),
+                                if (event.isFromIlikeGubbio)
+                                  _pill(_l.t('srcIlike'), AppColors.bluNotte),
                                 if (status == EventStatus.current)
-                                  _pill(_l.t('eventNow'), AppColors.rossoGubbio,
-                                      strong: true),
+                                  _pill(
+                                    _l.t('eventNow'),
+                                    AppColors.rossoGubbio,
+                                    strong: true,
+                                  ),
                               ],
                             ),
                           ],
@@ -1057,8 +1146,10 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                               url: event.imageUrl!,
                               fallback: const ColoredBox(
                                 color: AppColors.grigioChiaro,
-                                child: Icon(Icons.festival_outlined,
-                                    color: AppColors.tortora),
+                                child: Icon(
+                                  Icons.festival_outlined,
+                                  color: AppColors.tortora,
+                                ),
                               ),
                             ),
                           ),
@@ -1074,7 +1165,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                         children: [
                           EditIconButton(onPressed: () => _editEvent(event)),
                           const SizedBox(width: 8),
-                          DeleteIconButton(onPressed: () => _deleteEvent(event)),
+                          DeleteIconButton(
+                            onPressed: () => _deleteEvent(event),
+                          ),
                         ],
                       ),
                     ),
@@ -1092,8 +1185,9 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
       width: 54,
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: (isPast ? AppColors.tortora : AppColors.rossoGubbio)
-            .withValues(alpha: 0.12),
+        color: (isPast ? AppColors.tortora : AppColors.rossoGubbio).withValues(
+          alpha: 0.12,
+        ),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1166,7 +1260,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
     String day(DateTime d) => '${d.day} ${_l.list('monthsShort')[d.month - 1]}';
     final s = e.startTime;
     final end = e.endTime;
-    final allDay = s.hour == 0 && s.minute == 0 && end.hour == 23 && end.minute == 59;
+    final allDay =
+        s.hour == 0 && s.minute == 0 && end.hour == 23 && end.minute == 59;
     final sameDay =
         s.year == end.year && s.month == end.month && s.day == end.day;
     // Eventi di più giorni (mostre, mercatini...): "4 nov – 24 nov".
@@ -1180,13 +1275,17 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
 
   Widget _buildEmptyState() {
     final l10n = AppLocalizations.of(
-        context.read<LanguageService>().currentLanguageCode);
+      context.read<LanguageService>().currentLanguageCode,
+    );
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const SizedBox(height: 50),
-        Icon(Icons.event_busy,
-            size: 70, color: AppColors.tortora.withValues(alpha: 0.55)),
+        Icon(
+          Icons.event_busy,
+          size: 70,
+          color: AppColors.tortora.withValues(alpha: 0.55),
+        ),
         const SizedBox(height: 16),
         Text(
           l10n.noEventsFound,
@@ -1216,7 +1315,8 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
                 foregroundColor: AppColors.rossoGubbio,
                 side: const BorderSide(color: AppColors.rossoGubbio),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
               child: Text(_l.t('showAllEvents')),
             ),
