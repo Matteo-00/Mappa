@@ -8,10 +8,19 @@ part of 'home_landing_page.dart';
 
 const Color _goldSoft = Color(0xFFE6CFA0);
 
-/// Altezza del pannello chiuso (solo la ricerca) e a metà (ricerca,
-/// schede e i 3 itinerari della vetrina), senza il bordo di sistema.
-const double _panelClosedPx = 94;
-const double _panelMidPx = 446;
+/// Altezza del pannello chiuso (solo la ricerca) e a metà (ricerca, schede,
+/// i 3 itinerari e il pulsante "Tutti gli itinerari"), senza il bordo di
+/// sistema. A metà è circa 1/3-0,4 dello schermo.
+const double _panelClosedPx = 84;
+const double _panelMidPx = 392;
+
+/// Scheda Eventi: il pannello arriva a mostrare per intero i primi 3 eventi
+/// (senza il quarto che spunta sotto).
+const double _panelMidEventsPx = 418;
+
+/// Altezza di base del pannello per la scheda scelta (0 Itinerari, 1 Eventi,
+/// 2 Servizi).
+double _midPxFor(int tab) => tab == 1 ? _panelMidEventsPx : _panelMidPx;
 
 extension _ExplorePanel on _HomeLandingPageState {
   bool get _panelOpen => _sheetExtent > _maxE - 0.04;
@@ -37,14 +46,22 @@ extension _ExplorePanel on _HomeLandingPageState {
       child: ClipRRect(
         borderRadius: radius,
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.avorio.withValues(alpha: 0.78),
+              // Vetro: chiaro e quasi trasparente, il video si vede nitido.
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: 0.30),
+                  Colors.white.withValues(alpha: 0.14),
+                ],
+              ),
               borderRadius: radius,
               border: Border(
                   top: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.8))),
+                      color: Colors.white.withValues(alpha: 0.6))),
             ),
             // Il pannello si trascina anche con il mouse (versione web).
             child: ScrollConfiguration(
@@ -56,9 +73,14 @@ extension _ExplorePanel on _HomeLandingPageState {
                     bottom: 24 + MediaQuery.of(context).padding.bottom),
                 children: [
                   _panelHeader(),
-                  ValueListenableBuilder<int>(
-                    valueListenable: _panelTab,
-                    builder: (context, tab, _) => _panelTabs(tab),
+                  // Chiuso: si vede solo la ricerca. Tutto il resto sfuma, così
+                  // non resta nemmeno un pezzetto di schede sopra la barra.
+                  Opacity(
+                    opacity: ((_sheetExtent - _minE) / 0.05).clamp(0.0, 1.0),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _panelTab,
+                      builder: (context, tab, _) => _panelTabs(tab),
+                    ),
                   ),
                 ],
               ),
@@ -164,7 +186,7 @@ extension _ExplorePanel on _HomeLandingPageState {
     ];
     final Widget body = switch (tab) {
       0 => Column(children: [
-          _itinerariRow(200),
+          _itinerariRow(164),
           _allButton(_l10n.t('homeAllItineraries'), _openItinerari),
           if (context.watch<AuthService>().isAdmin)
             Padding(
@@ -189,7 +211,8 @@ extension _ExplorePanel on _HomeLandingPageState {
     final rest = <Widget>[
       if (tab != 1) ...[
         _panelSection(_l10n.t('homeUpcomingEvents'),
-            onSeeAll: _openEvents, top: 26),
+            // Spazio sopra: a pannello di base "Prossimi eventi" non si vede.
+            onSeeAll: _openEvents, top: 52),
         _eventsRow(),
       ],
       if (tab != 2) ...[
@@ -199,13 +222,13 @@ extension _ExplorePanel on _HomeLandingPageState {
       if (tab == 2) ...[
         _panelSection(_l10n.suggestedItinerariesNav,
             onSeeAll: _openItinerari, top: 24),
-        _itinerariRow(180),
+        _itinerariRow(164),
       ],
       _storiaBanner(),
     ];
     return Column(children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -677,7 +700,9 @@ extension _ExplorePanel on _HomeLandingPageState {
         child: GestureDetector(
           onTap: _openStoria,
           child: Container(
-            height: 112,
+            // Altezza minima: se il testo è più lungo (sottotitolo a capo, testo
+            // grande) il riquadro cresce invece di andare in overflow.
+            constraints: const BoxConstraints(minHeight: 112),
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
@@ -697,7 +722,9 @@ extension _ExplorePanel on _HomeLandingPageState {
               ),
               Padding(
                 padding: const EdgeInsets.all(18),
-                child: Column(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 76),
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -720,6 +747,7 @@ extension _ExplorePanel on _HomeLandingPageState {
                             fontSize: 13,
                             color: Colors.white.withValues(alpha: 0.85))),
                   ],
+                  ),
                 ),
               ),
             ]),

@@ -102,14 +102,22 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     _videoMuted.dispose();
     _videoFinished.dispose();
     _videoReplay.dispose();
+    _panelTab.removeListener(_onPanelTabChanged);
     _panelTab.dispose();
     _sheet.dispose();
     super.dispose();
   }
 
+  /// Cambiando scheda il pannello prende l'altezza giusta per quella scheda
+  /// (il sistema lo anima da solo fino alla nuova posizione di base).
+  void _onPanelTabChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    _panelTab.addListener(_onPanelTabChanged);
     // All'apertura chiediamo (una volta) il consenso alla posizione.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -314,8 +322,13 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
     // e i 3 itinerari della vetrina), aperto.
     final minExtent =
         ((_panelClosedPx + bottomInset) / size.height).clamp(0.08, 0.3);
-    final midExtent = ((_panelMidPx + bottomInset) / size.height)
-        .clamp(minExtent + 0.1, 0.72);
+    // Di base il pannello mostra ricerca, schede, i 3 itinerari e il pulsante
+    // "Tutti gli itinerari" (circa 1/3-0,4 dello schermo).
+    // Uguale per tutti (anche per gli admin): la riga "Scegli gli itinerari in
+    // vetrina" si vede tirando su il pannello.
+    final midExtent =
+        ((_midPxFor(_panelTab.value) + bottomInset) / size.height)
+            .clamp(minExtent + 0.1, 0.72);
     const maxExtent = 0.88;
     _minE = minExtent;
     _maxE = maxExtent;
@@ -451,9 +464,9 @@ class _HomeLandingPageState extends State<HomeLandingPage> with RouteAware {
           muted: _videoMuted,
           finished: _videoFinished,
           replay: _videoReplay,
-          // Se il pannello sale oltre la metà il video resta dov'è.
-          visibleFraction:
-              1 - (_sheetExtent < midExtent ? _sheetExtent : midExtent),
+          // Il video non si muove quando si tira il pannello: l'inquadratura
+          // è sempre quella con il pannello nella posizione di base.
+          visibleFraction: 1 - midExtent,
           fallback: Image.asset(
             'assets/geo/hero.jpg',
             fit: BoxFit.cover,
