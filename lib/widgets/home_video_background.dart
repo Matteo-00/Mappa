@@ -27,17 +27,19 @@ class HomeVideoBackground extends StatefulWidget {
   static const String asset = 'assets/videohome/clip_visit_gubbio.mp4';
 
   /// Proporzioni (larghezza / altezza) dell'immagine vera dentro al file,
-  /// centrata. La clip attuale (volo del drone sul Palazzo dei Consoli) è un
-  /// video verticale 1080×1920 senza bande: si usa tutto il fotogramma.
+  /// centrata. La clip attuale (video "iLike Gubbio" del Comune, montato in
+  /// verticale scena per scena) è un video 1080×1920 senza bande: si usa
+  /// tutto il fotogramma.
   /// Per un video con bande nere ai lati qui vanno le proporzioni della sola
   /// parte con l'immagine (es. 9 / 16 dentro un file 16:9).
   static const double contentAspect = 9 / 16;
 
-  /// Parte del Palazzo dei Consoli che a video finito deve stare sopra il
-  /// pannello, in frazioni (0-1) dell'ultimo fotogramma: dai merli al portale.
-  /// Nell'ultimo fotogramma la facciata riempie tutta la larghezza, così resta
-  /// a tutto schermo senza bande ai lati. Se cambia il video va aggiornato.
-  static const Rect finalFocus = Rect.fromLTRB(0.03, 0.04, 1.0, 0.58);
+  /// Parte dell'ultimo fotogramma che a video finito deve stare sopra il
+  /// pannello, in frazioni (0-1): Gubbio sotto la neve con il Palazzo dei
+  /// Consoli e il Palazzo Pretorio. Margini laterali lasciati liberi così
+  /// l'immagine resta a tutta larghezza, senza bande ai lati. Se cambia il
+  /// video va aggiornato.
+  static const Rect finalFocus = Rect.fromLTRB(0.08, 0.28, 0.92, 0.64);
 
   /// Margine in pixel attorno al palazzo a video finito.
   static const double focusMargin = 12;
@@ -251,10 +253,17 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
     final w = screen.width;
     final h = screen.height;
 
-    // Inizio: tutto schermo, centrato. "Height" è l'altezza dell'immagine.
+    // Inizio: tutto schermo. "Height" è l'altezza dell'immagine.
     final startHeight = h > w / aspect ? h : w / aspect;
     final startLeft = (w - startHeight * aspect) / 2;
-    final startTop = (h - startHeight) / 2;
+    final coverTop = (h - startHeight) / 2;
+    // Durante la riproduzione il video sale di metà della parte coperta dal
+    // pannello: così sopra il pannello si vede il CENTRO di ogni scena (dove
+    // sta il soggetto) e non solo la parte alta. Segue il pannello quando lo
+    // si trascina. Sotto, una copia a tutto schermo riempie lo spazio dietro
+    // al pannello (che è di vetro sfocato), così non si vede mai il nero.
+    final covered = h * (1 - widget.visibleFraction);
+    final startTop = coverTop - covered / 2;
 
     // Fine: il palazzo deve stare interamente nell'area visibile.
     const focus = HomeVideoBackground.finalFocus;
@@ -287,6 +296,17 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
       fit: BoxFit.fill,
       child: _visibleArea(controller, videoSize),
     );
+    // Copia a tutto schermo dietro al video (sotto il pannello).
+    final underlay = Positioned(
+      left: startLeft,
+      top: coverTop,
+      width: startHeight * aspect,
+      height: startHeight,
+      child: FittedBox(
+        fit: BoxFit.fill,
+        child: _visibleArea(controller, videoSize),
+      ),
+    );
 
     return AnimatedBuilder(
       animation: _fit,
@@ -296,6 +316,7 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
         final height = lerpDouble(startHeight, endHeight, t)!;
         return Stack(
           children: [
+            if (covered > 0) underlay,
             Positioned(
               left: lerpDouble(startLeft, endLeft, t)!,
               top: lerpDouble(startTop, endTop, t)!,

@@ -2,6 +2,7 @@ import '../widgets/distance_label.dart';
 import '../utils/text_match.dart';
 import '../widgets/error_snack.dart';
 import 'package:flutter/material.dart';
+import '../widgets/christmas_banner.dart';
 import 'package:provider/provider.dart';
 import '../services/offline_mode_service.dart';
 import '../models/event_model.dart';
@@ -276,6 +277,7 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
         context.watch<LanguageService>().currentLanguageCode);
     final events = _filteredEvents;
     final rows = _buildRows(events);
+    final showXmas = ChristmasBanner.isSeason();
 
     return Scaffold(
       backgroundColor: AppColors.avorio,
@@ -328,13 +330,28 @@ class _EventsListPageState extends State<EventsListPage> with RouteAware {
             child: RefreshIndicator(
                     color: AppColors.rossoGubbio,
                     onRefresh: _loadEvents,
-                    child: events.isEmpty
+                    child: events.isEmpty && !showXmas
                         ? _buildEmptyState()
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-                            itemCount: rows.length,
-                            itemBuilder: (context, i) {
+                            itemCount: rows.length +
+                                (showXmas ? 1 : 0) +
+                                (events.isEmpty ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              // In cima, nel periodo natalizio: il banner di
+                              // Gubbio a Natale (scorre via con la lista).
+                              if (showXmas && index == 0) {
+                                return const Padding(
+                                  padding: EdgeInsets.fromLTRB(0, 6, 0, 8),
+                                  child: ChristmasBanner(),
+                                );
+                              }
+                              final i = index - (showXmas ? 1 : 0);
+                              if (events.isEmpty) {
+                                return SizedBox(
+                                    height: 340, child: _buildEmptyState());
+                              }
                               final row = rows[i];
                               if (row is String) return _buildGroupHeader(row);
                               return Padding(
