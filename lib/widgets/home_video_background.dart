@@ -86,6 +86,9 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
   /// True quando il video è finito: resta fermo sull'ultimo fotogramma.
   bool _ended = false;
 
+  /// Quando è stato premuto "play" l'ultima volta (vedi [_onVideoTick]).
+  DateTime? _restartedAt;
+
   /// False quando un'altra pagina è aperta sopra la home.
   bool _pageVisible = true;
   PageRoute<dynamic>? _subscribedRoute;
@@ -138,6 +141,15 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
   void _onVideoTick() {
     final c = _controller;
     if (c == null || _ended) return;
+    // Subito dopo "play" il lettore può dire ancora per un istante di essere
+    // in fondo e fermo: senza questa pausa il video risulterebbe di nuovo
+    // finito e servirebbe premere play due volte.
+    final restarted = _restartedAt;
+    if (restarted != null &&
+        DateTime.now().difference(restarted) <
+            const Duration(milliseconds: 1500)) {
+      return;
+    }
     final v = c.value;
     if (v.duration > Duration.zero &&
         !v.isPlaying &&
@@ -154,10 +166,12 @@ class _HomeVideoBackgroundState extends State<HomeVideoBackground>
   Future<void> _replay() async {
     final c = _controller;
     if (c == null || !_ready) return;
+    _restartedAt = DateTime.now();
     setState(() => _ended = false);
     widget.finished?.value = false;
     _fitController.reverse();
     await c.seekTo(Duration.zero);
+    if (!mounted) return;
     _syncPlayback();
   }
 
