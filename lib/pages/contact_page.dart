@@ -12,7 +12,7 @@ import '../widgets/premium_scaffold.dart';
 /// aiuto) e l'indirizzo email di Visit Gubbio, da copiare o da aprire.
 class ContactPage extends StatelessWidget {
   /// Indirizzo email di Visit Gubbio.
-  static const String email = 'visitgubbioapp@gmail.com';
+  static const String email = 'info@visitgubbio.eu';
 
   const ContactPage({super.key});
 
